@@ -56,7 +56,9 @@ export class UIScene extends Phaser.Scene {
   addLog(message: string): void {
     this.logLines.push(message);
     if (this.logLines.length > 6) this.logLines.shift();
-    this.logText.setText(this.logLines.join('\n'));
+    if (this.logText) {
+      this.logText.setText(this.logLines.join('\n'));
+    }
   }
 
   private bar(current: number, max: number): string {

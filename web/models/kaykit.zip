@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang='en-gb' dir='ltr'>
+
+<head>
+
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+	<meta name='theme-color' content='#3E302C'>
+
+	<title>Kay Lousberg &middot; We couldn't find this page!</title>
+
+	<meta name='description' content='Freelance 3D Artist'>
+	<meta name='keywords' content=''>
+
+	<link rel="stylesheet" href="https://kaylousberg.com/data/css/bootstrap.css">
+<link rel="stylesheet" href="https://kaylousberg.com/data/css/bootstrap-grid.css">
+<link rel="stylesheet" href="https://kaylousberg.com/data/css/bootstrap-reboot.css">
+<link rel="stylesheet" href="https://kaylousberg.com/data/css/main.css">
+<link rel="stylesheet" href="https://kaylousberg.com/data/css/font.css">
+<link rel="stylesheet" href="https://kaylousberg.com/data/css/lity.css">
+<link rel="stylesheet" href="https://kaylousberg.com/data/css/animate.css">
+	
+	<link rel='shortcut icon' type='image/png' href='https://kaylousberg.com/favicon.png'/>
+	<link rel='shortcut icon' type='image/x-icon' href='https://kaylousberg.com/favicon.ico'/>
+	
+	<!-- OpenGraph !-->
+	
+	<meta property='og:url'	  content='https://kaylousberg.com/error' />
+	<meta property='og:type'  content='article' />
+	
+	<meta property='og:title' content='Kay Lousberg • We couldn't find this page!' />
+	
+	<meta property='og:description' content="Well, stuff can go wrong sometimes and maybe you mistyped a URL, tapped/clicked a broken link or your computer just wants to drive you nuts. Anyway, keep calm and head over to the homepage." />
+<meta property='og:image'			content='https://kaylousberg.com/data/img/logo.png' />	
+</head>
+
+<body>
+
+<div class='container'>
+
+	<div class='row'>
+	
+		<div class='col-md-4'>
+	
+			<div class='logo'><a href='https://kaylousberg.com'><img src='https://kaylousberg.com/data/img/logo.png' srcset='https://kaylousberg.com/data/img/logo@2.png 2x'/></a></div>
+			
+		</div>
+		
+		<div class='col-md-8'>
+	
+			<ul class='menu'>
+			
+								
+				<li class='btn'><a  href='https://kaylousberg.com/contact'>Contact</a></li>
+				
+								
+				<li class='btn'><a  href='https://kaylousberg.com/patreon-characters'>Patreon Characters</a></li>
+				
+								
+				<li class='btn'><a  href='https://kaylousberg.com/game-assets'>Game assets</a></li>
+				
+								
+				<li class='btn'><a  href='https://kaylousberg.com'>Home</a></li>
+				
+							
+			</ul>
+			
+		</div>
+	
+	</div>
+	
+	<div class='push'></div>
+	
+	<div class='row animated-short fadeIn'
+<div class='row'>
+	<div class='col-md-12'>
+	
+		<p>Well, stuff can go wrong sometimes and maybe you mistyped a URL, tapped/clicked a broken link or your computer just wants to drive you nuts. Anyway, keep calm and head over to the homepage.</p>		
+	</div>
+</div>
+
+<footer class='footer'><p>Copyright © 2026 Kay Lousberg<br />
+<strong><a href="https://kaylousberg.com/contact">contact me</a></strong></p></footer>
+
+</div> <!-- animation -->
+</div> <!-- container -->
+
+</body>
+
+<link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro' rel='stylesheet'>
+<link href='https://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet'>
+
+<script type='text/javascript' src='https://kaylousberg.com/data/js/jquery.js'></script>
+<script type='text/javascript' src='https://kaylousberg.com/data/js/bootstrap.popper.js'></script>
+<script type='text/javascript' src='https://kaylousberg.com/data/js/bootstrap.js'></script>
+
+<script type='text/javascript' src='https://kaylousberg.com/data/js/lity.js'></script>
+
+</html>

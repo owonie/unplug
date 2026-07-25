@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UNPLUG — Zombie Survivors</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
+    #game-canvas{width:100vw;height:100vh;display:block}
+    #hud{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;padding:16px}
+    #stats{color:#fff;font-size:13px;text-shadow:0 0 4px #000}
+    #stat-panel{margin-top:8px;font-size:11px;color:#ccc;line-height:1.8;background:rgba(0,0,0,0.7);padding:8px 10px;border-radius:6px;border:1px solid #444;max-width:160px;font-family:'Courier New',monospace}
+    #hp-bar-bg{width:200px;height:12px;background:#333;border-radius:6px;margin:4px 0;border:1px solid #555}
+    #hp-bar-fill{height:100%;background:linear-gradient(90deg,#ff2222,#ff6644);border-radius:5px;transition:width 0.2s}
+    #xp-bar-bg{width:200px;height:8px;background:#222;border-radius:4px;margin:2px 0;border:1px solid #444}
+    #xp-bar-fill{height:100%;background:linear-gradient(90deg,#4488ff,#44ddff);border-radius:3px;transition:width 0.1s}
+    #timer{position:fixed;top:16px;right:16px;color:#aaa;font-size:14px}
+    #kills{position:fixed;top:36px;right:16px;color:#ff6644;font-size:13px}
+    #log{position:fixed;bottom:16px;right:16px;color:#8a8;font-size:11px;text-align:right;max-width:300px;opacity:0.8}
+    /* Level up popup */
+    #levelup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);border:2px solid #ffcc00;border-radius:12px;padding:24px;display:none;pointer-events:all;text-align:center;min-width:400px;z-index:1000}
+    #levelup h2{color:#ffcc00;margin-bottom:12px;font-size:18px}
+    .choice-btn{display:block;width:100%;padding:12px;margin:8px 0;background:#1a1a2a;border:1px solid #444;color:#fff;font-size:13px;cursor:pointer;border-radius:6px;font-family:inherit;text-align:left}
+    .choice-btn:hover{background:#2a2a4a;border-color:#ffcc00}
+    .choice-btn span{color:#ffcc00;font-weight:bold}
+    #controls-hint{position:fixed;bottom:16px;left:16px;color:#555;font-size:10px}
+    .dmg-popup{position:fixed;color:#fff;font-size:16px;font-weight:bold;pointer-events:none;animation:dmg-float 0.8s ease-out forwards;text-shadow:0 0 4px #000,0 0 2px #000;z-index:999}
+    .dmg-popup.crit{color:#ff4400;font-size:24px;text-shadow:0 0 8px #ff0000}
+    @keyframes dmg-float{0%{opacity:1;transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.2)}100%{opacity:0;transform:translateY(-60px) scale(0.8)}}
+    @keyframes lvlflash{0%{opacity:1}100%{opacity:0}}
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <div id="hud">
+    <div id="stats">
+      <div>LV.<span id="level">1</span></div>
+      <div id="hp-bar-bg"><div id="hp-bar-fill" style="width:100%"></div></div>
+      <div id="xp-bar-bg"><div id="xp-bar-fill" style="width:0%"></div></div>
+      <div id="stat-panel"></div>
+    </div>
+  </div>
+  <div id="timer">0:00</div>
+  <div id="kills">0 kills</div>
+  <div id="log"></div>
+  <div id="controls-hint">[WASD] Move | Auto-attack nearest | Survive!</div>
+  <div id="levelup">
+    <h2>⬆️ LEVEL UP!</h2>
+    <button class="choice-btn" id="choice-0"></button>
+    <button class="choice-btn" id="choice-1"></button>
+    <button class="choice-btn" id="choice-2"></button>
+  </div>
+
+  <script type="module">
+    import init, { GameEngine } from './pkg/unplug_engine.js';
+    import { ThreeRenderer } from './src/renderer.js';
+
+    const UPGRADE_NAMES = [
+      '⚔️ Damage +10', '👟 Speed +0.6', '⚡ Attack Speed', '🎯 Range +2.5',
+      '🔫 Cleave +', '❤️ Max HP +30', '💚 Heal 50%',
+      '🗡️ Pierce +1', '💥 Crit +15%', '🧛 Lifesteal +5%',
+      '💫 AOE on Kill', '🧲 Magnet +2',
+      '🔥 Fire Blade', '❄️ Frost Blade', '⚡ Thunder Blade', '☠️ Poison Blade',
+    ];
+
+    async function main() {
+      await init();
+      const engine = new GameEngine();
+
+      const canvas = document.getElementById('game-canvas');
+      const renderer = new ThreeRenderer(canvas);
+
+      // Input (use e.code for Korean IME safety)
+      const keyMap = {'KeyW':'w','KeyA':'a','KeyS':'s','KeyD':'d','ArrowUp':'w','ArrowDown':'s','ArrowLeft':'a','ArrowRight':'d','Digit1':'1','Digit2':'2','Digit3':'3'};
+      document.addEventListener('keydown', e => {
+        const k = keyMap[e.code] || e.key.toLowerCase();
+        engine.on_key_down(k);
+
+        // Level up choice
+        if (engine.level_up_pending()) {
+          if (k === '1') { engine.choose_upgrade(0); hideLevelUp(); }
+          if (k === '2') { engine.choose_upgrade(1); hideLevelUp(); }
+          if (k === '3') { engine.choose_upgrade(2); hideLevelUp(); }
+        }
+      });
+      document.addEventListener('keyup', e => {
+        const k = keyMap[e.code] || e.key.toLowerCase();
+        engine.on_key_up(k);
+      });
+
+      // Level up buttons
+      for (let i = 0; i < 3; i++) {
+        document.getElementById(`choice-${i}`).addEventListener('click', () => {
+          engine.choose_upgrade(i);
+          hideLevelUp();
+        });
+      }
+
+      function showLevelUp() {
+        const el = document.getElementById('levelup');
+        el.style.display = 'block';
+        el.classList.add('shown');
+        for (let i = 0; i < 3; i++) {
+          const id = engine.level_up_choice(i);
+          document.getElementById(`choice-${i}`).innerHTML = `<span>[${i+1}]</span> ${UPGRADE_NAMES[id] || 'Unknown'}`;
+        }
+      }
+      function hideLevelUp() {
+        const el = document.getElementById('levelup');
+        el.style.display = 'none';
+        el.classList.remove('shown');
+      }
+
+      // HUD
+      const logLines = [];
+      function updateHUD() {
+        document.getElementById('level').textContent = engine.player_level();
+        const hpPct = Math.max(0, engine.player_hp() / engine.player_max_hp() * 100);
+        document.getElementById('hp-bar-fill').style.width = hpPct + '%';
+        const xpPct = engine.player_xp() / engine.player_xp_max() * 100;
+        document.getElementById('xp-bar-fill').style.width = xpPct + '%';
+
+        // Stat panel
+        const sp = document.getElementById('stat-panel');
+        if (sp) sp.innerHTML =
+          `⚔️ ATK <span style="color:#ff8844">${Math.round(engine.player_damage())}</span><br>` +
+          `⚡ SPD <span style="color:#44ccff">${engine.player_atk_speed().toFixed(1)}/s</span><br>` +
+          `🎯 RNG <span style="color:#88ff44">${engine.player_range().toFixed(1)}</span><br>` +
+          `💥 CRT <span style="color:#ff4488">${Math.round(engine.player_crit()*100)}%</span><br>` +
+          `🗡️ PRC <span style="color:#ffcc44">${engine.player_pierce()}</span> ` +
+          `🔫 ×<span style="color:#44ffcc">${engine.player_multi()}</span><br>` +
+          `🧛 STEAL <span style="color:#ff44ff">${Math.round(engine.player_lifesteal()*100)}%</span>`;
+
+        const t = Math.floor(engine.game_time());
+        const min = Math.floor(t / 60);
+        const sec = t % 60;
+        document.getElementById('timer').textContent = `${min}:${sec.toString().padStart(2,'0')}`;
+        document.getElementById('kills').textContent = `${engine.kills()} kills`;
+
+        if (engine.level_up_pending() && !document.getElementById('levelup').classList.contains('shown')) showLevelUp();
+
+        let log;
+        while ((log = engine.pop_log()) !== undefined) { logLines.push(log); if (logLines.length > 4) logLines.shift(); }
+        document.getElementById('log').textContent = logLines.join('\n');
+      }
+
+      // Damage popup system
+      function showDamagePopup(wx, wz, amount, isCrit) {
+        const el = document.createElement('div');
+        el.className = 'dmg-popup' + (isCrit ? ' crit' : '');
+        el.textContent = Math.round(amount);
+        // Random offset
+        const ox = (Math.random() - 0.5) * 40;
+        el.style.left = (window.innerWidth / 2 + ox) + 'px';
+        el.style.top = (window.innerHeight / 2 - 50 + Math.random() * 20) + 'px';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+      }
+
+      // Game loop
+      let lastTime = 0;
+      function loop(timestamp) {
+        const dt = lastTime ? (timestamp - lastTime) / 1000 : 0.016;
+        lastTime = timestamp;
+
+        engine.update(timestamp);
+
+        // Build world state for Three.js
+        const enemies = [];
+        const ec = engine.enemy_count();
+        for (let i = 0; i < ec; i++) {
+          enemies.push({ x: engine.enemy_x(i), z: engine.enemy_z(i), type: engine.enemy_type(i), hit: engine.enemy_hit(i) });
+        }
+        const bullets = [];
+        const orbs = [];
+        const oc = engine.orb_count();
+        for (let i = 0; i < oc; i++) {
+          orbs.push({ x: engine.orb_x(i), z: engine.orb_z(i) });
+        }
+        // Damage events → popups + slash effects
+        const dmgCount = engine.damage_event_count();
+        const px = engine.player_x(), pz = engine.player_z();
+        const atkPower = engine.player_damage(); // 공격력 비례 색상용
+        for (let i = 0; i < dmgCount; i++) {
+          const ex = engine.damage_event_x(i);
+          const ez = engine.damage_event_z(i);
+          const isCrit = engine.damage_event_crit(i);
+          showDamagePopup(ex, ez, engine.damage_event_amount(i), isCrit);
+          renderer.spawnSlash(px, pz, ex, ez, isCrit, atkPower);
+        }
+        // Death events → particles at exact enemy position
+        const deathCount = engine.death_event_count();
+        for (let i = 0; i < deathCount; i++) {
+          renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i));
+        }
+
+        renderer.update({
+          playerX: engine.player_x(),
+          playerZ: engine.player_z(),
+          playerMoving: engine.player_moving(),
+          playerDirX: engine.player_dir_x(),
+          playerDirZ: engine.player_dir_z(),
+          playerHit: engine.player_hit(),
+          playerAttacking: engine.player_attacking(),
+          nearestEnemyDirX: engine.nearest_enemy_dir_x(),
+          enemies, bullets, orbs,
+        }, dt);
+
+        updateHUD();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    }
+
+    main().catch(err => { document.body.innerHTML = `<pre style="color:red;padding:20px">FATAL: ${err}\n${err.stack||''}</pre>`; });
+  </script>
+</body>
+</html>

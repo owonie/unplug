@@ -68,4 +68,8 @@ export class ResourceManager {
     }
     return false;
   }
+
+  addCommits(amount: number): void {
+    this.commits += amount;
+  }
 }

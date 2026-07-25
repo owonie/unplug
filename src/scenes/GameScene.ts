@@ -82,11 +82,17 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown-T', () => {
       this.buildingManager.placeBuildingAtPlayer(this.player, 'turret');
     });
+    this.input.keyboard!.on('keydown-U', () => {
+      this.buildingManager.upgradeNearest(this.player);
+    });
 
-    this.waveManager.start();
     this.scene.launch('UIScene');
 
-    // Game over handler
+    // Give UIScene a frame to initialize before starting waves
+    this.time.delayedCall(100, () => {
+      this.waveManager.start();
+    });
+
     this.events.on('player-death', () => {
       this.scene.pause();
       const uiScene = this.scene.get('UIScene') as any;

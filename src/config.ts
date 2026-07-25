@@ -6,9 +6,9 @@
 export const GAME_WIDTH = 1024;
 export const GAME_HEIGHT = 768;
 
-export const TILE_SIZE = 32;
-export const MAP_WIDTH = 64;
-export const MAP_HEIGHT = 64;
+export const TILE_SIZE = 40;
+export const MAP_WIDTH = 50; // tiles
+export const MAP_HEIGHT = 50; // tiles
 
 export const COLORS = {
   background: 0x0a0e1a,
