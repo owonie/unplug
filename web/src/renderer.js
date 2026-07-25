@@ -179,14 +179,8 @@ export class ThreeRenderer {
     if (this.playerGroup) {
       this.playerGroup.position.set(playerX, 0.9, playerZ);
 
-      // Billboard: face camera (only Y rotation 방식으로 — 늘어남 방지)
-      const camDir = new THREE.Vector3();
-      this.camera.getWorldDirection(camDir);
-      this.playerGroup.rotation.set(
-        Math.atan2(camDir.y, Math.sqrt(camDir.x*camDir.x + camDir.z*camDir.z)),
-        Math.atan2(-camDir.x, -camDir.z),
-        0
-      );
+      // Billboard: face camera (simple quaternion copy)
+      this.playerGroup.quaternion.copy(this.camera.quaternion);
 
       // Flip: 이동 방향 or 적 방향
       let faceDir = 0;

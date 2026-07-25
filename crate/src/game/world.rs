@@ -527,47 +527,43 @@ impl World {
             10 => { self.player.aoe_radius += 1.5; self.log("💫 +AOE!".into()); }
             11 => { self.player.magnet_range += 2.0; self.log("🧲 +MAGNET!".into()); }
             12 => {
+                if self.player.skill_level(0) >= 5 { self.player.attack_damage += 10.0; self.log("⚔️ Fire maxed! +DMG instead".into()); } else {
                 self.player.attack_damage += 5.0;
                 self.player.aoe_radius += 0.8;
                 self.player.learn_skill(0);
                 let lv = self.player.skill_level(0);
-                if lv >= 6 {
-                    self.log("🔥🔥🔥 FIRE MASTERY! Inferno unleashed!".into());
-                } else {
-                    self.log(format!("🔥 Fire Blade Lv.{}!", lv));
+                if lv >= 5 { self.log("🔥🔥🔥 FIRE MAX! Inferno unleashed!".into()); }
+                else { self.log(format!("🔥 Fire Blade Lv.{}!", lv)); }
                 }
             }
             13 => {
+                if self.player.skill_level(4) >= 5 { self.player.attack_damage += 10.0; self.log("⚔️ Ice maxed! +DMG instead".into()); } else {
                 self.player.attack_damage += 5.0;
                 self.player.attack_range += 0.5;
                 self.player.learn_skill(4);
                 let lv = self.player.skill_level(4);
-                if lv >= 6 {
-                    self.log("❄️❄️❄️ ICE MASTERY! Absolute Zero!".into());
-                } else {
-                    self.log(format!("❄️ Frost Blade Lv.{}!", lv));
+                if lv >= 5 { self.log("❄️❄️❄️ ICE MAX! Absolute Zero!".into()); }
+                else { self.log(format!("❄️ Frost Blade Lv.{}!", lv)); }
                 }
             }
             14 => {
+                if self.player.skill_level(2) >= 5 { self.player.attack_damage += 10.0; self.log("⚔️ Thunder maxed! +DMG instead".into()); } else {
                 self.player.attack_damage += 5.0;
                 self.player.attack_cooldown = (self.player.attack_cooldown - 0.05).max(0.12);
                 self.player.learn_skill(2);
                 let lv = self.player.skill_level(2);
-                if lv >= 6 {
-                    self.log("⚡⚡⚡ THUNDER MASTERY! Storm Lord!".into());
-                } else {
-                    self.log(format!("⚡ Thunder Blade Lv.{}!", lv));
+                if lv >= 5 { self.log("⚡⚡⚡ THUNDER MAX! Storm Lord!".into()); }
+                else { self.log(format!("⚡ Thunder Blade Lv.{}!", lv)); }
                 }
             }
             15 => {
+                if self.player.skill_level(7) >= 5 { self.player.attack_damage += 10.0; self.log("⚔️ Poison maxed! +DMG instead".into()); } else {
                 self.player.attack_damage += 5.0;
                 self.player.lifesteal += 0.03;
                 self.player.learn_skill(7);
                 let lv = self.player.skill_level(7);
-                if lv >= 6 {
-                    self.log("☠️☠️☠️ POISON MASTERY! Plague Bearer!".into());
-                } else {
-                    self.log(format!("☠️ Poison Blade Lv.{}!", lv));
+                if lv >= 5 { self.log("☠️☠️☠️ POISON MAX! Plague Bearer!".into()); }
+                else { self.log(format!("☠️ Poison Blade Lv.{}!", lv)); }
                 }
             }
             16 => {

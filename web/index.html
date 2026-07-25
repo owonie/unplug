@@ -9,11 +9,14 @@
     body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
     #game-canvas{width:100vw;height:100vh;display:block}
     #hud{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;padding:16px}
-    #stats{color:#fff;font-size:13px;text-shadow:0 0 4px #000}
+    #stats{color:#fff;font-size:13px;text-shadow:0 0 4px #000;pointer-events:all}
     #stat-panel{margin-top:8px;font-size:11px;color:#ccc;line-height:1.8;background:rgba(0,0,0,0.7);padding:8px 10px;border-radius:6px;border:1px solid #444;max-width:160px;font-family:'Courier New',monospace}
-    #skill-slots{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap}
-    .skill-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid #555;position:relative}
+    #skill-slots{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;pointer-events:all}
+    .skill-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid #555;position:relative;cursor:pointer;overflow:visible}
     .skill-icon .sk-lvl{position:absolute;bottom:-2px;right:0;font-size:8px;color:#ffcc00;font-weight:bold}
+    .skill-icon:hover .sk-tooltip{display:block}
+    .sk-tooltip{display:none;position:absolute;bottom:34px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.95);border:1px solid #555;border-radius:6px;padding:8px 10px;font-size:10px;color:#ccc;white-space:nowrap;z-index:3000;min-width:160px;text-align:left;line-height:1.5;pointer-events:none}
+    .skill-icon.active-tip .sk-tooltip{display:block}
     #hp-bar-bg{width:200px;height:12px;background:#333;border-radius:6px;margin:4px 0;border:1px solid #555}
     #hp-bar-fill{height:100%;background:linear-gradient(90deg,#ff2222,#ff6644);border-radius:5px;transition:width 0.2s}
     #xp-bar-bg{width:200px;height:8px;background:#222;border-radius:4px;margin:2px 0;border:1px solid #444}
@@ -83,6 +86,29 @@
       '👑 PROMOTE!',
       '🔥 Flame Aura', '❄️ Frost Armor', '⚡ Chain Lightning', '☠️ Plague',
     ];
+    const UPGRADE_DESC = [
+      '공격력 +10. 모든 공격 데미지 증가.',
+      '이동속도 +0.6. 더 빠르게 움직임.',
+      '공격속도 증가. 쿨다운 -0.08s.',
+      '공격 범위 +0.8. 더 멀리 타격.',
+      '클리브 범위 +0.3. 더 많은 적 동시 타격.',
+      'MAX HP +30. 더 오래 버팀.',
+      '즉시 체력 50% 회복.',
+      '관통 +1. 공격이 추가 적을 관통.',
+      '치명타 확률 +15%. 2.5배 데미지.',
+      '흡혈 +5%. 데미지의 5%만큼 회복.',
+      '킬 시 주변 폭발. 범위 데미지.',
+      'XP 흡수 범위 +2. 더 넓게 경험치 수집.',
+      '🔥 화염 검기. ATK+5, AOE+0.8. Lv2: 주변 화염 오브.',
+      '❄️ 빙결 검기. ATK+5, RNG+0.5. Lv2: 적 슬로우.',
+      '⚡ 번개 검기. ATK+5, 공속↑. Lv2: 이동 시 공속 보너스.',
+      '☠️ 맹독 검기. ATK+5, 흡혈+3%. Lv2: 주변 DOT.',
+      '👑 전직! ATK+15, HP+50, SPD+0.5. 전용 스킬 해금.',
+      '🔥 화염 오라 강화. ATK+8, AOE+1.',
+      '❄️ 빙결 갑옷. HP+20, RNG+0.5. 피격 시 빙결.',
+      '⚡ 체인 라이트닝. 멀티+1, 공속↑. 공격 연쇄.',
+      '☠️ 역병 확산. 흡혈+4%, AOE+0.8.',
+    ];
 
     async function main() {
       await init();
@@ -143,7 +169,9 @@
         el.classList.add('shown');
         for (let i = 0; i < 3; i++) {
           const id = engine.level_up_choice(i);
-          document.getElementById(`choice-${i}`).innerHTML = `<span>[${i+1}]</span> ${UPGRADE_NAMES[id] || 'Unknown'}`;
+          const name = UPGRADE_NAMES[id] || 'Unknown';
+          const desc = UPGRADE_DESC[id] || '';
+          document.getElementById(`choice-${i}`).innerHTML = `<span>[${i+1}]</span> ${name}<br><small style="color:#999;font-size:11px">${desc}</small>`;
         }
       }
       function hideLevelUp() {
@@ -154,6 +182,7 @@
 
       // HUD
       const logLines = [];
+      let lastSkillKey = '';
       function updateHUD() {
         const promoted = engine.player_promoted();
         const elemNames = { 1:'🔥Flame Knight', 2:'❄️Frost Paladin', 3:'⚡Storm Warrior', 4:'☠️Death Knight' };
@@ -175,19 +204,45 @@
           `🔫 ×<span style="color:#44ffcc">${engine.player_multi()}</span><br>` +
           `🧛 STEAL <span style="color:#ff44ff">${Math.round(engine.player_lifesteal()*100)}%</span>`;
 
-        // Skill slots
+        // Skill slots (only re-render when changed)
         const SKILL_ICONS = { 0:'🔥', 4:'❄️', 2:'⚡', 7:'☠️' };
         const SKILL_COLORS = { 0:'#ff4400', 4:'#44ccff', 2:'#ffcc00', 7:'#44ff44' };
+        const SKILL_NAMES = { 0:'Fire Blade', 4:'Frost Blade', 2:'Thunder Blade', 7:'Poison Blade' };
+        const SKILL_DESC = {
+          0:'🔥 화염 검기. ATK+5, AOE+0.8\nLv2: 주변 화염 오브\nLv5: MAX - 인페르노',
+          4:'❄️ 빙결 검기. ATK+5, RNG+0.5\nLv2: 적 슬로우\nLv5: MAX - 절대영도',
+          2:'⚡ 번개 검기. ATK+5, 공속↑\nLv2: 이동→공속 보너스\nLv5: MAX - 번개 폭풍',
+          7:'☠️ 맹독 검기. ATK+5, 흡혈+3%\nLv2: 주변 DOT\nLv5: MAX - 역병',
+        };
         const slotCount = engine.skill_slot_count();
-        let slotsHtml = '';
-        for (let i = 0; i < slotCount; i++) {
-          const id = engine.skill_slot_id(i);
-          const lv = engine.skill_slot_level(i);
-          const icon = SKILL_ICONS[id] || '⭐';
-          const color = SKILL_COLORS[id] || '#888';
-          slotsHtml += `<div class="skill-icon" style="background:${color}22;border-color:${color}">${icon}<span class="sk-lvl">${lv}</span></div>`;
+        let newSkillKey = '';
+        for (let i = 0; i < slotCount; i++) { newSkillKey += engine.skill_slot_id(i) + ':' + engine.skill_slot_level(i) + ','; }
+        if (newSkillKey !== lastSkillKey) {
+          lastSkillKey = newSkillKey;
+          let slotsHtml = '';
+          for (let i = 0; i < slotCount; i++) {
+            const id = engine.skill_slot_id(i);
+            const lv = engine.skill_slot_level(i);
+            const icon = SKILL_ICONS[id] || '⭐';
+            const color = SKILL_COLORS[id] || '#888';
+            const name = SKILL_NAMES[id] || 'Skill';
+            const desc = (SKILL_DESC[id] || '').replace(/\n/g, '<br>');
+            const maxed = lv >= 5 ? ' <span style="color:#ff4">MAX</span>' : '';
+            slotsHtml += `<div class="skill-icon" style="background:${color}22;border-color:${color}">
+              ${icon}<span class="sk-lvl">${lv}${maxed}</span>
+              <div class="sk-tooltip"><b style="color:${color}">${name} Lv.${lv}/5</b><br>${desc}</div>
+            </div>`;
+          }
+          document.getElementById('skill-slots').innerHTML = slotsHtml;
+          document.querySelectorAll('.skill-icon').forEach(el => {
+            el.addEventListener('click', (e) => {
+              const wasActive = el.classList.contains('active-tip');
+              document.querySelectorAll('.skill-icon').forEach(x => x.classList.remove('active-tip'));
+              if (!wasActive) el.classList.add('active-tip');
+              e.stopPropagation();
+            });
+          });
         }
-        document.getElementById('skill-slots').innerHTML = slotsHtml;
 
         const t = Math.floor(engine.game_time());
         const min = Math.floor(t / 60);
