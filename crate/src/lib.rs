@@ -54,6 +54,8 @@ impl GameEngine {
     pub fn player_pierce(&self) -> u32 { self.world.player.pierce }
     pub fn player_lifesteal(&self) -> f32 { self.world.player.lifesteal }
     pub fn player_multi(&self) -> u32 { self.world.player.attack_count }
+    pub fn player_promoted(&self) -> bool { self.world.player.promoted }
+    pub fn player_promoted_element(&self) -> u32 { self.world.player.promoted_element }
     pub fn player_hit(&self) -> bool { self.world.player.invuln_timer > 0.3 }
     pub fn player_attacking(&self) -> bool {
         self.world.attacking
@@ -109,6 +111,32 @@ impl GameEngine {
 
     // === Log ===
     pub fn pop_log(&mut self) -> Option<String> { self.world.log_queue.pop_front() }
+
+    // === Learned skills ===
+    pub fn skill_slot_count(&self) -> u32 { self.world.player.skills.len() as u32 }
+    pub fn skill_slot_id(&self, i: u32) -> u32 { self.world.player.skills.get(i as usize).map(|s| s.skill_id).unwrap_or(99) }
+    pub fn skill_slot_level(&self, i: u32) -> u32 { self.world.player.skills.get(i as usize).map(|s| s.level).unwrap_or(0) }
+
+    // === Active element (highest level element for effects) ===
+    pub fn active_element(&self) -> u32 {
+        // 0=none, 1=fire, 2=ice, 3=thunder, 4=poison
+        let mut best_id = 0u32;
+        let mut best_level = 0u32;
+        for skill in &self.world.player.skills {
+            let element = match skill.skill_id {
+                0 => 1, // fire
+                4 => 2, // ice
+                2 => 3, // thunder
+                7 => 4, // poison
+                _ => 0,
+            };
+            if element > 0 && skill.level > best_level {
+                best_level = skill.level;
+                best_id = element;
+            }
+        }
+        best_id
+    }
 }
 
 mod console_error_panic_hook {

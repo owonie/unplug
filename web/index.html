@@ -11,6 +11,9 @@
     #hud{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;padding:16px}
     #stats{color:#fff;font-size:13px;text-shadow:0 0 4px #000}
     #stat-panel{margin-top:8px;font-size:11px;color:#ccc;line-height:1.8;background:rgba(0,0,0,0.7);padding:8px 10px;border-radius:6px;border:1px solid #444;max-width:160px;font-family:'Courier New',monospace}
+    #skill-slots{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap}
+    .skill-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid #555;position:relative}
+    .skill-icon .sk-lvl{position:absolute;bottom:-2px;right:0;font-size:8px;color:#ffcc00;font-weight:bold}
     #hp-bar-bg{width:200px;height:12px;background:#333;border-radius:6px;margin:4px 0;border:1px solid #555}
     #hp-bar-fill{height:100%;background:linear-gradient(90deg,#ff2222,#ff6644);border-radius:5px;transition:width 0.2s}
     #xp-bar-bg{width:200px;height:8px;background:#222;border-radius:4px;margin:2px 0;border:1px solid #444}
@@ -33,12 +36,27 @@
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
+  <!-- Start Screen -->
+  <div id="start-screen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000">
+    <h1 style="color:#ff8844;font-size:48px;margin-bottom:8px;text-shadow:0 0 20px #ff4400">UNPLUG</h1>
+    <p style="color:#888;font-size:14px;margin-bottom:24px">Fantasy Hack &amp; Slash Survivor</p>
+    <button id="start-btn" style="padding:12px 32px;font-size:16px;background:#222;color:#fff;border:2px solid #ff8844;border-radius:8px;cursor:pointer;font-family:inherit">⚔️ START GAME</button>
+    <p style="color:#555;font-size:11px;margin-top:16px">[WASD] Move | Auto-attack | Level up to survive</p>
+  </div>
+  <!-- Game Over Screen -->
+  <div id="gameover-screen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:2000">
+    <h1 style="color:#ff2222;font-size:36px;margin-bottom:16px">☠️ YOU DIED</h1>
+    <div id="final-stats" style="color:#ccc;font-size:14px;line-height:2"></div>
+    <div id="achievements" style="color:#ffcc00;font-size:12px;margin-top:12px;line-height:1.8"></div>
+    <button id="retry-btn" style="margin-top:20px;padding:10px 28px;font-size:14px;background:#222;color:#fff;border:2px solid #ff8844;border-radius:8px;cursor:pointer;font-family:inherit">🔄 RETRY</button>
+  </div>
   <div id="hud">
     <div id="stats">
       <div>LV.<span id="level">1</span></div>
       <div id="hp-bar-bg"><div id="hp-bar-fill" style="width:100%"></div></div>
       <div id="xp-bar-bg"><div id="xp-bar-fill" style="width:0%"></div></div>
       <div id="stat-panel"></div>
+      <div id="skill-slots"></div>
     </div>
   </div>
   <div id="timer">0:00</div>
@@ -57,19 +75,41 @@
     import { ThreeRenderer } from './src/renderer.js';
 
     const UPGRADE_NAMES = [
-      '⚔️ Damage +10', '👟 Speed +0.6', '⚡ Attack Speed', '🎯 Range +2.5',
+      '⚔️ Damage +10', '👟 Speed +0.6', '⚡ Attack Speed', '🎯 Range +',
       '🔫 Cleave +', '❤️ Max HP +30', '💚 Heal 50%',
       '🗡️ Pierce +1', '💥 Crit +15%', '🧛 Lifesteal +5%',
       '💫 AOE on Kill', '🧲 Magnet +2',
       '🔥 Fire Blade', '❄️ Frost Blade', '⚡ Thunder Blade', '☠️ Poison Blade',
+      '👑 PROMOTE!',
+      '🔥 Flame Aura', '❄️ Frost Armor', '⚡ Chain Lightning', '☠️ Plague',
     ];
 
     async function main() {
       await init();
-      const engine = new GameEngine();
+      let engine = new GameEngine();
 
       const canvas = document.getElementById('game-canvas');
       const renderer = new ThreeRenderer(canvas);
+
+      // === Start Screen ===
+      let gameStarted = false;
+      document.getElementById('start-btn').addEventListener('click', () => {
+        document.getElementById('start-screen').style.display = 'none';
+        gameStarted = true;
+      });
+      document.getElementById('retry-btn').addEventListener('click', () => {
+        document.getElementById('gameover-screen').style.display = 'none';
+        engine = new GameEngine();
+        gameStarted = true;
+        gameOverShown = false;
+        // Clear renderer pools
+        renderer.enemyMeshes.forEach(m => renderer.scene.remove(m));
+        renderer.enemyMeshes = [];
+        renderer.orbMeshes.forEach(m => renderer.scene.remove(m));
+        renderer.orbMeshes = [];
+        renderer.bulletMeshes.forEach(m => renderer.scene.remove(m));
+        renderer.bulletMeshes = [];
+      });
 
       // Input (use e.code for Korean IME safety)
       const keyMap = {'KeyW':'w','KeyA':'a','KeyS':'s','KeyD':'d','ArrowUp':'w','ArrowDown':'s','ArrowLeft':'a','ArrowRight':'d','Digit1':'1','Digit2':'2','Digit3':'3'};
@@ -115,7 +155,10 @@
       // HUD
       const logLines = [];
       function updateHUD() {
-        document.getElementById('level').textContent = engine.player_level();
+        const promoted = engine.player_promoted();
+        const elemNames = { 1:'🔥Flame Knight', 2:'❄️Frost Paladin', 3:'⚡Storm Warrior', 4:'☠️Death Knight' };
+        const className = promoted ? elemNames[engine.player_promoted_element()] || '⭐Champion' : '';
+        document.getElementById('level').textContent = engine.player_level() + (className ? ' ' + className : '');
         const hpPct = Math.max(0, engine.player_hp() / engine.player_max_hp() * 100);
         document.getElementById('hp-bar-fill').style.width = hpPct + '%';
         const xpPct = engine.player_xp() / engine.player_xp_max() * 100;
@@ -131,6 +174,20 @@
           `🗡️ PRC <span style="color:#ffcc44">${engine.player_pierce()}</span> ` +
           `🔫 ×<span style="color:#44ffcc">${engine.player_multi()}</span><br>` +
           `🧛 STEAL <span style="color:#ff44ff">${Math.round(engine.player_lifesteal()*100)}%</span>`;
+
+        // Skill slots
+        const SKILL_ICONS = { 0:'🔥', 4:'❄️', 2:'⚡', 7:'☠️' };
+        const SKILL_COLORS = { 0:'#ff4400', 4:'#44ccff', 2:'#ffcc00', 7:'#44ff44' };
+        const slotCount = engine.skill_slot_count();
+        let slotsHtml = '';
+        for (let i = 0; i < slotCount; i++) {
+          const id = engine.skill_slot_id(i);
+          const lv = engine.skill_slot_level(i);
+          const icon = SKILL_ICONS[id] || '⭐';
+          const color = SKILL_COLORS[id] || '#888';
+          slotsHtml += `<div class="skill-icon" style="background:${color}22;border-color:${color}">${icon}<span class="sk-lvl">${lv}</span></div>`;
+        }
+        document.getElementById('skill-slots').innerHTML = slotsHtml;
 
         const t = Math.floor(engine.game_time());
         const min = Math.floor(t / 60);
@@ -158,11 +215,54 @@
         setTimeout(() => el.remove(), 800);
       }
 
+
+      // Game Over screen with achievements
+      function showGameOver(eng) {
+        const t = Math.floor(eng.game_time());
+        const min = Math.floor(t / 60);
+        const sec = t % 60;
+        const kills = eng.kills();
+        const level = eng.player_level();
+
+        document.getElementById('final-stats').innerHTML =
+          `⏱️ Survived: ${min}:${sec.toString().padStart(2,'0')}<br>` +
+          `☠️ Kills: ${kills}<br>` +
+          `⭐ Level: ${level}<br>` +
+          `⚔️ Final ATK: ${Math.round(eng.player_damage())}`;
+
+        const titles = [];
+        if (kills >= 100) titles.push('💀 Century Slayer');
+        if (kills >= 50) titles.push('⚔️ Warrior');
+        if (kills >= 20) titles.push('🗡️ Fighter');
+        if (level >= 15) titles.push('👑 Legend');
+        if (level >= 10) titles.push('📈 Veteran');
+        if (level >= 5) titles.push('🌱 Apprentice');
+        if (t >= 300) titles.push('⏳ Eternal Survivor');
+        if (t >= 180) titles.push('🕐 Endurer');
+        if (t >= 60) titles.push('⌛ Lasted a Minute');
+        if (eng.player_promoted()) titles.push('👑 Class Promoted');
+        if (eng.player_damage() >= 100) titles.push('🔥 Weapon Master');
+
+        document.getElementById('achievements').innerHTML =
+          titles.length > 0 ? titles.map(t => '🏆 ' + t).join('<br>') : '...';
+
+        document.getElementById('gameover-screen').style.display = 'flex';
+      }
+
       // Game loop
       let lastTime = 0;
+      let gameOverShown = false;
       function loop(timestamp) {
         const dt = lastTime ? (timestamp - lastTime) / 1000 : 0.016;
         lastTime = timestamp;
+
+        if (!gameStarted) { requestAnimationFrame(loop); return; }
+
+        // Game over check
+        if (!engine.player_alive() && !gameOverShown) {
+          gameOverShown = true;
+          showGameOver(engine);
+        }
 
         engine.update(timestamp);
 
@@ -181,13 +281,14 @@
         // Damage events → popups + slash effects
         const dmgCount = engine.damage_event_count();
         const px = engine.player_x(), pz = engine.player_z();
-        const atkPower = engine.player_damage(); // 공격력 비례 색상용
+        const atkPower = engine.player_damage();
+        const element = engine.active_element(); // 0=none, 1=fire, 2=ice, 3=thunder, 4=poison
         for (let i = 0; i < dmgCount; i++) {
           const ex = engine.damage_event_x(i);
           const ez = engine.damage_event_z(i);
           const isCrit = engine.damage_event_crit(i);
           showDamagePopup(ex, ez, engine.damage_event_amount(i), isCrit);
-          renderer.spawnSlash(px, pz, ex, ez, isCrit, atkPower);
+          renderer.spawnSlash(px, pz, ex, ez, isCrit, atkPower, element);
         }
         // Death events → particles at exact enemy position
         const deathCount = engine.death_event_count();

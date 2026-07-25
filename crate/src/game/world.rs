@@ -36,7 +36,7 @@ pub struct World {
 
 impl World {
     pub fn new() -> Self {
-        let map_size = 60;
+        let map_size = 100;
         let mut world = World {
             player: Player::new(map_size as f32 / 2.0, map_size as f32 / 2.0),
             enemies: Vec::new(),
@@ -86,6 +86,7 @@ impl World {
                 self.attacking = false;
             }
         }
+        self.update_passive_skills(dt);
         self.update_enemies(dt);
         self.finalize_deaths();
         self.update_xp_pickup();
@@ -110,10 +111,12 @@ impl World {
     }
 
     fn clamp_player(&mut self) {
-        let margin = 1.0;
-        let max = self.map_size as f32 - margin;
-        self.player.x = self.player.x.clamp(margin, max);
-        self.player.z = self.player.z.clamp(margin, max);
+        // 무한 맵: 끝과 끝을 이어서 wrap
+        let size = self.map_size as f32;
+        if self.player.x < 0.0 { self.player.x += size; }
+        if self.player.x >= size { self.player.x -= size; }
+        if self.player.z < 0.0 { self.player.z += size; }
+        if self.player.z >= size { self.player.z -= size; }
     }
 
     fn auto_attack(&mut self) {
@@ -362,17 +365,148 @@ impl World {
 
     fn generate_choices(&mut self) {
         let seed = (self.time * 1000.0) as u32;
-        self.level_up_choices = [
-            seed % 16,
-            (seed / 16) % 16,
-            (seed / 256) % 16,
-        ];
-        if self.level_up_choices[1] == self.level_up_choices[0] {
-            self.level_up_choices[1] = (self.level_up_choices[1] + 1) % 16;
+
+        // 전직 완료 시: 해당 원소 전용 스킬셋만
+        if self.player.promoted {
+            let elem = self.player.promoted_element;
+            let elem_upgrade = match elem { 1=>12, 2=>13, 3=>14, 4=>15, _=>0 };
+            // 전직 전용 스킬 (17~20)
+            let class_skill = match elem { 1=>17, 2=>18, 3=>19, 4=>20, _=>0 };
+            // 선택지: 원소 강화 + 전용 스킬 + 스탯
+            let stat_pool = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11];
+            self.level_up_choices = [
+                if seed % 2 == 0 { elem_upgrade } else { class_skill },
+                if seed % 2 == 0 { class_skill } else { elem_upgrade },
+                stat_pool[(seed as usize / 3) % stat_pool.len()] as u32,
+            ];
+            if self.level_up_choices[2] == self.level_up_choices[0] {
+                self.level_up_choices[2] = stat_pool[(seed as usize / 7) % stat_pool.len()] as u32;
+            }
+            return;
         }
-        if self.level_up_choices[2] == self.level_up_choices[0] || self.level_up_choices[2] == self.level_up_choices[1] {
-            self.level_up_choices[2] = (self.level_up_choices[2] + 2) % 16;
+
+        // 원소 편향: 가장 높은 레벨 원소를 우선 제시
+        let dominant_element = self.get_dominant_element();
+        let dominant_upgrade = match dominant_element {
+            1 => 12, 2 => 13, 3 => 14, 4 => 15, _ => 99,
+        };
+
+        // 전직 가능 여부 (원소 Lv3+)
+        let can_promote = self.player.skills.iter().any(|s| s.level >= 3);
+
+        let mut choices = [0u32; 3];
+
+        if can_promote && self.player.level % 5 == 0 {
+            choices[0] = 16;
+            choices[1] = if dominant_upgrade < 16 { dominant_upgrade } else { seed % 12 };
+            choices[2] = (seed / 7) % 12;
+        } else {
+            if dominant_upgrade < 16 && seed % 3 == 0 {
+                choices[0] = dominant_upgrade;
+            } else {
+                choices[0] = seed % 16;
+            }
+            choices[1] = (seed / 16) % 16;
+            choices[2] = (seed / 256) % 12;
         }
+
+        if choices[1] == choices[0] { choices[1] = (choices[1] + 1) % 16; }
+        if choices[2] == choices[0] || choices[2] == choices[1] { choices[2] = (choices[2] + 2) % 12; }
+
+        self.level_up_choices = choices;
+    }
+
+    fn update_passive_skills(&mut self, dt: f32) {
+        if !self.player.promoted { return; }
+
+        let px = self.player.x;
+        let pz = self.player.z;
+        let elem = self.player.promoted_element;
+        let fire_level = self.player.skill_level(0);
+        let ice_level = self.player.skill_level(4);
+        let thunder_level = self.player.skill_level(2);
+        let poison_level = self.player.skill_level(7);
+
+        match elem {
+            1 => {
+                // 🔥 Fire: 주위 회전 오브 (매 0.5초마다 근처 적에게 데미지)
+                if fire_level >= 2 {
+                    let interval = 0.5 - fire_level as f32 * 0.03;
+                    let tick = (self.time / interval) as u32;
+                    let prev_tick = ((self.time - dt) / interval) as u32;
+                    if tick != prev_tick {
+                        let radius = 2.0 + fire_level as f32 * 0.3;
+                        let dmg = 5.0 + fire_level as f32 * 3.0;
+                        for enemy in &mut self.enemies {
+                            if !enemy.alive { continue; }
+                            let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
+                            if dist < radius {
+                                enemy.take_damage(dmg);
+                                self.damage_events.push((enemy.x, enemy.z, dmg, false));
+                            }
+                        }
+                    }
+                }
+            }
+            2 => {
+                // ❄️ Ice: 적 슬로우 (범위 내 속도 감소)
+                if ice_level >= 2 {
+                    let radius = 3.0 + ice_level as f32 * 0.5;
+                    for enemy in &mut self.enemies {
+                        if !enemy.alive { continue; }
+                        let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
+                        if dist < radius {
+                            // 슬로우: 속도를 프레임마다 줄임 (적이 update에서 복원하니까 매 프레임)
+                            enemy.speed = enemy.speed.min(1.5);
+                        }
+                    }
+                }
+            }
+            3 => {
+                // ⚡ Thunder: 공격 시 체인 라이트닝 (resolve_attack에서 처리)
+                // 여기선 이동속도→공속 보너스
+                if thunder_level >= 2 && self.player.moving {
+                    // 이동 중이면 공격 쿨다운 더 빨리 회복
+                    self.player.last_attack -= dt * 0.3;
+                }
+            }
+            4 => {
+                // ☠️ Poison: 체력 낮을수록 공격력 보너스 (계산은 resolve에서)
+                // 여기선 처치 시 독구름 (finalize_deaths에서 처리할 수도 있지만 간단히)
+                // 매 1초마다 주변 적에게 미약 DOT
+                if poison_level >= 2 {
+                    let tick = (self.time * 2.0) as u32;
+                    let prev_tick = ((self.time - dt) * 2.0) as u32;
+                    if tick != prev_tick {
+                        let radius = 2.5 + poison_level as f32 * 0.3;
+                        let dmg = 3.0 + poison_level as f32 * 2.0;
+                        for enemy in &mut self.enemies {
+                            if !enemy.alive { continue; }
+                            let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
+                            if dist < radius {
+                                enemy.take_damage(dmg);
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn get_dominant_element(&self) -> u32 {
+        let mut best_element = 0u32;
+        let mut best_level = 0u32;
+        for skill in &self.player.skills {
+            let element = match skill.skill_id {
+                0 => 1, 4 => 2, 2 => 3, 7 => 4, _ => 0,
+            };
+            if element > 0 && skill.level > best_level {
+                best_level = skill.level;
+                best_element = element;
+            }
+        }
+        best_element
     }
 
     pub fn choose_upgrade(&mut self, choice: u32) {
@@ -392,30 +526,93 @@ impl World {
             9 => { self.player.lifesteal += 0.05; self.log("🧛 +STEAL!".into()); }
             10 => { self.player.aoe_radius += 1.5; self.log("💫 +AOE!".into()); }
             11 => { self.player.magnet_range += 2.0; self.log("🧲 +MAGNET!".into()); }
-            // 원소 무기
             12 => {
                 self.player.attack_damage += 5.0;
                 self.player.aoe_radius += 0.8;
                 self.player.learn_skill(0);
-                self.log("🔥 FIRE BLADE! Burns enemies".into());
+                let lv = self.player.skill_level(0);
+                if lv >= 6 {
+                    self.log("🔥🔥🔥 FIRE MASTERY! Inferno unleashed!".into());
+                } else {
+                    self.log(format!("🔥 Fire Blade Lv.{}!", lv));
+                }
             }
             13 => {
                 self.player.attack_damage += 5.0;
                 self.player.attack_range += 0.5;
                 self.player.learn_skill(4);
-                self.log("❄️ FROST BLADE! Slows enemies".into());
+                let lv = self.player.skill_level(4);
+                if lv >= 6 {
+                    self.log("❄️❄️❄️ ICE MASTERY! Absolute Zero!".into());
+                } else {
+                    self.log(format!("❄️ Frost Blade Lv.{}!", lv));
+                }
             }
             14 => {
                 self.player.attack_damage += 5.0;
                 self.player.attack_cooldown = (self.player.attack_cooldown - 0.05).max(0.12);
                 self.player.learn_skill(2);
-                self.log("⚡ THUNDER BLADE! Chain lightning".into());
+                let lv = self.player.skill_level(2);
+                if lv >= 6 {
+                    self.log("⚡⚡⚡ THUNDER MASTERY! Storm Lord!".into());
+                } else {
+                    self.log(format!("⚡ Thunder Blade Lv.{}!", lv));
+                }
             }
             15 => {
                 self.player.attack_damage += 5.0;
                 self.player.lifesteal += 0.03;
                 self.player.learn_skill(7);
-                self.log("☠️ POISON BLADE! Drains life".into());
+                let lv = self.player.skill_level(7);
+                if lv >= 6 {
+                    self.log("☠️☠️☠️ POISON MASTERY! Plague Bearer!".into());
+                } else {
+                    self.log(format!("☠️ Poison Blade Lv.{}!", lv));
+                }
+            }
+            16 => {
+                // 전직!
+                let element = self.get_dominant_element();
+                self.player.promoted = true;
+                self.player.promoted_element = element;
+                let class_name = match element {
+                    1 => "🔥 Flame Knight",
+                    2 => "❄️ Frost Paladin",
+                    3 => "⚡ Storm Warrior",
+                    4 => "☠️ Death Knight",
+                    _ => "⭐ Champion",
+                };
+                self.player.attack_damage += 15.0;
+                self.player.max_hp += 50.0;
+                self.player.hp += 50.0;
+                self.player.speed += 0.5;
+                self.log(format!("👑 PROMOTED to {}!", class_name));
+            }
+            // 전직 전용 스킬
+            17 => {
+                // 🔥 Flame Aura: 화염 오브 강화
+                self.player.aoe_radius += 1.0;
+                self.player.attack_damage += 8.0;
+                self.log("🔥 Flame Aura enhanced! Fire orbits stronger".into());
+            }
+            18 => {
+                // ❄️ Frost Armor: 피격 시 주변 빙결
+                self.player.max_hp += 20.0;
+                self.player.hp += 20.0;
+                self.player.attack_range += 0.5;
+                self.log("❄️ Frost Armor! Freeze on hit, wider reach".into());
+            }
+            19 => {
+                // ⚡ Chain Lightning: 공격 체인 수 증가
+                self.player.attack_count += 1;
+                self.player.attack_cooldown = (self.player.attack_cooldown - 0.04).max(0.1);
+                self.log("⚡ Chain Lightning! Attacks bounce more".into());
+            }
+            20 => {
+                // ☠️ Plague: 독 범위 + 흡혈 강화
+                self.player.lifesteal += 0.04;
+                self.player.aoe_radius += 0.8;
+                self.log("☠️ Plague spreads! More drain, wider poison".into());
             }
             _ => {}
         }

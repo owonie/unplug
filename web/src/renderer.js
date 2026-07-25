@@ -15,7 +15,7 @@ export class ThreeRenderer {
     // Camera — top-down follow
     const aspect = window.innerWidth / window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 200);
-    this.camera.position.set(30, 20, 45); // 시작 위치 (플레이어 근처)
+    this.camera.position.set(30, 12, 40); // 시작 위치
     this.camera.lookAt(30, 0, 30);
 
     // Resize
@@ -169,9 +169,9 @@ export class ThreeRenderer {
     const { playerX, playerZ, playerMoving, playerDirX, playerDirZ, enemies, bullets, orbs } = state;
 
     // Camera follows player smoothly
-    const targetCamPos = new THREE.Vector3(playerX, 20, playerZ + 15);
+    const targetCamPos = new THREE.Vector3(playerX, 12, playerZ + 10);
     this.camera.position.lerp(targetCamPos, 0.15);
-    this.camera.lookAt(playerX, 1, playerZ);
+    this.camera.lookAt(playerX, 0, playerZ);
 
     this.playerLight.position.set(playerX, 3, playerZ);
 
@@ -336,13 +336,12 @@ export class ThreeRenderer {
     }
   }
 
-  spawnSlash(fromX, fromZ, toX, toZ, isCrit, atkPower = 25) {
+  spawnSlash(fromX, fromZ, toX, toZ, isCrit, atkPower = 25, element = 0) {
     const dx = toX - fromX;
     const dz = toZ - fromZ;
     const angle = Math.atan2(dx, dz);
 
-    // 공격력 비례 크기/색상 (25 기본 → 100+ 강화)
-    const power = Math.min((atkPower - 25) / 80, 1.0); // 0~1 (25~105)
+    const power = Math.min((atkPower - 25) / 80, 1.0);
     const length = (isCrit ? 2.5 : 1.5) + power * 1.0;
     const baseWidth = (isCrit ? 0.6 : 0.3) + power * 0.3;
 
@@ -354,12 +353,24 @@ export class ThreeRenderer {
 
     const geo = new THREE.ShapeGeometry(shape);
 
-    // 색상: 연한 하늘 → 파랑 → 보라 (공격력 비례)
+    // 원소별 색상
     let color;
     if (isCrit) {
-      color = new THREE.Color(0xff2200); // 크리티컬은 항상 빨강
+      color = new THREE.Color(0xff2200);
+    } else if (element === 1) {
+      // 🔥 Fire: 주황→빨강
+      color = new THREE.Color(1.0, 0.4 + power * 0.2, 0.0);
+    } else if (element === 2) {
+      // ❄️ Ice: 밝은 하늘→진한 시안
+      color = new THREE.Color(0.2, 0.7 + power * 0.3, 1.0);
+    } else if (element === 3) {
+      // ⚡ Thunder: 밝은 노랑→금색
+      color = new THREE.Color(1.0, 0.9 - power * 0.2, 0.1);
+    } else if (element === 4) {
+      // ☠️ Poison: 연두→진한 초록
+      color = new THREE.Color(0.2, 0.9 - power * 0.2, 0.1);
     } else {
-      // 공격력 낮으면 연한 하늘, 높으면 진한 보라
+      // 무원소: 하늘→보라 (기본)
       const r = 0.4 + power * 0.3;
       const g = 0.8 - power * 0.6;
       const b = 1.0;
@@ -383,8 +394,10 @@ export class ThreeRenderer {
     this.slashEffects.push({ mesh, life: 0.15, maxLife: 0.15, isCrit, expand: false });
 
     if (isCrit) {
+      // 크리티컬 링 (원소 색상)
+      const ringColor = element === 1 ? 0xff4400 : element === 2 ? 0x00ccff : element === 3 ? 0xffcc00 : element === 4 ? 0x44ff00 : 0xff4400;
       const ringGeo = new THREE.RingGeometry(0.2, 0.5 + power * 0.3, 16);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false });
+      const ringMat = new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false });
       const ring = new THREE.Mesh(ringGeo, ringMat);
       ring.position.set(toX, 0.1, toZ);
       ring.rotation.x = -Math.PI / 2;
@@ -500,17 +513,31 @@ export class ThreeRenderer {
     for (let i = data.length; i < pool.length; i++) {
       pool[i].visible = false;
     }
-    // Show/create
+    // Show/create — check type match for enemies
     for (let i = 0; i < data.length; i++) {
       let mesh = pool[i];
+
+      // 타입이 다르면 재생성 (적 종류 변경 방지)
+      if (mesh && mesh.userData.entityType !== undefined && data[i].type !== undefined && mesh.userData.entityType !== data[i].type) {
+        this.scene.remove(mesh);
+        mesh = null;
+        pool[i] = null;
+      }
+
       if (!mesh) {
         mesh = createFn(data[i]);
+        mesh.userData.entityType = data[i].type !== undefined ? data[i].type : -1;
         this.scene.add(mesh);
-        pool.push(mesh);
+        pool[i] = mesh;
       }
       mesh.visible = true;
       mesh.position.x = data[i].x;
       mesh.position.z = data[i].z;
+    }
+
+    // Clean up nulls
+    for (let i = pool.length - 1; i >= 0; i--) {
+      if (pool[i] === null) pool.splice(i, 1);
     }
   }
 }

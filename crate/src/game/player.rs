@@ -22,6 +22,9 @@ pub struct Player {
     pub magnet_range: f32,
     // Skills (learned, max 6 slots)
     pub skills: Vec<SkillSlot>,
+    // Promotion
+    pub promoted: bool,
+    pub promoted_element: u32, // 0=none, 1=fire, 2=ice, 3=thunder, 4=poison
     // Movement
     pub dir_x: f32,
     pub dir_z: f32,
@@ -106,6 +109,8 @@ impl Player {
             aoe_radius: 0.0,
             magnet_range: 1.5,
             skills: Vec::new(),
+            promoted: false,
+            promoted_element: 0,
             dir_x: 0.0,
             dir_z: 0.0,
             moving: false,
