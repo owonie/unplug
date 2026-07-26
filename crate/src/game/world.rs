@@ -328,7 +328,7 @@ impl World {
             let dist = ((orb.x - px).powi(2) + (orb.z - pz).powi(2)).sqrt();
             if dist < pickup_range {
                 orb.alive = false;
-                if self.player.add_xp(3) {
+                if self.player.add_xp(orb.xp_value) {
                     leveled = true;
                 }
             }
@@ -348,7 +348,14 @@ impl World {
             if enemy.is_dying() && enemy.knockback_done() {
                 enemy.alive = false;
                 self.death_events.push((enemy.x, enemy.z));
-                self.xp_orbs.push(ResourcePickup::new(enemy.x, enemy.z, 0));
+                // XP based on enemy type: 0=skeleton(small), 1=imp(med), 2=golem(med), 3=wraith(large)
+                let orb_type = match enemy.enemy_type {
+                    0 => 0, // small
+                    1 | 2 => 1, // medium
+                    3 => 2, // large
+                    _ => 0,
+                };
+                self.xp_orbs.push(ResourcePickup::new(enemy.x, enemy.z, orb_type));
                 self.kills += 1;
             }
         }
@@ -457,7 +464,7 @@ impl World {
                 let angle = i as f32 * std::f32::consts::PI / 4.0;
                 self.xp_orbs.push(ResourcePickup::new(
                     self.boss_x + angle.cos() * 1.5,
-                    self.boss_z + angle.sin() * 1.5, 0
+                    self.boss_z + angle.sin() * 1.5, 3 // boss orb
                 ));
             }
             self.log_queue.push_back("👑 BOSS DEFEATED! Massive XP!".into());

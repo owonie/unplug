@@ -670,7 +670,7 @@
         const orbs = [];
         const oc = engine.orb_count();
         for (let i = 0; i < oc; i++) {
-          orbs.push({ x: engine.orb_x(i), z: engine.orb_z(i) });
+          orbs.push({ x: engine.orb_x(i), z: engine.orb_z(i), type: engine.orb_type(i) });
         }
         // Damage events → popups + slash effects + sound (only when game running)
         if (!engine.level_up_pending()) {

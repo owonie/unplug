@@ -393,11 +393,16 @@ export class ThreeRenderer {
       this.scene.remove(m);
     }
 
-    // XP Orbs (판타지 = 소울/에센스)
-    this.updatePool(this.orbMeshes, orbs, () => {
+    // XP Orbs — size/color by type (0=small, 1=med, 2=large, 3=boss)
+    this.updatePool(this.orbMeshes, orbs, (data) => {
+      const t = data ? (data.type || 0) : 0;
+      const sizes = [0.1, 0.15, 0.22, 0.3];
+      const colors = [0xaa88ff, 0x44ddff, 0xffcc00, 0xff4488];
+      const emissives = [0x6644ff, 0x2288ff, 0xff8800, 0xff0044];
+      const size = sizes[t] || 0.1;
       const m = new THREE.Mesh(
-        new THREE.OctahedronGeometry(0.12, 0),
-        new THREE.MeshStandardMaterial({ color: 0xaa88ff, emissive: 0x6644ff, emissiveIntensity: 1.5, transparent: true, opacity: 0.8 })
+        new THREE.OctahedronGeometry(size, 0),
+        new THREE.MeshStandardMaterial({ color: colors[t] || 0xaa88ff, emissive: emissives[t] || 0x6644ff, emissiveIntensity: 1.5, transparent: true, opacity: 0.85 })
       );
       return m;
     });

@@ -123,6 +123,7 @@ impl GameEngine {
     pub fn orb_count(&self) -> u32 { self.world.xp_orbs.len() as u32 }
     pub fn orb_x(&self, i: u32) -> f32 { self.world.xp_orbs.get(i as usize).map(|o| o.x).unwrap_or(0.0) }
     pub fn orb_z(&self, i: u32) -> f32 { self.world.xp_orbs.get(i as usize).map(|o| o.z).unwrap_or(0.0) }
+    pub fn orb_type(&self, i: u32) -> u32 { self.world.xp_orbs.get(i as usize).map(|o| o.res_type).unwrap_or(0) }
 
     // === Log ===
     pub fn pop_log(&mut self) -> Option<String> { self.world.log_queue.pop_front() }
