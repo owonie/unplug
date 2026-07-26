@@ -1091,6 +1091,9 @@
           }
         }
 
+        // Update shield visual (follows player)
+        if (renderer.updateShield) renderer.updateShield(engine.player_x(), engine.player_z(), dt / 1000);
+
         renderer.update({
           playerX: engine.player_x(),
           playerZ: engine.player_z(),

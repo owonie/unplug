@@ -810,29 +810,62 @@ export class ThreeRenderer {
     };
   }
 
-  // === Shield: thin ring → expands → explodes (Sion W) ===
+  // === Shield: ring follows player 5s → explodes ===
   spawnShieldEffect(x, z, element = 0) {
     const colors = { 1: 0xff6633, 2: 0x6699bb, 3: 0xddcc44, 4: 0x7744aa, 0: 0x88ccff };
     const color = colors[element] || 0x88ccff;
-    // Thin ring around player
-    const ringGeo = new THREE.TorusGeometry(0.8, 0.04, 8, 24);
-    const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 });
+    // Persistent ring that follows player
+    const ringGeo = new THREE.TorusGeometry(1.0, 0.05, 8, 24);
+    const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45 });
     const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.set(x, 0.6, z);
+    ring.position.set(x, 0.5, z);
     ring.rotation.x = Math.PI / 2;
     this.scene.add(ring);
-    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 1.8, isRing: true, scale: 1 });
+    // Store as persistent shield visual (updated every frame)
+    this._shieldRing = { mesh: ring, life: 5.0, color };
 
-    // After 1.5s → burst
-    setTimeout(() => {
-      const burstGeo = new THREE.RingGeometry(0.5, 1.8, 16);
-      const burstMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
-      const burst = new THREE.Mesh(burstGeo, burstMat);
-      burst.position.set(x, 0.2, z);
-      burst.rotation.x = -Math.PI / 2;
-      this.scene.add(burst);
-      this.deathParticles.push({ mesh: burst, vx: 0, vy: 0, vz: 0, life: 0.3, isRing: true, scale: 1 });
-    }, 1500);
+    // Second outer ring
+    const outerGeo = new THREE.TorusGeometry(1.2, 0.03, 6, 20);
+    const outerMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.2 });
+    const outer = new THREE.Mesh(outerGeo, outerMat);
+    outer.position.set(x, 0.5, z);
+    outer.rotation.x = Math.PI / 2;
+    this.scene.add(outer);
+    this._shieldOuter = { mesh: outer };
+  }
+
+  // Call every frame to update shield position
+  updateShield(playerX, playerZ, dt) {
+    if (this._shieldRing) {
+      this._shieldRing.life -= dt;
+      this._shieldRing.mesh.position.set(playerX, 0.5, playerZ);
+      this._shieldRing.mesh.rotation.z += dt * 2; // slow spin
+      // Pulse opacity as timer runs out
+      const t = this._shieldRing.life;
+      this._shieldRing.mesh.material.opacity = t > 1 ? 0.45 : 0.2 + Math.sin(t * 15) * 0.2;
+
+      if (this._shieldOuter) {
+        this._shieldOuter.mesh.position.set(playerX, 0.5, playerZ);
+        this._shieldOuter.mesh.rotation.z -= dt * 1.5;
+        this._shieldOuter.mesh.material.opacity = t > 1 ? 0.2 : 0.1;
+      }
+
+      if (t <= 0) {
+        // Burst!
+        this.scene.remove(this._shieldRing.mesh);
+        if (this._shieldOuter) this.scene.remove(this._shieldOuter.mesh);
+        // Burst ring
+        const burstGeo = new THREE.RingGeometry(0.5, 2.5, 20);
+        const burstMat = new THREE.MeshBasicMaterial({ color: this._shieldRing.color, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+        const burst = new THREE.Mesh(burstGeo, burstMat);
+        burst.position.set(playerX, 0.2, playerZ);
+        burst.rotation.x = -Math.PI / 2;
+        this.scene.add(burst);
+        this.deathParticles.push({ mesh: burst, vx: 0, vy: 0, vz: 0, life: 0.4, isRing: true, scale: 1 });
+        this._shieldRing = null;
+        this._shieldOuter = null;
+      }
+    }
   }
 
   // === Ultimate: big magic circle on ground + screen flash ===
@@ -899,22 +932,23 @@ export class ThreeRenderer {
   }
 
   _spawnFireBreath(x, z, dirX, dirZ, range) {
-    // Fire breath: dramatic cone stream
-    for (let i = 0; i < 12; i++) {
-      const t = (i / 12) * range * 0.9;
-      const spread = (Math.random() - 0.5) * 0.5 * (t / range);
-      const size = 0.05 + (t / range) * 0.08;
+    // Wide fan breath
+    for (let i = 0; i < 15; i++) {
+      const spreadAngle = ((i / 14) - 0.5) * 1.8; // wide ~100° fan
+      const sdx = dirX * Math.cos(spreadAngle) - dirZ * Math.sin(spreadAngle);
+      const sdz = dirX * Math.sin(spreadAngle) + dirZ * Math.cos(spreadAngle);
+      const t = 0.5 + Math.random() * range * 0.8;
+      const size = 0.05 + (t / range) * 0.06;
       const geo = new THREE.SphereGeometry(size, 4, 4);
       const colors = [0xffcc44, 0xff8800, 0xff5500, 0xcc2200];
       const mat = new THREE.MeshBasicMaterial({
-        color: colors[Math.floor(i/3)],
-        transparent: true, opacity: 0.55 - (i/12) * 0.2
+        color: colors[Math.floor(Math.random() * 4)],
+        transparent: true, opacity: 0.5
       });
       const mesh = new THREE.Mesh(geo, mat);
-      const perpX = -dirZ, perpZ = dirX;
-      mesh.position.set(x + dirX * (t + 0.5) + perpX * spread, 0.3, z + dirZ * (t + 0.5) + perpZ * spread);
+      mesh.position.set(x + sdx * 0.5, 0.3, z + sdz * 0.5);
       this.scene.add(mesh);
-      this.deathParticles.push({ mesh, vx: dirX * 6, vy: 0.2 + Math.random() * 0.5, vz: dirZ * 6, life: 0.2 + i * 0.015 });
+      this.deathParticles.push({ mesh, vx: sdx * 6, vy: 0.2, vz: sdz * 6, life: 0.25 + Math.random() * 0.1 });
     }
   }
 
@@ -946,17 +980,17 @@ export class ThreeRenderer {
   }
 
   _spawnIceWave(x, z, dirX, dirZ, range) {
-    // Subtle fan-shaped frost particles
-    for (let i = 0; i < 5; i++) {
-      const spreadAngle = ((i / 4) - 0.5) * 0.8;
+    // Wide frost wave
+    for (let i = 0; i < 8; i++) {
+      const spreadAngle = ((i / 7) - 0.5) * 1.6; // ~90° fan
       const sdx = dirX * Math.cos(spreadAngle) - dirZ * Math.sin(spreadAngle);
       const sdz = dirX * Math.sin(spreadAngle) + dirZ * Math.cos(spreadAngle);
-      const geo = new THREE.ConeGeometry(0.03, 0.15, 4);
-      const mat = new THREE.MeshBasicMaterial({ color: 0x6699aa, transparent: true, opacity: 0.5 });
+      const geo = new THREE.ConeGeometry(0.04, 0.18, 4);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x6699aa, transparent: true, opacity: 0.45 });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(x + sdx * 0.5, 0.2, z + sdz * 0.5);
       this.scene.add(mesh);
-      this.deathParticles.push({ mesh, vx: sdx * 5, vy: 0.3, vz: sdz * 5, life: 0.35 });
+      this.deathParticles.push({ mesh, vx: sdx * 6, vy: 0.2, vz: sdz * 6, life: 0.35 });
     }
   }
 
