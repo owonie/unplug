@@ -811,23 +811,24 @@ export class ThreeRenderer {
   }
 
   // === Shield: thin ring → expands → explodes (Sion W) ===
-  spawnShieldEffect(x, z) {
+  spawnShieldEffect(x, z, element = 0) {
+    const colors = { 1: 0xff6633, 2: 0x6699bb, 3: 0xddcc44, 4: 0x7744aa, 0: 0x88ccff };
+    const color = colors[element] || 0x88ccff;
     // Thin ring around player
     const ringGeo = new THREE.TorusGeometry(0.8, 0.04, 8, 24);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 });
+    const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.position.set(x, 0.6, z);
     ring.rotation.x = Math.PI / 2;
     this.scene.add(ring);
-    // Ring stays 1.5s then pops
-    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 1.8, isRing: true, scale: 1, isShield: true });
+    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 1.8, isRing: true, scale: 1 });
 
-    // After 1.5s → explosion ring (handled in particle update)
+    // After 1.5s → burst
     setTimeout(() => {
-      const burstGeo = new THREE.RingGeometry(0.5, 2.0, 20);
-      const burstMat = new THREE.MeshBasicMaterial({ color: 0xaaddff, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+      const burstGeo = new THREE.RingGeometry(0.5, 1.8, 16);
+      const burstMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
       const burst = new THREE.Mesh(burstGeo, burstMat);
-      burst.position.set(x, 0.3, z);
+      burst.position.set(x, 0.2, z);
       burst.rotation.x = -Math.PI / 2;
       this.scene.add(burst);
       this.deathParticles.push({ mesh: burst, vx: 0, vy: 0, vz: 0, life: 0.3, isRing: true, scale: 1 });

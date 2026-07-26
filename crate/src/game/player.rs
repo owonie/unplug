@@ -142,8 +142,8 @@ impl Player {
             }
         }
 
-        // Stamina regen (3/s base, 5/s if promoted)
-        let regen = if self.class_tier > 0 { 5.0 } else { 3.0 };
+        // Stamina regen (8/s base, 12/s if promoted)
+        let regen = if self.class_tier > 0 { 12.0 } else { 8.0 };
         self.stamina = (self.stamina + regen * dt).min(self.max_stamina);
 
         // Dashing: fast movement + invulnerable

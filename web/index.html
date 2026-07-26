@@ -392,14 +392,21 @@
             // Arrow: show direction for outward
             if (gesture === 'outward') {
               const angle = Math.atan2(dy, dx);
-              const arrows = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'];
-              const idx = Math.round((angle + Math.PI) / (Math.PI/4)) % 8;
+              // 8 directions: right=0, down-right=1, down=2...
+              const arrows = ['➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️', '⬆️', '↗️'];
+              let idx = Math.round(angle / (Math.PI / 4));
+              if (idx < 0) idx += 8;
+              idx = idx % 8;
               arrowEl.textContent = arrows[idx];
-              arrowEl.style.left = (pos.x + dx * 0.4) + 'px';
-              arrowEl.style.top = (pos.y + dy * 0.4 - 14) + 'px';
+              arrowEl.style.fontSize = '32px';
+              // Position: ahead of player in drag direction
+              const arrowDist = 50;
+              arrowEl.style.left = (pos.x + Math.cos(angle) * arrowDist - 16) + 'px';
+              arrowEl.style.top = (pos.y + Math.sin(angle) * arrowDist - 16) + 'px';
               arrowEl.style.opacity = '1';
             } else if (gesture === 'inward') {
               arrowEl.textContent = '🛡️';
+              arrowEl.style.fontSize = '28px';
               arrowEl.style.left = (pos.x - 14) + 'px';
               arrowEl.style.top = (pos.y - 14) + 'px';
               arrowEl.style.opacity = '1';
@@ -439,7 +446,7 @@
               showSkillName('outward');
             } else if (gesture === 'inward') {
               engine.use_shield_skill();
-              renderer.spawnShieldEffect(engine.player_x(), engine.player_z());
+              renderer.spawnShieldEffect(engine.player_x(), engine.player_z(), engine.player_class_element() || engine.active_element());
               renderer.shake(0.15, 0.05);
               showSkillName('inward');
             } else if (gesture === 'circle') {

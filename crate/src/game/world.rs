@@ -228,7 +228,7 @@ impl World {
         let target_z = self.enemies[main_target].z;
 
         // 2. 메인 타겟 주변 클리브 범위 (1.5 + 레벨 보너스) 내 모든 적 타격
-        let cleave_radius = 1.5 + self.player.attack_count as f32 * 0.3; // multi-shot = 넓은 클리브
+        let cleave_radius = 0.8 + self.player.attack_count as f32 * 0.2; // tight cleave, ~2 enemies
         let mut total_damage = 0.0_f32;
         let mut kills: Vec<(f32, f32)> = Vec::new();
 
@@ -910,7 +910,7 @@ impl World {
     /// Ultimate skill (circle gesture) — massive AoE
     pub fn use_ultimate_skill(&mut self) {
         if self.player.class_tier == 0 { return; }
-        let cost = 80.0;
+        let cost = 50.0; // was 80, too expensive
         if self.player.stamina < cost { return; }
 
         self.player.stamina -= cost;
