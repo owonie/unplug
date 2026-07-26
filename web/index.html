@@ -324,6 +324,7 @@
       let magicCircle = null;
       let dragPoints = []; // for gesture recognition
       let arrowEl = null;
+      let trailCanvas = null;
 
       gameCanvas.addEventListener('mousedown', e => {
         if (!gameStarted || !engine) return;
@@ -353,6 +354,38 @@
 
           // Detect gesture type
           const gesture = detectGesture(dragPoints, dragStart);
+
+          // Draw drag trail (spell trajectory)
+          if (!trailCanvas) {
+            const tc = document.createElement('canvas');
+            tc.width = window.innerWidth;
+            tc.height = window.innerHeight;
+            tc.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:899';
+            document.body.appendChild(tc);
+            trailCanvas = tc;
+          }
+          const ctx = trailCanvas.getContext('2d');
+          ctx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+          if (dragPoints.length > 2) {
+            const elem = engine.player_class_element() || engine.active_element();
+            const trailColors = { 1:'rgba(255,100,0,0.5)', 2:'rgba(100,150,200,0.4)', 3:'rgba(255,220,50,0.5)', 4:'rgba(120,50,180,0.4)', 0:'rgba(150,150,255,0.4)' };
+            ctx.strokeStyle = trailColors[elem] || trailColors[0];
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(dragPoints[0].x, dragPoints[0].y);
+            for (let p = 1; p < dragPoints.length; p++) {
+              ctx.lineTo(dragPoints[p].x, dragPoints[p].y);
+            }
+            ctx.stroke();
+
+            // If circle detected, show glow
+            if (gesture === 'circle') {
+              ctx.strokeStyle = 'rgba(255,200,0,0.7)';
+              ctx.lineWidth = 5;
+              ctx.stroke();
+            }
+          }
 
           // Show magic circle at player
           if (!magicCircle) {
@@ -432,6 +465,7 @@
 
         if (magicCircle) { magicCircle.remove(); magicCircle = null; }
         if (arrowEl) { arrowEl.remove(); arrowEl = null; }
+        if (trailCanvas) { trailCanvas.remove(); trailCanvas = null; }
 
         if (btn === 0 && engine.player_class_tier() > 0) {
           // LEFT CLICK: 1st class element skills
@@ -507,8 +541,8 @@
         const dy = last.y - start.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
 
-        // Check for circle: did the path curve significantly?
-        if (points.length > 15) {
+        // Check for circle: must rotate nearly full 360° (330°+)
+        if (points.length > 20) {
           let totalAngle = 0;
           for (let i = 2; i < points.length; i++) {
             const ax = points[i-1].x - points[i-2].x;
@@ -519,8 +553,8 @@
             const dot = ax * bx + ay * by;
             totalAngle += Math.atan2(cross, dot);
           }
-          // If total rotation > 270 degrees, it's a circle
-          if (Math.abs(totalAngle) > Math.PI * 1.5) return 'circle';
+          // Full circle = 330°+ rotation
+          if (Math.abs(totalAngle) > Math.PI * 1.83) return 'circle';
         }
 
         // Check direction relative to player screen position

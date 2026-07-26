@@ -859,17 +859,17 @@ impl World {
     pub fn use_directional_skill(&mut self, angle: f32) {
         if self.player.class_tier == 0 { return; }
         if self.player.active_skill_cd > 0.0 { return; }
-        let cost = 25.0;
+        let cost = 20.0;
         if self.player.stamina < cost { return; }
 
         self.player.stamina -= cost;
-        self.player.active_skill_cd = 1.5;
+        self.player.active_skill_cd = 1.2;
 
         let px = self.player.x;
         let pz = self.player.z;
         let range = 6.0;
-        let cone_half = 0.6; // ~70 degree cone
-        let damage = self.player.attack_damage * 2.0;
+        let cone_half = 0.3; // ~72 degree cone (wider)
+        let damage = self.player.attack_damage * 3.0; // 3x ATK
 
         let dir_x = angle.cos();
         let dir_z = -angle.sin(); // screen Y is inverted
@@ -910,11 +910,12 @@ impl World {
     /// Ultimate skill (circle gesture) — massive AoE
     pub fn use_ultimate_skill(&mut self) {
         if self.player.class_tier == 0 { return; }
-        let cost = 50.0; // was 80, too expensive
+        let cost = 50.0;
         if self.player.stamina < cost { return; }
+        if self.player.active_skill_cd > 3.0 { return; } // still on ult CD
 
         self.player.stamina -= cost;
-        self.player.active_skill_cd = 5.0; // long CD
+        self.player.active_skill_cd = 15.0; // 15s cooldown
 
         let px = self.player.x;
         let pz = self.player.z;
