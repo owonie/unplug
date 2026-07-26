@@ -84,6 +84,8 @@ export class ThreeRenderer {
     this.deathParticles = [];
     this.prevEnemyCount = 0;
     this.slashEffects = []; // {mesh, life, maxLife}
+    this.elementOrbs = [];
+    this._orbKey = '';
   }
 
   async loadModels() {
@@ -230,8 +232,112 @@ export class ThreeRenderer {
 
     // No mixer needed for sprites
 
+    // === Element Orbs — 전직 후에는 체내 흡수 (오브 안 보임, 글로우만) ===
+    const isPromoted = state.promoted || false;
+    const orbKey = isPromoted ? 'absorbed' : `${state.fireLv||0}_${state.iceLv||0}_${state.thunderLv||0}_${state.poisonLv||0}`;
+    if (orbKey !== this._orbKey) {
+      this.elementOrbs.forEach(o => this.scene.remove(o));
+      this.elementOrbs = [];
+      this._orbKey = orbKey;
+
+      if (!isPromoted) {
+        const elemData = [
+          { level: state.fireLv || 0, color: 0xff4400 },
+          { level: state.iceLv || 0, color: 0x44ccff },
+          { level: state.thunderLv || 0, color: 0xffcc00 },
+          { level: state.poisonLv || 0, color: 0x44ff44 },
+        ];
+        for (const ed of elemData) {
+          for (let i = 0; i < ed.level; i++) {
+            const size = 0.1 + ed.level * 0.015;
+            const geo = new THREE.SphereGeometry(size, 8, 6);
+            const mat = new THREE.MeshBasicMaterial({ color: ed.color, transparent: true, opacity: 0.75 });
+            const orb = new THREE.Mesh(geo, mat);
+            const light = new THREE.PointLight(ed.color, 0.3, 2);
+            orb.add(light);
+            this.scene.add(orb);
+            this.elementOrbs.push(orb);
+          }
+        }
+      } else {
+        // 전직 후: 캐릭터 빛 색상 변경
+        const elemColors = { 1: 0xff4400, 2: 0x44ccff, 3: 0xffcc00, 4: 0x44ff44 };
+        if (this.playerLight) {
+          this.playerLight.color.set(elemColors[state.element] || 0xffffcc);
+          this.playerLight.intensity = 3.0;
+          this.playerLight.distance = 8;
+        }
+      }
+    }
+
+    // Animate orbs around player
+    if (this.elementOrbs.length > 0) {
+      const t = this.clock.getElapsedTime();
+      const orbCount = this.elementOrbs.length;
+      this.elementOrbs.forEach((orb, i) => {
+        const angle = t * 2.5 + (i * Math.PI * 2 / orbCount);
+        const radius = 1.0 + Math.sin(t * 1.5 + i) * 0.2;
+        orb.position.set(
+          playerX + Math.cos(angle) * radius,
+          0.6 + Math.sin(t * 3 + i * 2) * 0.2,
+          playerZ + Math.sin(angle) * radius
+        );
+      });
+    }
+
     // Enemies
     this.updatePool(this.enemyMeshes, enemies, (e) => this.createZombie(e.type));
+
+    // Boss
+    if (state.bossActive) {
+      if (!this.bossMesh) {
+        const group = new THREE.Group();
+        const body = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.6, 1.5, 8, 12),
+          new THREE.MeshStandardMaterial({ color: 0x440000, roughness: 0.7 })
+        );
+        body.position.y = 1.0;
+        body.castShadow = true;
+        group.add(body);
+        const head = new THREE.Mesh(
+          new THREE.SphereGeometry(0.4, 8, 6),
+          new THREE.MeshStandardMaterial({ color: 0x660000 })
+        );
+        head.position.y = 2.2;
+        group.add(head);
+        // Crown
+        const crown = new THREE.Mesh(
+          new THREE.ConeGeometry(0.25, 0.3, 6),
+          new THREE.MeshStandardMaterial({ color: 0xffcc00, emissive: 0xff8800, emissiveIntensity: 1 })
+        );
+        crown.position.y = 2.6;
+        group.add(crown);
+        // Eyes
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const le = new THREE.Mesh(new THREE.SphereGeometry(0.06, 4, 4), eyeMat);
+        le.position.set(-0.12, 2.25, 0.3); group.add(le);
+        const re = new THREE.Mesh(new THREE.SphereGeometry(0.06, 4, 4), eyeMat);
+        re.position.set(0.12, 2.25, 0.3); group.add(re);
+        // Aura light
+        const light = new THREE.PointLight(0xff2200, 2, 5);
+        light.position.y = 1.5;
+        group.add(light);
+
+        this.bossMesh = group;
+        this.scene.add(group);
+      }
+      this.bossMesh.visible = true;
+      this.bossMesh.position.set(state.bossX, 0, state.bossZ);
+      // Face player
+      const dx = playerX - state.bossX;
+      const dz = playerZ - state.bossZ;
+      this.bossMesh.rotation.y = Math.atan2(dx, dz);
+      // Pulse
+      const pulse = 1.0 + Math.sin(this.clock.getElapsedTime() * 3) * 0.05;
+      this.bossMesh.scale.set(pulse, pulse, pulse);
+    } else if (this.bossMesh) {
+      this.bossMesh.visible = false;
+    }
 
     // No bullets - melee attack (create slash effect instead)
     // Clear any leftover bullet meshes

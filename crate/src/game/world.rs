@@ -19,11 +19,19 @@ pub struct World {
     pub spawn_timer: f32,
     pub spawn_interval: f32,
     pub difficulty: f32,
+    pub wave_number: u32,
+    pub wave_timer: f32,
+    pub boss_active: bool,
+    pub boss_hp: f32,
+    pub boss_max_hp: f32,
+    pub boss_x: f32,
+    pub boss_z: f32,
     // Level up state
     pub level_up_pending: bool,
     pub level_up_choices: [u32; 3],
     // Stats
     pub game_time: f32,
+    pub paused: bool,
     // Damage popups (x, z, damage, is_crit)
     pub damage_events: Vec<(f32, f32, f32, bool)>,
     // Death events (x, z) for explosion particles
@@ -50,9 +58,17 @@ impl World {
             spawn_timer: 0.0,
             spawn_interval: 2.0,
             difficulty: 1.0,
+            wave_number: 1,
+            wave_timer: 0.0,
+            boss_active: false,
+            boss_hp: 0.0,
+            boss_max_hp: 0.0,
+            boss_x: 50.0,
+            boss_z: 50.0,
             level_up_pending: false,
             level_up_choices: [0, 1, 2],
             game_time: 0.0,
+            paused: false,
             damage_events: Vec::new(),
             death_events: Vec::new(),
             attack_windup: 0.0,
@@ -64,15 +80,15 @@ impl World {
     }
 
     pub fn update(&mut self, dt: f32) {
-        if !self.player.alive || self.level_up_pending { return; }
+        if !self.player.alive || self.level_up_pending || self.paused { return; }
 
         self.time += dt;
         self.game_time += dt;
         self.damage_events.clear();
         self.death_events.clear();
 
-        // Increase difficulty over time
-        self.difficulty = 1.0 + self.game_time / 30.0; // +1 every 30s
+        // Increase difficulty over time (slower curve)
+        self.difficulty = 1.0 + self.game_time / 60.0; // +1 every 60s (was 30s)
 
         self.handle_input();
         self.player.update(dt);
@@ -339,27 +355,110 @@ impl World {
 
     fn spawn_enemies(&mut self, dt: f32) {
         self.spawn_timer += dt;
+        self.wave_timer += dt;
 
-        // Spawn faster as difficulty increases
-        let interval = (self.spawn_interval / self.difficulty).max(0.3);
+        // 30초마다 웨이브 변경
+        if self.wave_timer >= 30.0 {
+            self.wave_timer = 0.0;
+            self.wave_number += 1;
+            self.difficulty = 1.0 + self.wave_number as f32 * 0.3;
 
+            // 매 5웨이브 보스
+            if self.wave_number % 5 == 0 {
+                self.spawn_boss();
+            }
+
+            self.log_queue.push_back(format!("⚠️ Wave {}!", self.wave_number));
+        }
+
+        // 일반 적 스폰
+        let interval = (self.spawn_interval / self.difficulty).max(0.4);
         if self.spawn_timer >= interval {
             self.spawn_timer = 0.0;
 
-            let count = (self.difficulty as u32).min(5);
+            // 웨이브별 적 종류 제한
+            let max_type = match self.wave_number {
+                1 => 0,      // 스켈레톤만
+                2..=3 => 1,  // +임프
+                4..=5 => 2,  // +골렘
+                _ => 3,      // 전부
+            };
+
+            let count = (self.difficulty as u32).min(6);
             let px = self.player.x;
             let pz = self.player.z;
 
             for _ in 0..count {
-                // Spawn at random position around player (outside view)
                 let angle = (self.time * 7.7 + self.enemies.len() as f32 * 2.3) % (std::f32::consts::PI * 2.0);
-                let dist = 12.0 + (self.time * 3.3).sin().abs() * 5.0;
-                let x = (px + angle.cos() * dist).clamp(1.0, self.map_size as f32 - 1.0);
-                let z = (pz + angle.sin() * dist).clamp(1.0, self.map_size as f32 - 1.0);
+                let dist = 14.0 + (self.time * 3.3).sin().abs() * 6.0;
+                let x = px + angle.cos() * dist;
+                let z = pz + angle.sin() * dist;
+                let size = self.map_size as f32;
+                let x = ((x % size) + size) % size;
+                let z = ((z % size) + size) % size;
 
-                let enemy_type = ((self.kills / 10) % 4) as u32;
-                self.enemies.push(Enemy::new(x, z, enemy_type.min(3)));
+                let enemy_type = ((self.enemies.len() as u32) % (max_type + 1)).min(3);
+                self.enemies.push(Enemy::new(x, z, enemy_type));
             }
+        }
+
+        // 보스 업데이트
+        if self.boss_active {
+            self.update_boss(dt);
+        }
+    }
+
+    fn spawn_boss(&mut self) {
+        let px = self.player.x;
+        let pz = self.player.z;
+        self.boss_active = true;
+        self.boss_max_hp = 200.0 + self.wave_number as f32 * 50.0;
+        self.boss_hp = self.boss_max_hp;
+        self.boss_x = px + 10.0;
+        self.boss_z = pz;
+        self.log_queue.push_back(format!("💀 BOSS WAVE {}! Defeat the boss!", self.wave_number));
+    }
+
+    fn update_boss(&mut self, dt: f32) {
+        if !self.boss_active { return; }
+
+        // 보스 이동 (플레이어 추격, 느림)
+        let dx = self.player.x - self.boss_x;
+        let dz = self.player.z - self.boss_z;
+        let dist = (dx * dx + dz * dz).sqrt().max(0.1);
+        let boss_speed = 2.0;
+        self.boss_x += dx / dist * boss_speed * dt;
+        self.boss_z += dz / dist * boss_speed * dt;
+
+        // 보스 플레이어 공격
+        if dist < 1.5 && ((self.time * 2.0) as u32 % 30 == 0) {
+            self.player.take_damage(15.0);
+        }
+
+        // 보스 피격 (클리브가 보스도 때림)
+        // resolve_attack에서 처리하도록 — 보스를 enemies에 큰 적으로 추가
+        // 간단하게: 플레이어 공격 범위 안이면 보스도 맞음
+        let attack_range = self.player.attack_range;
+        if dist < attack_range && self.time - self.player.last_attack < 0.05 {
+            let dmg = self.player.attack_damage;
+            self.boss_hp -= dmg;
+            self.damage_events.push((self.boss_x, self.boss_z, dmg, false));
+        }
+
+        // 보스 사망
+        if self.boss_hp <= 0.0 {
+            self.boss_active = false;
+            self.kills += 5;
+            self.death_events.push((self.boss_x, self.boss_z));
+            // 대량 XP 드롭
+            for i in 0..8 {
+                let angle = i as f32 * std::f32::consts::PI / 4.0;
+                self.xp_orbs.push(ResourcePickup::new(
+                    self.boss_x + angle.cos() * 1.5,
+                    self.boss_z + angle.sin() * 1.5, 0
+                ));
+            }
+            self.log_queue.push_back("👑 BOSS DEFEATED! Massive XP!".into());
         }
     }
 
@@ -391,12 +490,12 @@ impl World {
             1 => 12, 2 => 13, 3 => 14, 4 => 15, _ => 99,
         };
 
-        // 전직 가능 여부 (원소 Lv3+)
-        let can_promote = self.player.skills.iter().any(|s| s.level >= 3);
+        // 전직 가능 여부 (원소 Lv2+ & 아직 미전직)
+        let can_promote = !self.player.promoted && self.player.skills.iter().any(|s| s.level >= 2);
 
         let mut choices = [0u32; 3];
 
-        if can_promote && self.player.level % 5 == 0 {
+        if can_promote && self.player.level >= 5 && self.player.level % 5 == 0 {
             choices[0] = 16;
             choices[1] = if dominant_upgrade < 16 { dominant_upgrade } else { seed % 12 };
             choices[2] = (seed / 7) % 12;

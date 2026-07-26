@@ -31,6 +31,8 @@ impl GameEngine {
 
     pub fn on_key_down(&mut self, key: &str) { self.world.input.key_down(key); }
     pub fn on_key_up(&mut self, key: &str) { self.world.input.key_up(key); }
+    pub fn toggle_pause(&mut self) { self.world.paused = !self.world.paused; }
+    pub fn is_paused(&self) -> bool { self.world.paused }
 
     pub fn choose_upgrade(&mut self, choice: u32) { self.world.choose_upgrade(choice); }
 
@@ -77,6 +79,15 @@ impl GameEngine {
     // === Game state ===
     pub fn kills(&self) -> u32 { self.world.kills }
     pub fn game_time(&self) -> f32 { self.world.game_time }
+    pub fn wave_number(&self) -> u32 { self.world.wave_number }
+    pub fn boss_active(&self) -> bool { self.world.boss_active }
+    pub fn boss_hp_pct(&self) -> f32 { if self.world.boss_max_hp > 0.0 { self.world.boss_hp / self.world.boss_max_hp } else { 0.0 } }
+    pub fn boss_x(&self) -> f32 { self.world.boss_x }
+    pub fn boss_z(&self) -> f32 { self.world.boss_z }
+    pub fn final_points(&self) -> u32 {
+        // 포인트 = kills + 시간보너스 + 레벨보너스
+        self.world.kills + (self.world.game_time as u32 / 10) + self.world.player.level * 2
+    }
     pub fn level_up_pending(&self) -> bool { self.world.level_up_pending }
     pub fn level_up_choice(&self, idx: u32) -> u32 { self.world.level_up_choices[idx as usize % 3] }
 
@@ -119,16 +130,11 @@ impl GameEngine {
 
     // === Active element (highest level element for effects) ===
     pub fn active_element(&self) -> u32 {
-        // 0=none, 1=fire, 2=ice, 3=thunder, 4=poison
         let mut best_id = 0u32;
         let mut best_level = 0u32;
         for skill in &self.world.player.skills {
             let element = match skill.skill_id {
-                0 => 1, // fire
-                4 => 2, // ice
-                2 => 3, // thunder
-                7 => 4, // poison
-                _ => 0,
+                0 => 1, 4 => 2, 2 => 3, 7 => 4, _ => 0,
             };
             if element > 0 && skill.level > best_level {
                 best_level = skill.level;
@@ -137,6 +143,24 @@ impl GameEngine {
         }
         best_id
     }
+
+    pub fn active_element_level(&self) -> u32 {
+        let mut best_level = 0u32;
+        for skill in &self.world.player.skills {
+            let element = match skill.skill_id {
+                0 => 1, 4 => 2, 2 => 3, 7 => 4, _ => 0,
+            };
+            if element > 0 && skill.level > best_level {
+                best_level = skill.level;
+            }
+        }
+        best_level
+    }
+
+    pub fn fire_level(&self) -> u32 { self.world.player.skill_level(0) }
+    pub fn ice_level(&self) -> u32 { self.world.player.skill_level(4) }
+    pub fn thunder_level(&self) -> u32 { self.world.player.skill_level(2) }
+    pub fn poison_level(&self) -> u32 { self.world.player.skill_level(7) }
 }
 
 mod console_error_panic_hook {

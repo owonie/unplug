@@ -46,18 +46,36 @@
     <button id="start-btn" style="padding:12px 32px;font-size:16px;background:#222;color:#fff;border:2px solid #ff8844;border-radius:8px;cursor:pointer;font-family:inherit">⚔️ START GAME</button>
     <p style="color:#555;font-size:11px;margin-top:16px">[WASD] Move | Auto-attack | Level up to survive</p>
   </div>
+  <!-- Pause Menu -->
+  <div id="pause-menu" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:1999">
+    <h2 style="color:#fff;font-size:28px;margin-bottom:16px">⏸️ PAUSED</h2>
+    <p style="color:#888;font-size:12px;margin-bottom:20px">Press ESC to resume</p>
+    <div id="pause-skills" style="color:#ccc;font-size:12px;line-height:2;background:rgba(0,0,0,0.5);padding:16px;border-radius:8px;border:1px solid #444;max-width:350px;margin-bottom:16px"></div>
+    <button id="resume-btn" style="padding:10px 24px;font-size:14px;background:#222;color:#fff;border:2px solid #888;border-radius:8px;cursor:pointer;font-family:inherit">▶️ Resume</button>
+  </div>
   <!-- Game Over Screen -->
   <div id="gameover-screen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:2000">
     <h1 style="color:#ff2222;font-size:36px;margin-bottom:16px">☠️ YOU DIED</h1>
     <div id="final-stats" style="color:#ccc;font-size:14px;line-height:2"></div>
-    <div id="achievements" style="color:#ffcc00;font-size:12px;margin-top:12px;line-height:1.8"></div>
-    <button id="retry-btn" style="margin-top:20px;padding:10px 28px;font-size:14px;background:#222;color:#fff;border:2px solid #ff8844;border-radius:8px;cursor:pointer;font-family:inherit">🔄 RETRY</button>
+    <div id="points-earned" style="color:#ffcc00;font-size:18px;margin:12px 0"></div>
+    <div id="achievements" style="color:#ffcc00;font-size:12px;margin-top:8px;line-height:1.8"></div>
+    <div style="margin-top:16px;display:flex;gap:12px">
+      <button id="gacha-btn" style="padding:10px 24px;font-size:14px;background:#2a1a00;color:#ffcc00;border:2px solid #ffcc00;border-radius:8px;cursor:pointer;font-family:inherit">🎰 GACHA (10pts)</button>
+      <button id="retry-btn" style="padding:10px 28px;font-size:14px;background:#222;color:#fff;border:2px solid #ff8844;border-radius:8px;cursor:pointer;font-family:inherit">🔄 RETRY</button>
+    </div>
+    <div id="gacha-result" style="color:#fff;font-size:13px;margin-top:12px;min-height:24px"></div>
+    <div id="unlocked-list" style="color:#888;font-size:11px;margin-top:8px"></div>
   </div>
   <div id="hud">
     <div id="stats">
-      <div>LV.<span id="level">1</span></div>
-      <div id="hp-bar-bg"><div id="hp-bar-fill" style="width:100%"></div></div>
-      <div id="xp-bar-bg"><div id="xp-bar-fill" style="width:0%"></div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div id="portrait" style="width:40px;height:40px;border-radius:50%;border:2px solid #555;display:flex;align-items:center;justify-content:center;font-size:20px;background:#111">🗡️</div>
+        <div>
+          <div>LV.<span id="level">1</span></div>
+          <div id="hp-bar-bg"><div id="hp-bar-fill" style="width:100%"></div></div>
+          <div id="xp-bar-bg"><div id="xp-bar-fill" style="width:0%"></div></div>
+        </div>
+      </div>
       <div id="stat-panel"></div>
       <div id="skill-slots"></div>
     </div>
@@ -76,6 +94,9 @@
   <script type="module">
     import init, { GameEngine } from './pkg/unplug_engine.js';
     import { ThreeRenderer } from './src/renderer.js';
+    import { SoundManager } from './src/sound.js';
+
+    const sound = new SoundManager();
 
     const UPGRADE_NAMES = [
       '⚔️ Damage +10', '👟 Speed +0.6', '⚡ Attack Speed', '🎯 Range +',
@@ -122,6 +143,7 @@
       document.getElementById('start-btn').addEventListener('click', () => {
         document.getElementById('start-screen').style.display = 'none';
         gameStarted = true;
+        sound.init();
       });
       document.getElementById('retry-btn').addEventListener('click', () => {
         document.getElementById('gameover-screen').style.display = 'none';
@@ -141,6 +163,16 @@
       const keyMap = {'KeyW':'w','KeyA':'a','KeyS':'s','KeyD':'d','ArrowUp':'w','ArrowDown':'s','ArrowLeft':'a','ArrowRight':'d','Digit1':'1','Digit2':'2','Digit3':'3'};
       document.addEventListener('keydown', e => {
         const k = keyMap[e.code] || e.key.toLowerCase();
+
+        // ESC = pause toggle
+        if (e.code === 'Escape') {
+          engine.toggle_pause();
+          const paused = engine.is_paused();
+          document.getElementById('pause-menu').style.display = paused ? 'flex' : 'none';
+          if (paused) updatePauseSkills();
+          return;
+        }
+
         engine.on_key_down(k);
 
         // Level up choice
@@ -154,6 +186,40 @@
         const k = keyMap[e.code] || e.key.toLowerCase();
         engine.on_key_up(k);
       });
+
+      document.getElementById('resume-btn').addEventListener('click', () => {
+        engine.toggle_pause();
+        document.getElementById('pause-menu').style.display = 'none';
+      });
+
+      function updatePauseSkills() {
+        const SKILL_TREE = { 0:'🔥 Fire', 4:'❄️ Ice', 2:'⚡ Thunder', 7:'☠️ Poison' };
+        const SKILL_LV_DESC = {
+          0: ['화염 검기', '화염 오브 DOT', '오브 강화', '인페르노 범위↑', 'MAX: 화염 폭풍'],
+          4: ['빙결 검기', '적 슬로우', '빙결 갑옷', '절대영도 범위', 'MAX: 영구 빙결'],
+          2: ['번개 검기', '이동→공속', '체인 라이트닝', '연쇄 범위↑', 'MAX: 번개 폭풍'],
+          7: ['맹독 검기', '주변 DOT', '독 확산', '역병 범위↑', 'MAX: 전체 독'],
+        };
+        let html = '<b>📜 Skill Tree</b><br>';
+        const count = engine.skill_slot_count();
+        for (let i = 0; i < count; i++) {
+          const id = engine.skill_slot_id(i);
+          const lv = engine.skill_slot_level(i);
+          const name = SKILL_TREE[id] || 'Unknown';
+          const descs = SKILL_LV_DESC[id] || [];
+          html += `<br><b>${name} Lv.${lv}/5</b><br>`;
+          for (let j = 0; j < 5; j++) {
+            const unlocked = j < lv;
+            html += `  ${unlocked ? '✅' : '🔒'} Lv.${j+1}: ${descs[j] || '???'}<br>`;
+          }
+        }
+        if (count === 0) html += '<span style="color:#666">아직 배운 원소 없음</span>';
+        if (engine.player_promoted()) {
+          const elemNames = {1:'🔥Flame Knight',2:'❄️Frost Paladin',3:'⚡Storm Warrior',4:'☠️Death Knight'};
+          html += `<br><b>👑 ${elemNames[engine.player_promoted_element()] || 'Champion'}</b>`;
+        }
+        document.getElementById('pause-skills').innerHTML = html;
+      }
 
       // Level up buttons
       for (let i = 0; i < 3; i++) {
@@ -178,16 +244,29 @@
         const el = document.getElementById('levelup');
         el.style.display = 'none';
         el.classList.remove('shown');
+        levelUpShown = false;
+        sound.playPickup(); // 스킬 선택 확인 사운드
       }
 
       // HUD
       const logLines = [];
       let lastSkillKey = '';
+      let levelUpShown = false;
       function updateHUD() {
         const promoted = engine.player_promoted();
         const elemNames = { 1:'🔥Flame Knight', 2:'❄️Frost Paladin', 3:'⚡Storm Warrior', 4:'☠️Death Knight' };
         const className = promoted ? elemNames[engine.player_promoted_element()] || '⭐Champion' : '';
         document.getElementById('level').textContent = engine.player_level() + (className ? ' ' + className : '');
+
+        // Portrait: 원소에 따라 변경
+        const elem = engine.active_element();
+        const portrait = document.getElementById('portrait');
+        const portraitIcons = { 0:'🗡️', 1:'🔥', 2:'❄️', 3:'⚡', 4:'☠️' };
+        const portraitBorders = { 0:'#555', 1:'#ff4400', 2:'#44ccff', 3:'#ffcc00', 4:'#44ff44' };
+        portrait.textContent = portraitIcons[elem] || '🗡️';
+        portrait.style.borderColor = portraitBorders[elem] || '#555';
+        if (promoted) portrait.style.boxShadow = `0 0 10px ${portraitBorders[elem]}`;
+        else portrait.style.boxShadow = 'none';
         const hpPct = Math.max(0, engine.player_hp() / engine.player_max_hp() * 100);
         document.getElementById('hp-bar-fill').style.width = hpPct + '%';
         const xpPct = engine.player_xp() / engine.player_xp_max() * 100;
@@ -248,9 +327,25 @@
         const min = Math.floor(t / 60);
         const sec = t % 60;
         document.getElementById('timer').textContent = `${min}:${sec.toString().padStart(2,'0')}`;
-        document.getElementById('kills').textContent = `${engine.kills()} kills`;
+        document.getElementById('kills').textContent = `Wave ${engine.wave_number()} | ${engine.kills()} kills`;
 
-        if (engine.level_up_pending() && !document.getElementById('levelup').classList.contains('shown')) showLevelUp();
+        // Boss HP bar
+        if (engine.boss_active()) {
+          let bossBar = document.getElementById('boss-bar');
+          if (!bossBar) {
+            bossBar = document.createElement('div');
+            bossBar.id = 'boss-bar';
+            bossBar.style.cssText = 'position:fixed;top:50px;left:50%;transform:translateX(-50%);width:300px;text-align:center;z-index:100';
+            bossBar.innerHTML = '<div style="color:#ff4444;font-size:12px;margin-bottom:4px">💀 BOSS</div><div style="width:100%;height:10px;background:#333;border-radius:5px;border:1px solid #ff4444"><div id="boss-hp-fill" style="height:100%;background:linear-gradient(90deg,#ff2222,#ff6644);border-radius:4px;transition:width 0.1s"></div></div>';
+            document.body.appendChild(bossBar);
+          }
+          document.getElementById('boss-hp-fill').style.width = (engine.boss_hp_pct() * 100) + '%';
+        } else {
+          const bossBar = document.getElementById('boss-bar');
+          if (bossBar) bossBar.remove();
+        }
+
+        if (engine.level_up_pending() && !levelUpShown) { showLevelUp(); levelUpShown = true; sound.playLevelUp(); }
 
         let log;
         while ((log = engine.pop_log()) !== undefined) { logLines.push(log); if (logLines.length > 4) logLines.shift(); }
@@ -278,12 +373,21 @@
         const sec = t % 60;
         const kills = eng.kills();
         const level = eng.player_level();
+        const points = eng.final_points();
+
+        // Add points to saved total
+        let totalPoints = parseInt(localStorage.getItem('unplug_points') || '0');
+        totalPoints += points;
+        localStorage.setItem('unplug_points', totalPoints);
 
         document.getElementById('final-stats').innerHTML =
           `⏱️ Survived: ${min}:${sec.toString().padStart(2,'0')}<br>` +
           `☠️ Kills: ${kills}<br>` +
           `⭐ Level: ${level}<br>` +
           `⚔️ Final ATK: ${Math.round(eng.player_damage())}`;
+
+        document.getElementById('points-earned').innerHTML =
+          `💰 +${points} pts (Total: ${totalPoints})`;
 
         const titles = [];
         if (kills >= 100) titles.push('💀 Century Slayer');
@@ -299,9 +403,72 @@
         if (eng.player_damage() >= 100) titles.push('🔥 Weapon Master');
 
         document.getElementById('achievements').innerHTML =
-          titles.length > 0 ? titles.map(t => '🏆 ' + t).join('<br>') : '...';
+          titles.length > 0 ? titles.map(t => '🏆 ' + t).join('<br>') : '';
 
+        updateUnlockedList();
         document.getElementById('gameover-screen').style.display = 'flex';
+      }
+
+      // === GACHA SYSTEM ===
+      const GACHA_POOL = [
+        { name: '⚔️ 시작 ATK +5', stat: 'atk', value: 5, rarity: '일반' },
+        { name: '❤️ 시작 HP +20', stat: 'hp', value: 20, rarity: '일반' },
+        { name: '👟 시작 SPD +0.3', stat: 'spd', value: 0.3, rarity: '일반' },
+        { name: '🎯 시작 RNG +0.5', stat: 'rng', value: 0.5, rarity: '일반' },
+        { name: '💥 시작 CRT +5%', stat: 'crt', value: 0.05, rarity: '희귀' },
+        { name: '🧲 시작 MAGNET +1', stat: 'mag', value: 1, rarity: '희귀' },
+        { name: '🔥 Fire Starter (시작 시 불 Lv1)', stat: 'elem_fire', value: 1, rarity: '에픽' },
+        { name: '❄️ Ice Starter (시작 시 얼음 Lv1)', stat: 'elem_ice', value: 1, rarity: '에픽' },
+        { name: '⚡ Thunder Starter (시작 시 번개 Lv1)', stat: 'elem_thunder', value: 1, rarity: '에픽' },
+        { name: '☠️ Poison Starter (시작 시 독 Lv1)', stat: 'elem_poison', value: 1, rarity: '에픽' },
+        { name: '👑 즉시 전직권', stat: 'instant_promote', value: 1, rarity: '전설' },
+      ];
+
+      document.getElementById('gacha-btn').addEventListener('click', () => {
+        let pts = parseInt(localStorage.getItem('unplug_points') || '0');
+        if (pts < 10) {
+          document.getElementById('gacha-result').innerHTML = '<span style="color:#ff4444">포인트 부족! (10pt 필요)</span>';
+          return;
+        }
+        pts -= 10;
+        localStorage.setItem('unplug_points', pts);
+        document.getElementById('points-earned').innerHTML = `💰 Total: ${pts}`;
+        sound.playGacha();
+
+        // 가챠 뽑기 (가중치)
+        const roll = Math.random();
+        let item;
+        if (roll < 0.05) { // 5% 전설
+          item = GACHA_POOL[10];
+        } else if (roll < 0.2) { // 15% 에픽
+          item = GACHA_POOL[6 + Math.floor(Math.random() * 4)];
+        } else if (roll < 0.45) { // 25% 희귀
+          item = GACHA_POOL[4 + Math.floor(Math.random() * 2)];
+        } else { // 55% 일반
+          item = GACHA_POOL[Math.floor(Math.random() * 4)];
+        }
+
+        // 저장
+        let unlocked = JSON.parse(localStorage.getItem('unplug_unlocked') || '[]');
+        unlocked.push(item);
+        localStorage.setItem('unplug_unlocked', JSON.stringify(unlocked));
+
+        const rarityColors = { '일반': '#aaa', '희귀': '#4488ff', '에픽': '#aa44ff', '전설': '#ffcc00' };
+        document.getElementById('gacha-result').innerHTML =
+          `🎉 <span style="color:${rarityColors[item.rarity]}">[${item.rarity}] ${item.name}</span>`;
+        updateUnlockedList();
+      });
+
+      function updateUnlockedList() {
+        const unlocked = JSON.parse(localStorage.getItem('unplug_unlocked') || '[]');
+        if (unlocked.length === 0) {
+          document.getElementById('unlocked-list').textContent = '아직 해금된 아이템 없음';
+        } else {
+          const counts = {};
+          unlocked.forEach(i => { counts[i.name] = (counts[i.name]||0) + 1; });
+          document.getElementById('unlocked-list').innerHTML =
+            '📦 보유: ' + Object.entries(counts).map(([n,c]) => `${n}${c>1?' x'+c:''}`).join(', ');
+        }
       }
 
       // Game loop
@@ -333,22 +500,33 @@
         for (let i = 0; i < oc; i++) {
           orbs.push({ x: engine.orb_x(i), z: engine.orb_z(i) });
         }
-        // Damage events → popups + slash effects
-        const dmgCount = engine.damage_event_count();
-        const px = engine.player_x(), pz = engine.player_z();
-        const atkPower = engine.player_damage();
-        const element = engine.active_element(); // 0=none, 1=fire, 2=ice, 3=thunder, 4=poison
-        for (let i = 0; i < dmgCount; i++) {
-          const ex = engine.damage_event_x(i);
-          const ez = engine.damage_event_z(i);
-          const isCrit = engine.damage_event_crit(i);
-          showDamagePopup(ex, ez, engine.damage_event_amount(i), isCrit);
-          renderer.spawnSlash(px, pz, ex, ez, isCrit, atkPower, element);
-        }
-        // Death events → particles at exact enemy position
-        const deathCount = engine.death_event_count();
-        for (let i = 0; i < deathCount; i++) {
-          renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i));
+        // Damage events → popups + slash effects + sound (only when game running)
+        if (!engine.level_up_pending()) {
+          const dmgCount = engine.damage_event_count();
+          const px = engine.player_x(), pz = engine.player_z();
+          const atkPower = engine.player_damage();
+          const element = engine.active_element(); // 0=none, 1=fire, 2=ice, 3=thunder, 4=poison
+          for (let i = 0; i < dmgCount; i++) {
+            const ex = engine.damage_event_x(i);
+            const ez = engine.damage_event_z(i);
+            const isCrit = engine.damage_event_crit(i);
+            showDamagePopup(ex, ez, engine.damage_event_amount(i), isCrit);
+            renderer.spawnSlash(px, pz, ex, ez, isCrit, atkPower, element);
+            if (i === 0) {
+              if (isCrit) sound.playCrit();
+              else if (element === 1) sound.playElementFire();
+              else if (element === 2) sound.playElementIce();
+              else if (element === 3) sound.playElementThunder();
+              else if (element === 4) sound.playElementPoison();
+              else sound.playHit();
+            }
+          }
+          // Death events → particles + sound
+          const deathCount = engine.death_event_count();
+          for (let i = 0; i < deathCount; i++) {
+            renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i));
+            if (i === 0) sound.playDeath();
+          }
         }
 
         renderer.update({
@@ -360,6 +538,17 @@
           playerHit: engine.player_hit(),
           playerAttacking: engine.player_attacking(),
           nearestEnemyDirX: engine.nearest_enemy_dir_x(),
+          element: engine.active_element(),
+          elementLevel: engine.active_element_level(),
+          fireLv: engine.fire_level(),
+          iceLv: engine.ice_level(),
+          thunderLv: engine.thunder_level(),
+          poisonLv: engine.poison_level(),
+          bossActive: engine.boss_active(),
+          bossX: engine.boss_x(),
+          bossZ: engine.boss_z(),
+          bossHpPct: engine.boss_hp_pct(),
+          promoted: engine.player_promoted(),
           enemies, bullets, orbs,
         }, dt);
 
