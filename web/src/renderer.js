@@ -875,40 +875,135 @@ export class ThreeRenderer {
 
   // === Ultimate: big magic circle on ground + screen flash ===
   spawnUltimateEffect(x, z, element, range) {
-    // Giant ground circle
-    const circGeo = new THREE.RingGeometry(range * 0.3, range * 0.8, 32);
+    // Element-specific ultimate effects
     const colors = { 1: 0xff4400, 2: 0x44ccff, 3: 0xffcc00, 4: 0x9933ff, 0: 0xffffff };
     const color = colors[element] || 0xffffff;
-    const circMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+
+    // Base ground circle (all elements)
+    const circGeo = new THREE.RingGeometry(range * 0.2, range * 0.85, 48);
+    const circMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
     const circ = new THREE.Mesh(circGeo, circMat);
     circ.position.set(x, 0.08, z);
     circ.rotation.x = -Math.PI / 2;
     this.scene.add(circ);
-    this.deathParticles.push({ mesh: circ, vx: 0, vy: 0, vz: 0, life: 1.2, isRing: true, scale: 0.5 });
+    this.deathParticles.push({ mesh: circ, vx: 0, vy: 0, vz: 0, life: 1.5, isRing: true, scale: 0.3 });
 
-    // Inner spinning circle
-    const innerGeo = new THREE.RingGeometry(range * 0.1, range * 0.25, 16);
-    const innerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-    const inner = new THREE.Mesh(innerGeo, innerMat);
-    inner.position.set(x, 0.1, z);
-    inner.rotation.x = -Math.PI / 2;
-    this.scene.add(inner);
-    this.deathParticles.push({ mesh: inner, vx: 0, vy: 0, vz: 0, life: 1.0, isRing: true, scale: 0.3 });
+    switch (element) {
+      case 1: // 🔥 Fire: eruption pillars + radial explosions
+        for (let i = 0; i < 12; i++) {
+          const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.3;
+          const r = range * (0.2 + Math.random() * 0.6);
+          const size = 0.2 + Math.random() * 0.2;
+          const geo = new THREE.SphereGeometry(size, 6, 6);
+          const mat = new THREE.MeshBasicMaterial({ color: [0xff4400, 0xff6600, 0xff2200, 0xffaa00][i%4], transparent: true, opacity: 0.5 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(x + Math.cos(angle) * r, 0.1, z + Math.sin(angle) * r);
+          this.scene.add(mesh);
+          this.deathParticles.push({ mesh, vx: 0, vy: 6 + Math.random() * 4, vz: 0, life: 0.6 + Math.random() * 0.3 });
+        }
+        // Fire ring expanding outward
+        for (let i = 0; i < 16; i++) {
+          const angle = (i / 16) * Math.PI * 2;
+          const geo = new THREE.SphereGeometry(0.15, 5, 5);
+          const mat = new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.4 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(x, 0.3, z);
+          this.scene.add(mesh);
+          this.deathParticles.push({ mesh, vx: Math.cos(angle) * 8, vy: 1, vz: Math.sin(angle) * 8, life: 0.7, isRing: true, scale: 0.8 });
+        }
+        break;
 
-    // Rising pillar particles
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2;
-      const r = range * 0.5;
-      const geo = new THREE.SphereGeometry(0.08, 4, 4);
-      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6 });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x + Math.cos(angle) * r, 0.2, z + Math.sin(angle) * r);
-      this.scene.add(mesh);
-      this.deathParticles.push({ mesh, vx: 0, vy: 4 + Math.random() * 2, vz: 0, life: 0.8 });
+      case 2: // ❄️ Ice: crystalline shatter + frost wave
+        for (let i = 0; i < 10; i++) {
+          const angle = (i / 10) * Math.PI * 2;
+          const r = range * (0.3 + Math.random() * 0.5);
+          const geo = new THREE.OctahedronGeometry(0.15 + Math.random() * 0.1);
+          const mat = new THREE.MeshBasicMaterial({ color: [0x88ddff, 0xaaeeff, 0x66ccff, 0xffffff][i%4], transparent: true, opacity: 0.6 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(x + Math.cos(angle) * r, 0.5 + Math.random() * 1.5, z + Math.sin(angle) * r);
+          this.scene.add(mesh);
+          this.deathParticles.push({ mesh, vx: (Math.random()-0.5)*2, vy: -3, vz: (Math.random()-0.5)*2, life: 1.0 });
+        }
+        // Frost floor wave
+        for (let i = 0; i < 20; i++) {
+          const angle = (i / 20) * Math.PI * 2;
+          const geo = new THREE.SphereGeometry(0.12, 4, 4);
+          const mat = new THREE.MeshBasicMaterial({ color: 0x99eeff, transparent: true, opacity: 0.3 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(x, 0.05, z);
+          this.scene.add(mesh);
+          this.deathParticles.push({ mesh, vx: Math.cos(angle) * 6, vy: 0, vz: Math.sin(angle) * 6, life: 0.9, isRing: true, scale: 0.5 });
+        }
+        break;
+
+      case 3: // ⚡ Thunder: multi-bolt strike from sky + ground shockwave
+        for (let i = 0; i < 6; i++) {
+          const angle = (i / 6) * Math.PI * 2 + Math.random() * 0.5;
+          const r = range * (0.15 + Math.random() * 0.5);
+          const bx = x + Math.cos(angle) * r;
+          const bz = z + Math.sin(angle) * r;
+          // Vertical bolt (sky→ground)
+          const pts = [];
+          for (let j = 0; j <= 6; j++) {
+            const y = 5 - (j / 6) * 5;
+            const jitter = j > 0 && j < 6 ? (Math.random() - 0.5) * 0.4 : 0;
+            pts.push(new THREE.Vector3(bx + jitter, y, bz + jitter));
+          }
+          const curve = new THREE.CatmullRomCurve3(pts);
+          const tubeGeo = new THREE.TubeGeometry(curve, 8, 0.04, 4, false);
+          const tubeMat = new THREE.MeshBasicMaterial({ color: 0xffff88, transparent: true, opacity: 0.9 });
+          const bolt = new THREE.Mesh(tubeGeo, tubeMat);
+          this.scene.add(bolt);
+          this.deathParticles.push({ mesh: bolt, vx: 0, vy: 0, vz: 0, life: 0.15 + Math.random() * 0.1, isRing: true, scale: 1, noScale: true });
+          // Impact spark at ground
+          const sparkGeo = new THREE.SphereGeometry(0.25, 6, 6);
+          const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffffcc, transparent: true, opacity: 0.8 });
+          const spark = new THREE.Mesh(sparkGeo, sparkMat);
+          spark.position.set(bx, 0.1, bz);
+          this.scene.add(spark);
+          this.deathParticles.push({ mesh: spark, vx: 0, vy: 0, vz: 0, life: 0.2, isRing: true, scale: 0.5 });
+        }
+        break;
+
+      case 4: // ☠️ Poison: toxic eruption + rising miasma
+        for (let i = 0; i < 14; i++) {
+          const angle = (i / 14) * Math.PI * 2 + Math.random() * 0.4;
+          const r = range * (0.1 + Math.random() * 0.7);
+          const geo = new THREE.SphereGeometry(0.2 + Math.random() * 0.15, 5, 5);
+          const mat = new THREE.MeshBasicMaterial({ color: [0x6622aa, 0x9933ff, 0x441188, 0xaa44ff][i%4], transparent: true, opacity: 0.35 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(x + Math.cos(angle) * r, 0.1, z + Math.sin(angle) * r);
+          this.scene.add(mesh);
+          this.deathParticles.push({ mesh, vx: (Math.random()-0.5)*1.5, vy: 2 + Math.random() * 2, vz: (Math.random()-0.5)*1.5, life: 1.2, isRing: true, scale: 0.6 });
+        }
+        // Bubbling ground ring
+        for (let i = 0; i < 10; i++) {
+          const angle = (i / 10) * Math.PI * 2;
+          const r = range * 0.6;
+          const geo = new THREE.SphereGeometry(0.08, 4, 4);
+          const mat = new THREE.MeshBasicMaterial({ color: 0x33ff33, transparent: true, opacity: 0.5 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(x + Math.cos(angle) * r, 0.05, z + Math.sin(angle) * r);
+          this.scene.add(mesh);
+          this.deathParticles.push({ mesh, vx: 0, vy: 3 + Math.random() * 2, vz: 0, life: 0.5 + Math.random() * 0.3 });
+        }
+        break;
+
+      default: // Generic white burst
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const r = range * 0.5;
+          const geo = new THREE.SphereGeometry(0.1, 4, 4);
+          const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(x + Math.cos(angle) * r, 0.2, z + Math.sin(angle) * r);
+          this.scene.add(mesh);
+          this.deathParticles.push({ mesh, vx: 0, vy: 4 + Math.random() * 2, vz: 0, life: 0.8 });
+        }
     }
 
-    // Screen flash (brief white overlay via hit stop)
-    this.hitStop(0.08);
+    // Screen flash
+    this.hitStop(0.1);
   }
 
   // === Element Skill Visual Effects ===

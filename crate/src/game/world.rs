@@ -953,7 +953,7 @@ impl World {
 
         let px = self.player.x;
         let pz = self.player.z;
-        let range = 10.0;
+        let range = 14.0;
         let damage = self.player.attack_damage * 5.0;
 
         for enemy in &mut self.enemies {

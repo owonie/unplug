@@ -204,31 +204,114 @@ export class SoundManager {
     osc.start(t); osc.stop(t + 0.12);
   }
 
-  playUltimate() {
-    // 💫 Epic rising tone + reverb feel
+  playUltimate(element) {
     if (!this.enabled || !this.ctx) return;
     const t = this.ctx.currentTime;
-    // Rising sweep
-    const osc = this.ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(200, t);
-    osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
-    const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0.06, t);
-    g.gain.setValueAtTime(0.06, t + 0.25);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-    osc.connect(g).connect(this.ctx.destination);
-    osc.start(t); osc.stop(t + 0.5);
-    // Impact boom
-    const boom = this.ctx.createOscillator();
-    boom.type = 'sine';
-    boom.frequency.setValueAtTime(80, t + 0.3);
-    boom.frequency.exponentialRampToValueAtTime(30, t + 0.6);
-    const bg = this.ctx.createGain();
-    bg.gain.setValueAtTime(0.08, t + 0.3);
-    bg.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-    boom.connect(bg).connect(this.ctx.destination);
-    boom.start(t + 0.3); boom.stop(t + 0.6);
+    const ctx = this.ctx;
+
+    switch (element) {
+      case 1: // 🔥 Fire: deep eruption boom + rising roar
+        {
+          const boom = ctx.createOscillator(); boom.type = 'sine';
+          boom.frequency.setValueAtTime(60, t);
+          boom.frequency.exponentialRampToValueAtTime(25, t + 0.4);
+          const bg = ctx.createGain();
+          bg.gain.setValueAtTime(0.1, t);
+          bg.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+          boom.connect(bg).connect(ctx.destination);
+          boom.start(t); boom.stop(t + 0.5);
+          // Crackle layer
+          const n = ctx.createBufferSource();
+          const buf = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.3;
+          n.buffer = buf;
+          const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 200; nf.Q.value = 2;
+          const ng = ctx.createGain(); ng.gain.setValueAtTime(0.04, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+          n.connect(nf).connect(ng).connect(ctx.destination);
+          n.start(t); n.stop(t + 0.3);
+        }
+        break;
+
+      case 2: // ❄️ Ice: crystal shatter + shimmer
+        {
+          const osc = ctx.createOscillator(); osc.type = 'sine';
+          osc.frequency.setValueAtTime(1200, t);
+          osc.frequency.exponentialRampToValueAtTime(600, t + 0.3);
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.05, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+          osc.connect(g).connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.4);
+          // Low thud
+          const thud = ctx.createOscillator(); thud.type = 'sine';
+          thud.frequency.setValueAtTime(80, t + 0.05);
+          thud.frequency.exponentialRampToValueAtTime(40, t + 0.3);
+          const tg = ctx.createGain(); tg.gain.setValueAtTime(0.06, t + 0.05); tg.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          thud.connect(tg).connect(ctx.destination);
+          thud.start(t + 0.05); thud.stop(t + 0.35);
+        }
+        break;
+
+      case 3: // ⚡ Thunder: sharp crack + rumble
+        {
+          // Sharp attack
+          const crack = ctx.createOscillator(); crack.type = 'sawtooth';
+          crack.frequency.setValueAtTime(2000, t);
+          crack.frequency.exponentialRampToValueAtTime(100, t + 0.08);
+          const cg = ctx.createGain(); cg.gain.setValueAtTime(0.07, t); cg.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+          const cf = ctx.createBiquadFilter(); cf.type = 'highpass'; cf.frequency.value = 400;
+          crack.connect(cf).connect(cg).connect(ctx.destination);
+          crack.start(t); crack.stop(t + 0.1);
+          // Rolling rumble
+          const rum = ctx.createOscillator(); rum.type = 'sine';
+          rum.frequency.setValueAtTime(50, t + 0.08);
+          rum.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+          const rg = ctx.createGain(); rg.gain.setValueAtTime(0.08, t + 0.08); rg.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+          rum.connect(rg).connect(ctx.destination);
+          rum.start(t + 0.08); rum.stop(t + 0.5);
+        }
+        break;
+
+      case 4: // ☠️ Poison: bubbling rise + low drone
+        {
+          const osc = ctx.createOscillator(); osc.type = 'sine';
+          osc.frequency.setValueAtTime(90, t);
+          osc.frequency.linearRampToValueAtTime(150, t + 0.2);
+          osc.frequency.linearRampToValueAtTime(80, t + 0.5);
+          const g = ctx.createGain(); g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+          const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 250;
+          osc.connect(f).connect(g).connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.55);
+          // Bubble pops
+          for (let i = 0; i < 3; i++) {
+            const b = ctx.createOscillator(); b.type = 'sine';
+            const bt = t + 0.1 + i * 0.12;
+            b.frequency.setValueAtTime(200 + i * 50, bt);
+            b.frequency.exponentialRampToValueAtTime(100, bt + 0.06);
+            const bg = ctx.createGain(); bg.gain.setValueAtTime(0.03, bt); bg.gain.exponentialRampToValueAtTime(0.001, bt + 0.08);
+            b.connect(bg).connect(ctx.destination);
+            b.start(bt); b.stop(bt + 0.08);
+          }
+        }
+        break;
+
+      default: // Generic sweep + boom
+        {
+          const osc = ctx.createOscillator(); osc.type = 'sine';
+          osc.frequency.setValueAtTime(200, t);
+          osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
+          const g = ctx.createGain(); g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+          osc.connect(g).connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.5);
+          const boom = ctx.createOscillator(); boom.type = 'sine';
+          boom.frequency.setValueAtTime(80, t + 0.3);
+          boom.frequency.exponentialRampToValueAtTime(30, t + 0.6);
+          const bg = ctx.createGain(); bg.gain.setValueAtTime(0.08, t + 0.3); bg.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+          boom.connect(bg).connect(ctx.destination);
+          boom.start(t + 0.3); boom.stop(t + 0.6);
+        }
+    }
   }
 
   playShield() {
