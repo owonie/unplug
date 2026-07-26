@@ -72,11 +72,9 @@
     <div id="points-earned" style="color:#ffcc00;font-size:18px;margin:12px 0"></div>
     <div id="achievements" style="color:#ffcc00;font-size:12px;margin-top:8px;line-height:1.8"></div>
     <div style="margin-top:16px;display:flex;gap:12px">
-      <button id="gacha-btn" style="padding:10px 24px;font-size:14px;background:#2a1a00;color:#ffcc00;border:2px solid #ffcc00;border-radius:8px;cursor:pointer;font-family:inherit">🎰 GACHA (10pts)</button>
       <button id="share-btn" style="padding:10px 24px;font-size:14px;background:#1a2a1a;color:#44ff88;border:2px solid #44ff88;border-radius:8px;cursor:pointer;font-family:inherit">🏆 Share Record</button>
       <button id="retry-btn" style="padding:10px 28px;font-size:14px;background:#222;color:#fff;border:2px solid #ff8844;border-radius:8px;cursor:pointer;font-family:inherit">🔄 RETRY</button>
     </div>
-    <div id="gacha-result" style="color:#fff;font-size:13px;margin-top:12px;min-height:24px"></div>
     <div id="unlocked-list" style="color:#888;font-size:11px;margin-top:8px"></div>
   </div>
   <div id="hud">
@@ -1024,67 +1022,6 @@
       }
 
       // === GACHA SYSTEM ===
-      const GACHA_POOL = [
-        { name: '⚔️ 시작 ATK +5', stat: 'atk', value: 5, rarity: '일반' },
-        { name: '❤️ 시작 HP +20', stat: 'hp', value: 20, rarity: '일반' },
-        { name: '👟 시작 SPD +0.3', stat: 'spd', value: 0.3, rarity: '일반' },
-        { name: '🎯 시작 RNG +0.5', stat: 'rng', value: 0.5, rarity: '일반' },
-        { name: '💥 시작 CRT +5%', stat: 'crt', value: 0.05, rarity: '희귀' },
-        { name: '🧲 시작 MAGNET +1', stat: 'mag', value: 1, rarity: '희귀' },
-        { name: '🔥 Fire Starter (시작 시 불 Lv1)', stat: 'elem_fire', value: 1, rarity: '에픽' },
-        { name: '❄️ Ice Starter (시작 시 얼음 Lv1)', stat: 'elem_ice', value: 1, rarity: '에픽' },
-        { name: '⚡ Thunder Starter (시작 시 번개 Lv1)', stat: 'elem_thunder', value: 1, rarity: '에픽' },
-        { name: '☠️ Poison Starter (시작 시 독 Lv1)', stat: 'elem_poison', value: 1, rarity: '에픽' },
-        { name: '👑 즉시 전직권', stat: 'instant_promote', value: 1, rarity: '전설' },
-      ];
-
-      document.getElementById('gacha-btn').addEventListener('click', () => {
-        let pts = parseInt(localStorage.getItem('unplug_points') || '0');
-        if (pts < 10) {
-          document.getElementById('gacha-result').innerHTML = '<span style="color:#ff4444">포인트 부족! (10pt 필요)</span>';
-          return;
-        }
-        pts -= 10;
-        localStorage.setItem('unplug_points', pts);
-        document.getElementById('points-earned').innerHTML = `💰 Total: ${pts}`;
-        sound.playGacha();
-
-        // 가챠 뽑기 (가중치)
-        const roll = Math.random();
-        let item;
-        if (roll < 0.05) { // 5% 전설
-          item = GACHA_POOL[10];
-        } else if (roll < 0.2) { // 15% 에픽
-          item = GACHA_POOL[6 + Math.floor(Math.random() * 4)];
-        } else if (roll < 0.45) { // 25% 희귀
-          item = GACHA_POOL[4 + Math.floor(Math.random() * 2)];
-        } else { // 55% 일반
-          item = GACHA_POOL[Math.floor(Math.random() * 4)];
-        }
-
-        // 저장
-        let unlocked = JSON.parse(localStorage.getItem('unplug_unlocked') || '[]');
-        unlocked.push(item);
-        localStorage.setItem('unplug_unlocked', JSON.stringify(unlocked));
-
-        const rarityColors = { '일반': '#aaa', '희귀': '#4488ff', '에픽': '#aa44ff', '전설': '#ffcc00' };
-        document.getElementById('gacha-result').innerHTML =
-          `🎉 <span style="color:${rarityColors[item.rarity]}">[${item.rarity}] ${item.name}</span>`;
-        updateUnlockedList();
-      });
-
-      function updateUnlockedList() {
-        const unlocked = JSON.parse(localStorage.getItem('unplug_unlocked') || '[]');
-        if (unlocked.length === 0) {
-          document.getElementById('unlocked-list').textContent = '아직 해금된 아이템 없음';
-        } else {
-          const counts = {};
-          unlocked.forEach(i => { counts[i.name] = (counts[i.name]||0) + 1; });
-          document.getElementById('unlocked-list').innerHTML =
-            '📦 보유: ' + Object.entries(counts).map(([n,c]) => `${n}${c>1?' x'+c:''}`).join(', ');
-        }
-      }
-
       // Game loop
       let lastTime = 0;
       let gameOverShown = false;
