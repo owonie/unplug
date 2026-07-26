@@ -330,6 +330,107 @@ export class SoundManager {
     osc.start(t); osc.stop(t + 0.15);
   }
 
+  playAdvancedSkill(element) {
+    // 2nd class right-click: heavier, more impactful than basic directional
+    if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const ctx = this.ctx;
+
+    switch (element) {
+      case 1: // 🔥 Fire: deep ground eruption thump + sizzle
+        {
+          const thump = ctx.createOscillator(); thump.type = 'sine';
+          thump.frequency.setValueAtTime(100, t);
+          thump.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+          const tg = ctx.createGain(); tg.gain.setValueAtTime(0.1, t); tg.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+          thump.connect(tg).connect(ctx.destination);
+          thump.start(t); thump.stop(t + 0.3);
+          // Sizzle
+          const n = ctx.createBufferSource();
+          const buf = ctx.createBuffer(1, ctx.sampleRate * 0.25, ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.2;
+          n.buffer = buf;
+          const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 3000; nf.Q.value = 3;
+          const ng = ctx.createGain(); ng.gain.setValueAtTime(0.03, t + 0.05); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+          n.connect(nf).connect(ng).connect(ctx.destination);
+          n.start(t + 0.05); n.stop(t + 0.25);
+        }
+        break;
+
+      case 2: // ❄️ Ice: sharp crystalline impact + glass shatter
+        {
+          const osc = ctx.createOscillator(); osc.type = 'triangle';
+          osc.frequency.setValueAtTime(2500, t);
+          osc.frequency.exponentialRampToValueAtTime(800, t + 0.08);
+          const g = ctx.createGain(); g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+          osc.connect(g).connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.12);
+          // Impact body
+          const body = ctx.createOscillator(); body.type = 'sine';
+          body.frequency.setValueAtTime(150, t + 0.02);
+          body.frequency.exponentialRampToValueAtTime(60, t + 0.2);
+          const bg = ctx.createGain(); bg.gain.setValueAtTime(0.07, t + 0.02); bg.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+          body.connect(bg).connect(ctx.destination);
+          body.start(t + 0.02); body.stop(t + 0.25);
+        }
+        break;
+
+      case 3: // ⚡ Thunder: electric zap + bass punch
+        {
+          // Zap (fast descending sawtooth)
+          const zap = ctx.createOscillator(); zap.type = 'sawtooth';
+          zap.frequency.setValueAtTime(3000, t);
+          zap.frequency.exponentialRampToValueAtTime(200, t + 0.06);
+          const zf = ctx.createBiquadFilter(); zf.type = 'highpass'; zf.frequency.value = 500;
+          const zg = ctx.createGain(); zg.gain.setValueAtTime(0.05, t); zg.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+          zap.connect(zf).connect(zg).connect(ctx.destination);
+          zap.start(t); zap.stop(t + 0.08);
+          // Bass punch
+          const bass = ctx.createOscillator(); bass.type = 'sine';
+          bass.frequency.setValueAtTime(120, t + 0.03);
+          bass.frequency.exponentialRampToValueAtTime(40, t + 0.25);
+          const bg = ctx.createGain(); bg.gain.setValueAtTime(0.09, t + 0.03); bg.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+          bass.connect(bg).connect(ctx.destination);
+          bass.start(t + 0.03); bass.stop(t + 0.3);
+          // Crackle tail
+          const n = ctx.createBufferSource();
+          const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.15;
+          n.buffer = buf;
+          const nf = ctx.createBiquadFilter(); nf.type = 'highpass'; nf.frequency.value = 2000;
+          const ng = ctx.createGain(); ng.gain.setValueAtTime(0.025, t + 0.06); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+          n.connect(nf).connect(ng).connect(ctx.destination);
+          n.start(t + 0.06); n.stop(t + 0.2);
+        }
+        break;
+
+      case 4: // ☠️ Poison: toxic wave whoosh + chemical bubble
+        {
+          // Whoosh
+          const n = ctx.createBufferSource();
+          const buf = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.2;
+          n.buffer = buf;
+          const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 400; nf.Q.value = 1.5;
+          const ng = ctx.createGain(); ng.gain.setValueAtTime(0.05, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+          n.connect(nf).connect(ng).connect(ctx.destination);
+          n.start(t); n.stop(t + 0.3);
+          // Low wobble
+          const osc = ctx.createOscillator(); osc.type = 'sine';
+          osc.frequency.setValueAtTime(70, t);
+          osc.frequency.linearRampToValueAtTime(110, t + 0.15);
+          osc.frequency.linearRampToValueAtTime(60, t + 0.35);
+          const g = ctx.createGain(); g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+          osc.connect(g).connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.4);
+        }
+        break;
+    }
+  }
+
   // === BGM: Lonely apocalypse, C418/minecraft style ===
   // 3 sets with 기승전결 (intro-build-climax-resolve)
   startBGM(setIdx = 0) {

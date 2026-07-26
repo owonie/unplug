@@ -557,8 +557,10 @@
             if (gesture === 'outward') {
               if (!checkMana(20)) { dragStart=null;isDragging=false;dragPoints=[];return; }
               engine.use_directional_skill(angle);
-              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, engine.player_class_element() || engine.active_element(), 7);
-              renderer.shake(0.4, 0.12);
+              const elem = engine.player_class_element() || engine.active_element();
+              renderer.spawnAdvancedDirectionalEffect(engine.player_x(), engine.player_z(), angle, elem, 9);
+              sound.playAdvancedSkill(elem);
+              renderer.shake(0.55, 0.15);
               showSkillName('outward');
             } else if (gesture === 'circle') {
               if (!checkMana(50)) { dragStart=null;isDragging=false;dragPoints=[];return; }

@@ -1032,6 +1032,171 @@ export class ThreeRenderer {
     }
   }
 
+  // === ADVANCED DIRECTIONAL (Right-click 2nd class — heavier, different shape) ===
+  spawnAdvancedDirectionalEffect(fromX, fromZ, angle, element, range) {
+    const dirX = Math.cos(angle);
+    const dirZ = -Math.sin(angle);
+
+    switch (element) {
+      case 1: this._advFire(fromX, fromZ, dirX, dirZ, range); break;
+      case 2: this._advIce(fromX, fromZ, dirX, dirZ, range); break;
+      case 3: this._advThunder(fromX, fromZ, dirX, dirZ, range); break;
+      case 4: this._advPoison(fromX, fromZ, dirX, dirZ, range); break;
+      default: this._advFire(fromX, fromZ, dirX, dirZ, range); break;
+    }
+  }
+
+  _advFire(x, z, dirX, dirZ, range) {
+    // 🔥 Fire Pillar Line: ground eruption along the line
+    for (let i = 0; i < 6; i++) {
+      const t = ((i + 1) / 6) * range;
+      const px = x + dirX * t;
+      const pz = z + dirZ * t;
+      // Vertical pillar
+      const geo = new THREE.CylinderGeometry(0.12, 0.2, 1.5 + Math.random(), 6);
+      const mat = new THREE.MeshBasicMaterial({ color: [0xff3300, 0xff6600, 0xff4400][i%3], transparent: true, opacity: 0.6 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(px, 0.75, pz);
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: 0, vy: 3, vz: 0, life: 0.4 + i * 0.05 });
+      // Ground scorch
+      const sGeo = new THREE.RingGeometry(0.05, 0.25, 8);
+      const sMat = new THREE.MeshBasicMaterial({ color: 0x441100, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+      const scorch = new THREE.Mesh(sGeo, sMat);
+      scorch.position.set(px, 0.02, pz);
+      scorch.rotation.x = -Math.PI / 2;
+      this.scene.add(scorch);
+      this.deathParticles.push({ mesh: scorch, vx: 0, vy: 0, vz: 0, life: 0.8, isRing: true, scale: 0.8, noScale: true });
+    }
+    // Trailing embers
+    for (let i = 0; i < 10; i++) {
+      const t = Math.random() * range;
+      const spread = (Math.random() - 0.5) * 1.0;
+      const perpX = -dirZ, perpZ = dirX;
+      const geo = new THREE.SphereGeometry(0.04, 3, 3);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.7 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x + dirX * t + perpX * spread, 0.3, z + dirZ * t + perpZ * spread);
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: (Math.random()-0.5)*2, vy: 3 + Math.random()*3, vz: (Math.random()-0.5)*2, life: 0.5 });
+    }
+  }
+
+  _advIce(x, z, dirX, dirZ, range) {
+    // ❄️ Ice Lance Barrage: 3 sharp spears + trailing frost
+    for (let i = 0; i < 3; i++) {
+      const offset = (i - 1) * 0.4;
+      const perpX = -dirZ, perpZ = dirX;
+      const sx = x + perpX * offset;
+      const sz = z + perpZ * offset;
+      // Lance (elongated box)
+      const geo = new THREE.BoxGeometry(0.08, 0.08, range * 0.7);
+      const mat = new THREE.MeshBasicMaterial({ color: [0x88eeff, 0xaaffff, 0x66ddff][i], transparent: true, opacity: 0.7 });
+      const mesh = new THREE.Mesh(geo, mat);
+      // Position at midpoint and rotate toward direction
+      const midT = range * 0.35;
+      mesh.position.set(sx + dirX * midT, 0.4, sz + dirZ * midT);
+      mesh.rotation.y = -Math.atan2(dirZ, dirX);
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: dirX * 18, vy: 0, vz: dirZ * 18, life: 0.35, isRing: true, scale: 1, noScale: true });
+    }
+    // Frost trail particles
+    for (let i = 0; i < 12; i++) {
+      const t = Math.random() * range * 0.8;
+      const spread = (Math.random() - 0.5) * 1.2;
+      const perpX = -dirZ, perpZ = dirX;
+      const geo = new THREE.OctahedronGeometry(0.06);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xccffff, transparent: true, opacity: 0.5 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x + dirX * t + perpX * spread, 0.2 + Math.random() * 0.3, z + dirZ * t + perpZ * spread);
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: dirX * 2, vy: -1, vz: dirZ * 2, life: 0.6 });
+    }
+  }
+
+  _advThunder(x, z, dirX, dirZ, range) {
+    // ⚡ Plasma Beam: thick bolt + side arcs
+    // Main beam (thick tube)
+    const pts = [];
+    for (let i = 0; i <= 10; i++) {
+      const t = (i / 10) * range;
+      const jitter = i > 0 && i < 10 ? (Math.random() - 0.5) * 0.15 : 0;
+      const perpX = -dirZ, perpZ = dirX;
+      pts.push(new THREE.Vector3(x + dirX * t + perpX * jitter, 0.4, z + dirZ * t + perpZ * jitter));
+    }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const tubeGeo = new THREE.TubeGeometry(curve, 12, 0.12, 6, false);
+    const tubeMat = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.9 });
+    const beam = new THREE.Mesh(tubeGeo, tubeMat);
+    this.scene.add(beam);
+    this.deathParticles.push({ mesh: beam, vx: 0, vy: 0, vz: 0, life: 0.25, isRing: true, scale: 1, noScale: true });
+    // Core (white inner)
+    const coreGeo = new THREE.TubeGeometry(curve, 12, 0.04, 4, false);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1.0 });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    this.scene.add(core);
+    this.deathParticles.push({ mesh: core, vx: 0, vy: 0, vz: 0, life: 0.2, isRing: true, scale: 1, noScale: true });
+    // Side arcs
+    for (let s = -1; s <= 1; s += 2) {
+      const arcPts = [];
+      const perpX = -dirZ * s, perpZ = dirX * s;
+      for (let i = 0; i <= 5; i++) {
+        const t = (i / 5) * range * 0.8;
+        const drift = Math.sin(i * 1.5) * 0.4;
+        arcPts.push(new THREE.Vector3(
+          x + dirX * t + perpX * (0.3 + drift),
+          0.35 + Math.random() * 0.1,
+          z + dirZ * t + perpZ * (0.3 + drift)
+        ));
+      }
+      const arcCurve = new THREE.CatmullRomCurve3(arcPts);
+      const arcTube = new THREE.Mesh(
+        new THREE.TubeGeometry(arcCurve, 6, 0.025, 3, false),
+        new THREE.MeshBasicMaterial({ color: 0xaaccff, transparent: true, opacity: 0.6 })
+      );
+      this.scene.add(arcTube);
+      this.deathParticles.push({ mesh: arcTube, vx: 0, vy: 0, vz: 0, life: 0.15, isRing: true, scale: 1, noScale: true });
+    }
+    // End impact
+    const endX = x + dirX * range;
+    const endZ = z + dirZ * range;
+    const impactGeo = new THREE.SphereGeometry(0.4, 8, 8);
+    const impactMat = new THREE.MeshBasicMaterial({ color: 0xffffaa, transparent: true, opacity: 0.8 });
+    const impact = new THREE.Mesh(impactGeo, impactMat);
+    impact.position.set(endX, 0.4, endZ);
+    this.scene.add(impact);
+    this.deathParticles.push({ mesh: impact, vx: 0, vy: 0, vz: 0, life: 0.2, isRing: true, scale: 0.5 });
+  }
+
+  _advPoison(x, z, dirX, dirZ, range) {
+    // ☠️ Toxic Shockwave: wide cone blast + lingering gas
+    for (let i = 0; i < 14; i++) {
+      const spreadAngle = ((i / 13) - 0.5) * 2.2; // ~130° wide cone
+      const sdx = dirX * Math.cos(spreadAngle) - dirZ * Math.sin(spreadAngle);
+      const sdz = dirX * Math.sin(spreadAngle) + dirZ * Math.cos(spreadAngle);
+      const dist = range * (0.3 + Math.random() * 0.7);
+      const size = 0.15 + Math.random() * 0.2;
+      const geo = new THREE.SphereGeometry(size, 5, 5);
+      const colors = [0x6622aa, 0x9933ff, 0x441188, 0x7733cc, 0x22aa44];
+      const mat = new THREE.MeshBasicMaterial({ color: colors[i%5], transparent: true, opacity: 0.4 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x + sdx * 0.5, 0.15, z + sdz * 0.5);
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: sdx * 7, vy: 0.5, vz: sdz * 7, life: 0.7, isRing: true, scale: 0.7 });
+    }
+    // Lingering gas pools
+    for (let i = 0; i < 5; i++) {
+      const t = (i + 1) / 5 * range * 0.6;
+      const geo = new THREE.RingGeometry(0.1, 0.3 + Math.random() * 0.2, 8);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x33cc33, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+      const pool = new THREE.Mesh(geo, mat);
+      pool.position.set(x + dirX * t + (Math.random()-0.5)*0.5, 0.02, z + dirZ * t + (Math.random()-0.5)*0.5);
+      pool.rotation.x = -Math.PI / 2;
+      this.scene.add(pool);
+      this.deathParticles.push({ mesh: pool, vx: 0, vy: 0, vz: 0, life: 1.2, isRing: true, scale: 0.5 });
+    }
+  }
+
   _spawnFireBreath(x, z, dirX, dirZ, range) {
     // Cloud-style breath: large expanding spheres in fan
     for (let i = 0; i < 8; i++) {
