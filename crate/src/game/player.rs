@@ -47,6 +47,7 @@ pub struct Player {
     pub dash_dir_z: f32,
     pub dash_charges: u8,     // thunder: max 3 charges
     pub dash_charge_timer: f32, // time until next charge restores
+    pub dash_element: u8,    // locked at promotion (0=default, 1=fire, 2=ice, 3=thunder, 4=poison)
     // Stamina (for active skill)
     pub stamina: f32,
     pub max_stamina: f32,
@@ -118,6 +119,7 @@ impl Player {
             dash_dir_z: 0.0,
             dash_charges: 3,
             dash_charge_timer: 0.0,
+            dash_element: 0,
             // Stamina
             stamina: 100.0,
             max_stamina: 100.0,
@@ -132,7 +134,7 @@ impl Player {
         if self.active_skill_cd > 0.0 { self.active_skill_cd -= dt; }
 
         // Thunder dash charge recovery (1 charge per 1.5s)
-        if self.dominant_element() == 3 && self.class_tier > 0 && self.dash_charges < 3 {
+        if self.dash_element == 3 && self.dash_charges < 3 {
             self.dash_charge_timer += dt;
             if self.dash_charge_timer >= 1.5 {
                 self.dash_charge_timer = 0.0;
@@ -147,7 +149,7 @@ impl Player {
         // Dashing: fast movement + invulnerable
         if self.dash_timer > 0.0 {
             self.dash_timer -= dt;
-            let elem = self.dominant_element();
+            let elem = self.dash_element;
             match elem {
                 1 => {
                     // 🔥 Blink: instant teleport (no gradual movement)
@@ -178,7 +180,7 @@ impl Player {
         } else if self.moving {
             let mut spd = self.speed;
             // ❄️ Ice Skate: passive speed boost
-            if self.dominant_element() == 2 && self.class_tier > 0 {
+            if self.dash_element == 2 {
                 spd *= 1.4;
             }
             self.x += self.dir_x * spd * dt;
@@ -188,7 +190,7 @@ impl Player {
 
     /// Returns dash type: 0=normal, 1=blink(fire), 2=skate(ice), 3=triple(thunder), 4=smoke(poison)
     pub fn try_dash(&mut self) -> u8 {
-        let elem = if self.class_tier > 0 { self.dominant_element() } else { 0 };
+        let elem = if self.class_tier > 0 { self.dash_element } else { 0 };
 
         // Ice: no dash, passive speed instead
         if elem == 2 { return 0; }
@@ -339,6 +341,15 @@ impl Player {
                     });
                 }
             }
+
+            // Lock dash element to class's primary element
+            let mut max_req = 0u8;
+            let mut primary = 0u8;
+            if class.req_fire > max_req { max_req = class.req_fire; primary = 1; }
+            if class.req_ice > max_req { max_req = class.req_ice; primary = 2; }
+            if class.req_thunder > max_req { max_req = class.req_thunder; primary = 3; }
+            if class.req_poison > max_req { primary = 4; }
+            if primary > 0 { self.dash_element = primary; }
 
             // Stat boost on promotion
             match class.tier {
