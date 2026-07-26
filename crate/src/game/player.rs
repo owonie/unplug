@@ -298,7 +298,7 @@ impl Player {
         if self.xp >= self.xp_to_next {
             self.xp -= self.xp_to_next;
             self.level += 1;
-            self.xp_to_next = 15 + self.level * 5; // slower progression
+            self.xp_to_next = 20 + self.level * 6 + (self.level * self.level) / 3; // mild curve
             return true;
         }
         false

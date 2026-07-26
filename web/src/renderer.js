@@ -436,11 +436,19 @@ export class ThreeRenderer {
     }
 
     // No bullets - melee attack (create slash effect instead)
-    // Clear any leftover bullet meshes
-    while (this.bulletMeshes.length > 0) {
-      const m = this.bulletMeshes.pop();
-      this.scene.remove(m);
-    }
+    // Bullets (enemy projectiles)
+    this.updatePool(this.bulletMeshes, bullets, () => {
+      const geo = new THREE.SphereGeometry(0.12, 6, 6);
+      const mat = new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff2200, emissiveIntensity: 2 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = false;
+      return mesh;
+    });
+    this.bulletMeshes.forEach((m, i) => {
+      if (m.visible && bullets[i]) {
+        m.position.set(bullets[i].x, 0.5, bullets[i].z);
+      }
+    });
 
     // XP Orbs — size/color by type (0=small, 1=med, 2=large, 3=boss)
     this.updatePool(this.orbMeshes, orbs, (data) => {

@@ -940,7 +940,33 @@
         const min = Math.floor(t / 60);
         const sec = t % 60;
         document.getElementById('timer').textContent = `${min}:${sec.toString().padStart(2,'0')}`;
-        document.getElementById('kills').textContent = `Wave ${engine.wave_number()} | ${engine.kills()} kills`;
+        const waveNum = engine.wave_number();
+        const isBossWave = waveNum > 0 && waveNum % 10 === 0;
+        document.getElementById('kills').textContent = isBossWave
+          ? `⚠️ WAVE 0 — BOSS ⚠️ | ${engine.kills()} kills`
+          : `Wave ${waveNum} | ${engine.kills()} kills`;
+
+        // Boss wave entrance effect (once)
+        if (isBossWave && !this._bossShown) {
+          this._bossShown = true;
+          // Red flash
+          const flash = document.createElement('div');
+          flash.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,0,0,0.4);pointer-events:none;z-index:9999;transition:opacity 1s';
+          document.body.appendChild(flash);
+          setTimeout(() => { flash.style.opacity = '0'; }, 200);
+          setTimeout(() => flash.remove(), 1200);
+          // Warning text
+          const warn = document.createElement('div');
+          warn.style.cssText = 'position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);z-index:9999;pointer-events:none;text-align:center;animation:promo-pop 2s ease-out forwards';
+          warn.innerHTML = '<div style="font-size:42px;color:#ff2200;text-shadow:0 0 30px #ff0000,0 0 60px #880000;font-weight:bold">💀 BOSS 💀</div><div style="font-size:18px;color:#ffaa00;margin-top:8px">ALL ENEMIES CLEARED — DUEL!</div>';
+          document.body.appendChild(warn);
+          setTimeout(() => warn.remove(), 2500);
+          renderer.shake(0.8, 0.3);
+          renderer.hitStop(0.2);
+          sound.playUltimate(1); // dramatic sound
+        } else if (!isBossWave) {
+          this._bossShown = false;
+        }
 
         // Boss HP bar
         if (engine.boss_active()) {
@@ -1098,6 +1124,10 @@
           enemies.push({ x: engine.enemy_x(i), z: engine.enemy_z(i), type: engine.enemy_type(i), hit: engine.enemy_hit(i) });
         }
         const bullets = [];
+        const bc = engine.bullet_count();
+        for (let i = 0; i < bc; i++) {
+          bullets.push({ x: engine.bullet_x(i), z: engine.bullet_z(i) });
+        }
         const orbs = [];
         const oc = engine.orb_count();
         for (let i = 0; i < oc; i++) {

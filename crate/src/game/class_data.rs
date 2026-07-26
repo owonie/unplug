@@ -14,11 +14,11 @@ pub struct ClassDef {
 
 /// Check if player meets element requirements for a class
 pub fn can_promote_to(class: &ClassDef, fire: u8, ice: u8, thunder: u8, poison: u8, current_class: u8, level: u32) -> bool {
-    // Level check (minimal — orb count is primary gate)
+    // Level check
     let level_req = match class.tier {
-        1 => 5,
-        2 => 10,
-        3 => 15,
+        1 => 3,
+        2 => 5,
+        3 => 8,
         _ => 999,
     };
     if level < level_req { return false; }

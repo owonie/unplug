@@ -138,6 +138,7 @@ impl GameEngine {
     pub fn bullet_count(&self) -> u32 { self.world.bullets.len() as u32 }
     pub fn bullet_x(&self, i: u32) -> f32 { self.world.bullets.get(i as usize).map(|b| b.x).unwrap_or(0.0) }
     pub fn bullet_z(&self, i: u32) -> f32 { self.world.bullets.get(i as usize).map(|b| b.z).unwrap_or(0.0) }
+    pub fn bullet_type(&self, i: u32) -> u32 { self.world.bullets.get(i as usize).map(|b| b.bullet_type).unwrap_or(0) }
 
     // === XP Orbs ===
     pub fn orb_count(&self) -> u32 { self.world.xp_orbs.len() as u32 }

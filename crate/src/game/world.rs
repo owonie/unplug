@@ -307,13 +307,39 @@ impl World {
         for enemy in self.enemies.iter_mut() {
             enemy.update(dt, px, pz, time);
 
-            // Contact damage
+            // Contact damage (melee enemies only — not archer at range)
             let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
-            if dist < 0.7 {
+            if dist < 0.7 && enemy.enemy_type != 5 { // Archer doesn't melee
                 self.player.take_damage(enemy.damage);
+            }
+
+            // Archer: fire projectile at player
+            if enemy.enemy_type == 5 && enemy.alive {
+                enemy.last_attack += dt;
+                if enemy.last_attack >= 2.0 && dist > 3.0 && dist < 15.0 {
+                    enemy.last_attack = 0.0;
+                    let dx = px - enemy.x;
+                    let dz = pz - enemy.z;
+                    let d = dist.max(0.1);
+                    let speed = 5.0;
+                    let bullet = Bullet::new(enemy.x, enemy.z, dx / d * speed, dz / d * speed, enemy.damage * 0.6);
+                    self.bullets.push(bullet);
+                }
             }
         }
         self.enemies.retain(|e| e.alive);
+
+        // Update bullets + check player collision
+        for bullet in &mut self.bullets {
+            bullet.update(dt);
+            if !bullet.active { continue; }
+            let dist = ((bullet.x - px).powi(2) + (bullet.z - pz).powi(2)).sqrt();
+            if dist < 0.5 {
+                self.player.take_damage(bullet.damage);
+                bullet.active = false;
+            }
+        }
+        self.bullets.retain(|b| b.active);
     }
 
     fn update_collisions(&mut self) {
@@ -441,9 +467,10 @@ impl World {
             }
         }
 
-        // 일반 적 스폰 (보스 웨이브에도 잡몹 나옴)
+        // 일반 적 스폰 (보스 웨이브에는 스폰 안 함)
+        let is_boss_wave = self.wave_number % 10 == 0 && self.wave_number > 0;
         let interval = (1.2 / self.difficulty).max(0.2);
-        if self.spawn_timer >= interval {
+        if !is_boss_wave && self.spawn_timer >= interval {
             self.spawn_timer = 0.0;
             self.spawn_wave_enemies();
         }
@@ -454,21 +481,20 @@ impl World {
         let px = self.player.x;
         let pz = self.player.z;
 
-        // 웨이브별 스폰 구성
+        // 웨이브별 스폰 구성 (근거리4:원거리1 비율 wave2+)
         let (types, count): (Vec<u32>, u32) = match wave {
-            1 => (vec![0], 5),                        // 스켈레톤만
-            2 => (vec![0, 0, 0, 4, 4], 8),           // +스웜 소수
-            3 => (vec![0, 0, 2, 4, 4, 4], 10),      // +임프, 스웜 증가
-            4 => (vec![0, 2, 3, 4, 4, 4, 4], 12),   // +레이스, 스웜 대량
-            5 => (vec![0, 1, 2, 3, 4, 5], 10),      // 혼합 + 궁수
-            6 => (vec![0, 2, 4, 4, 4, 5, 6], 15),   // 스웜 대량 + 궁수 + 돌격병
-            7 => (vec![0, 4, 4, 4, 4, 5, 6], 18),   // 스웜 물량
-            8 => (vec![1, 2, 4, 4, 4, 4, 5, 6], 20), // 풀 혼합
-            9 => (vec![4, 4, 4, 4, 4, 6, 6], 25),   // 스웜 러시 + 돌격병
+            1 => (vec![0, 0, 0, 0, 0], 5),                           // 스켈레톤만
+            2 => (vec![0, 0, 4, 4, 5], 8),                           // +스웜+궁수 (4:1)
+            3 => (vec![0, 2, 4, 4, 5], 10),                          // +임프 (4:1)
+            4 => (vec![0, 2, 3, 4, 5], 12),                          // +레이스 (4:1)
+            5 => (vec![0, 1, 2, 4, 5], 10),                          // 혼합 (4:1)
+            6 => (vec![0, 4, 4, 6, 5], 15),                          // 스웜+돌격+궁수
+            7 => (vec![4, 4, 4, 6, 5], 18),                          // 스웜 물량+궁수
+            8 => (vec![0, 4, 4, 6, 5, 4, 4, 6, 5, 5], 20),          // 원거리 약간 증가
+            9 => (vec![4, 4, 4, 6, 5, 4, 4, 6, 5, 5], 25),          // 러시
             _ => {
-                // 10+ : 점점 더 많이
                 let c = (15 + wave * 3).min(40);
-                (vec![0, 1, 2, 3, 4, 4, 4, 5, 6], c)
+                (vec![0, 4, 4, 6, 5, 1, 4, 4, 6, 5], c)             // 4:1 유지
             }
         };
 
@@ -496,14 +522,22 @@ impl World {
     }
 
     fn spawn_main_boss(&mut self) {
-        let px = self.player.x;
-        let pz = self.player.z;
-        let mut boss = Enemy::new_scaled(px + 15.0, pz, 8, self.wave_number);
+        // Clear all enemies (no XP drop)
+        self.enemies.clear();
+        self.xp_orbs.clear(); // clean battlefield
+
+        // Spawn boss at map center
+        let center = self.map_size as f32 / 2.0;
+        let mut boss = Enemy::new(center, center, 8);
         boss.hp = 800.0 + self.wave_number as f32 * 200.0;
         boss.max_hp = boss.hp;
         boss.phase = 1;
         self.enemies.push(boss);
+
+        // Move player closer to center (teleport near boss)
+        // Don't force — just log
         self.log_queue.push_back("💀💀💀 BOSS APPEARED! 💀💀💀".into());
+        self.log_queue.push_back("⚔️ All enemies cleared — DUEL!".into());
     }
 
     fn generate_choices(&mut self) {
