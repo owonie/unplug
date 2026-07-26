@@ -58,11 +58,11 @@ export class SoundManager {
     this._play('levelup', 0.5);
   }
 
-  // === ELEMENT DIRECTIONAL (left-click) ===
-  playElementFire() { this._play('slash', 0.4); }
-  playElementIce() { this._play('ice', 0.35); }
-  playElementThunder() { this._play('electric', 0.35); }
-  playElementPoison() { this._play('slash', 0.3); }
+  // === ELEMENT DIRECTIONAL (left-click) — element sound + slash layer ===
+  playElementFire() { this._play('slash', 0.25); this._play('explosion', 0.3); }
+  playElementIce() { this._play('ice', 0.4); }
+  playElementThunder() { this._play('electric', 0.4); }
+  playElementPoison() { this._play('slash', 0.2); this._play('groundImpact', 0.3); }
 
   // === ADVANCED DIRECTIONAL (right-click — heavier) ===
   playAdvancedSkill(element) {

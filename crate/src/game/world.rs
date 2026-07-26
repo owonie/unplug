@@ -900,8 +900,8 @@ impl World {
 
         let px = self.player.x;
         let pz = self.player.z;
-        let range = 6.0;
-        let cone_half = 0.0; // cos(90°)=0, so ~120° cone (very wide)
+        let range = 8.0;
+        let cone_half = -0.17; // cos(100°) ≈ -0.17, so ~200° wide cone
         let damage = self.player.attack_damage * 3.0; // 3x ATK
 
         let dir_x = angle.cos();
