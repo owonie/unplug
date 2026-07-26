@@ -1007,6 +1007,69 @@ export class ThreeRenderer {
     this.hitStop(0.1);
   }
 
+  // === ADVANCED ULTIMATE (right-click 2nd class — bigger, flashier) ===
+  spawnAdvancedUltimateEffect(x, z, element, range) {
+    const colors = { 1: 0xff4400, 2: 0x44ccff, 3: 0xffcc00, 4: 0x9933ff };
+    const color = colors[element] || 0xffffff;
+
+    // Massive outer ring (expanding fast)
+    const ringGeo = new THREE.RingGeometry(range * 0.1, range * 0.9, 64);
+    const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.set(x, 0.1, z);
+    ring.rotation.x = -Math.PI / 2;
+    this.scene.add(ring);
+    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 1.8, isRing: true, scale: 0.2 });
+
+    // Inner vortex ring (spinning)
+    const innerGeo = new THREE.TorusGeometry(range * 0.3, 0.15, 8, 32);
+    const innerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
+    const inner = new THREE.Mesh(innerGeo, innerMat);
+    inner.position.set(x, 0.5, z);
+    inner.rotation.x = -Math.PI / 2;
+    this.scene.add(inner);
+    this.deathParticles.push({ mesh: inner, vx: 0, vy: 0, vz: 0, life: 1.5, isRing: true, scale: 0.5 });
+
+    // Radial explosion particles (outward burst)
+    for (let i = 0; i < 24; i++) {
+      const angle = (i / 24) * Math.PI * 2;
+      const speed = 8 + Math.random() * 6;
+      const size = 0.15 + Math.random() * 0.15;
+      const geo = new THREE.SphereGeometry(size, 5, 5);
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, 0.3, z);
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: Math.cos(angle) * speed, vy: 1 + Math.random() * 2, vz: Math.sin(angle) * speed, life: 0.6, isRing: true, scale: 0.8 });
+    }
+
+    // Vertical pillars (element-colored, rising)
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const r = range * 0.5;
+      const geo = new THREE.CylinderGeometry(0.08, 0.15, 2.5, 6);
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x + Math.cos(angle) * r, 1.0, z + Math.sin(angle) * r);
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: 0, vy: 5 + Math.random() * 3, vz: 0, life: 0.7 });
+    }
+
+    // Ground shockwave rings (multiple expanding)
+    for (let w = 0; w < 3; w++) {
+      const wGeo = new THREE.RingGeometry(0.1, 0.3, 32);
+      const wMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+      const wave = new THREE.Mesh(wGeo, wMat);
+      wave.position.set(x, 0.05 + w * 0.02, z);
+      wave.rotation.x = -Math.PI / 2;
+      this.scene.add(wave);
+      this.deathParticles.push({ mesh: wave, vx: 0, vy: 0, vz: 0, life: 1.0 + w * 0.3, isRing: true, scale: 0.1 + w * 0.2 });
+    }
+
+    // Extended hit stop for impact
+    this.hitStop(0.18);
+  }
+
   // === Element Skill Visual Effects ===
   spawnSkillEffect(x, z, element, range) {
     switch (element) {

@@ -86,16 +86,26 @@ export class SoundManager {
     }
   }
 
-  // === ULTIMATE ===
+  // === ULTIMATE (left-click) ===
   playUltimate(element) {
-    // Always play the riser hit
     this._play('ultimate', 0.5);
-    // Plus element-specific layer
     switch (element) {
       case 1: this._play('explosion', 0.4); break;
       case 2: this._play('ice', 0.35); break;
       case 3: this._play('thunder', 0.45); break;
       case 4: this._play('liquidSplash', 0.4); break;
+    }
+  }
+
+  // === ADVANCED ULTIMATE (right-click — double layer, heavier) ===
+  playAdvancedUltimate(element) {
+    this._play('ultimate', 0.55);
+    this._play('groundImpact', 0.45);
+    switch (element) {
+      case 1: this._play('explosion', 0.5); break;
+      case 2: this._play('iceCrack', 0.45); this._play('ice', 0.3); break;
+      case 3: this._play('thunder', 0.5); this._play('electroImpact', 0.35); break;
+      case 4: this._play('liquidSplash', 0.45); this._play('gasLeak', 0.35); break;
     }
   }
 

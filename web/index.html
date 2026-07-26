@@ -567,8 +567,18 @@
               showSkillName('outward');
             } else if (gesture === 'circle') {
               if (!checkMana(50)) { dragStart=null;isDragging=false;dragPoints=[];return; }
-              engine.use_ultimate_skill(); sound.playUltimate(engine.player_class_element() || engine.active_element());
-              renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), engine.player_class_element() || engine.active_element(), 10);
+              const elem = engine.player_class_element() || engine.active_element();
+              engine.use_ultimate_skill();
+              sound.playAdvancedUltimate(elem);
+              renderer.spawnAdvancedUltimateEffect(engine.player_x(), engine.player_z(), elem, 12);
+              renderer.shake(0.9, 0.3);
+              showSkillName('circle');
+              // Double flash for advanced ult
+              const flash = document.createElement('div');
+              flash.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:999;animation:flash-fade 0.4s ease-out forwards';
+              flash.style.background = elem===1?'rgba(255,100,0,0.3)':elem===2?'rgba(100,200,255,0.3)':elem===3?'rgba(255,255,0,0.3)':'rgba(150,50,255,0.3)';
+              document.body.appendChild(flash);
+              setTimeout(() => flash.remove(), 400);
               renderer.shake(0.7, 0.25);
               showSkillName('circle');
             } else {
