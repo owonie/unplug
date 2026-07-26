@@ -122,8 +122,10 @@ impl World {
 
         self.player.set_direction(dx, dz);
 
-        // Level up choice (1/2/3 keys)
-        // handled externally via choose_upgrade
+        // Space = dash
+        if self.input.is_key_just_pressed(" ") {
+            self.player.try_dash();
+        }
     }
 
     fn clamp_player(&mut self) {
@@ -467,7 +469,7 @@ impl World {
         let level = self.player.level;
         let class_tier = self.player.class_tier;
 
-        // Check if promotion is available
+        // Check if promotion is available (element-based)
         let promotions = super::class_data::available_promotions(
             self.player.fire_level,
             self.player.ice_level,
@@ -477,14 +479,26 @@ impl World {
             level,
         );
 
-        // If promotions available, offer one as first choice
-        if !promotions.is_empty() && (level == 10 || level == 25 || level == 45) {
+        // Check hidden stat-based promotions
+        let hidden_promos = super::class_data::available_hidden_promotions(
+            self.player.attack_damage,
+            self.player.lifesteal,
+            self.player.aoe_radius,
+            self.player.crit_chance,
+            self.player.speed,
+            self.player.class_id,
+            level,
+        );
+
+        // If promotions available, offer as choices
+        let all_promos: Vec<u8> = promotions.iter().chain(hidden_promos.iter()).copied().collect();
+        if !all_promos.is_empty() && (level == 10 || level == 25 || level == 45) {
             // Promotion choice (encoded as 100 + class_id)
-            let promo_id = promotions[(seed as usize) % promotions.len()];
+            let promo_id = all_promos[(seed as usize) % all_promos.len()];
             self.level_up_choices[0] = 100 + promo_id as u32;
             // Also offer second promo if available
-            if promotions.len() > 1 {
-                let promo2 = promotions[(seed as usize + 1) % promotions.len()];
+            if all_promos.len() > 1 {
+                let promo2 = all_promos[(seed as usize + 1) % all_promos.len()];
                 self.level_up_choices[1] = 100 + promo2 as u32;
             } else {
                 self.level_up_choices[1] = self.random_element_choice(seed / 3);
@@ -535,7 +549,11 @@ impl World {
     }
 
     /// Element choice: 50=fire, 51=ice, 52=thunder, 53=poison
+    /// If at cap, returns a stat choice instead
     fn random_element_choice(&self, seed: u32) -> u32 {
+        if self.player.total_elements() >= self.player.element_cap() {
+            return self.random_stat_choice(seed);
+        }
         50 + (seed % 4)
     }
 
@@ -637,10 +655,10 @@ impl World {
 
         match upgrade_id {
             // === Element orbs: 50~53 ===
-            50 => { self.player.add_element(1); self.log(format!("🔥 Fire Orb! (Lv.{})", self.player.fire_level)); }
-            51 => { self.player.add_element(2); self.log(format!("❄️ Ice Orb! (Lv.{})", self.player.ice_level)); }
-            52 => { self.player.add_element(3); self.log(format!("⚡ Thunder Orb! (Lv.{})", self.player.thunder_level)); }
-            53 => { self.player.add_element(4); self.log(format!("☠️ Poison Orb! (Lv.{})", self.player.poison_level)); }
+            50 => { if self.player.add_element(1) { self.log(format!("🔥 Fire Orb! ({}/{})", self.player.total_elements(), self.player.element_cap())); } else { self.player.attack_damage += 8.0; self.log("🔥 Orb MAX! +DMG instead".into()); } }
+            51 => { if self.player.add_element(2) { self.log(format!("❄️ Ice Orb! ({}/{})", self.player.total_elements(), self.player.element_cap())); } else { self.player.attack_damage += 8.0; self.log("❄️ Orb MAX! +DMG instead".into()); } }
+            52 => { if self.player.add_element(3) { self.log(format!("⚡ Thunder Orb! ({}/{})", self.player.total_elements(), self.player.element_cap())); } else { self.player.attack_damage += 8.0; self.log("⚡ Orb MAX! +DMG instead".into()); } }
+            53 => { if self.player.add_element(4) { self.log(format!("☠️ Poison Orb! ({}/{})", self.player.total_elements(), self.player.element_cap())); } else { self.player.attack_damage += 8.0; self.log("☠️ Orb MAX! +DMG instead".into()); } }
 
             // === Stats: 60~68 ===
             60 => { self.player.attack_damage += 10.0; self.log("⚔️ +DMG!".into()); }
@@ -654,12 +672,36 @@ impl World {
             68 => { self.player.magnet_range += 2.0; self.log("🧲 +MAGNET!".into()); }
 
             // === Class promotion: 100 + class_id ===
-            100..=145 => {
+            100..=199 => {
                 let class_id = (upgrade_id - 100) as u8;
-                self.player.promote_to(class_id);
+                // Try normal class first
                 if let Some(class) = super::class_data::class_by_id(class_id) {
+                    self.player.promote_to(class_id);
                     let tier_emoji = match class.tier { 1 => "⭐", 2 => "🌟", 3 => "👑", _ => "✨" };
                     self.log(format!("{} PROMOTED to {}!", tier_emoji, class.name));
+                } else if let Some(hidden) = super::class_data::hidden_class_by_id(class_id) {
+                    // Hidden stat-based class
+                    self.player.class_id = class_id;
+                    self.player.class_tier = hidden.tier;
+                    self.player.promoted = true;
+                    self.player.promoted_element = 0; // no element affinity
+                    // Learn hidden class skills
+                    let skills = super::skill_data::skills_for_class(class_id);
+                    for skill in skills {
+                        if !self.player.has_skill_id(skill.id) {
+                            self.player.learned_skills.push(super::player::LearnedSkill {
+                                skill_id: skill.id,
+                                class_id,
+                                level: 1,
+                                last_used: -999.0,
+                            });
+                        }
+                    }
+                    // Stat boost
+                    self.player.attack_damage += 20.0;
+                    self.player.max_hp += 60.0;
+                    self.player.hp += 60.0;
+                    self.log(format!("🌈 HIDDEN CLASS: {}!", hidden.name));
                 }
             }
 

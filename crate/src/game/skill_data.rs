@@ -84,6 +84,11 @@ pub fn skills_for_class(class_id: u8) -> &'static [SkillDef] {
         43 => &SKILLS_C43,
         44 => &SKILLS_C44,
         45 => &SKILLS_C45,
+        46 => &SKILLS_C46,
+        47 => &SKILLS_C47,
+        48 => &SKILLS_C48,
+        49 => &SKILLS_C49,
+        50 => &SKILLS_C50,
         _ => &[],
     }
 }
@@ -362,4 +367,36 @@ pub static SKILLS_C45: [SkillDef; 3] = [
     SkillDef { id: 133, class_id: 45, name: "Omni-Element", skill_type: SkillType::Active, element: Element::Multi, damage_mult: 2.5, cooldown: 1.5, range: RANGE_L, description: "All 4 elements, 250% ATK" },
     SkillDef { id: 134, class_id: 45, name: "Creation/Destruction", skill_type: SkillType::Passive, element: Element::Multi, damage_mult: 0.0, cooldown: 0.0, range: 0.0, description: "Kill=heal 5%, hit=+10% ATK 5s" },
     SkillDef { id: 135, class_id: 45, name: "Genesis", skill_type: SkillType::Ultimate, element: Element::Multi, damage_mult: 9.99, cooldown: 90.0, range: RANGE_XL, description: "999% all, reset CDs, full heal" },
+];
+
+// === Hidden Stat-based Classes (C46~C50) ===
+
+pub static SKILLS_C46: [SkillDef; 3] = [
+    SkillDef { id: 136, class_id: 46, name: "Blade Mastery", skill_type: SkillType::Passive, element: Element::None, damage_mult: 0.0, cooldown: 0.0, range: 0.0, description: "Basic ATK +50%, cleave +2" },
+    SkillDef { id: 137, class_id: 46, name: "Lethal Strike", skill_type: SkillType::Active, element: Element::None, damage_mult: 4.0, cooldown: 3.0, range: RANGE_S, description: "400% ATK single hit, ignores DEF" },
+    SkillDef { id: 138, class_id: 46, name: "Sword Storm", skill_type: SkillType::Active, element: Element::None, damage_mult: 2.0, cooldown: 6.0, range: RANGE_M, description: "Rapid 8-hit combo, 200% each" },
+];
+
+pub static SKILLS_C47: [SkillDef; 3] = [
+    SkillDef { id: 139, class_id: 47, name: "Blood Drain", skill_type: SkillType::Passive, element: Element::None, damage_mult: 0.0, cooldown: 0.0, range: RANGE_M, description: "Nearby enemies lose HP → heals you" },
+    SkillDef { id: 140, class_id: 47, name: "Crimson Feast", skill_type: SkillType::Active, element: Element::None, damage_mult: 2.0, cooldown: 4.0, range: RANGE_M, description: "Kill = full heal, AoE blood burst" },
+    SkillDef { id: 141, class_id: 47, name: "Immortal", skill_type: SkillType::Passive, element: Element::None, damage_mult: 0.0, cooldown: 0.0, range: 0.0, description: "Cannot die if killed within 3s of a kill" },
+];
+
+pub static SKILLS_C48: [SkillDef; 3] = [
+    SkillDef { id: 142, class_id: 48, name: "Rage", skill_type: SkillType::Passive, element: Element::None, damage_mult: 0.0, cooldown: 0.0, range: 0.0, description: "HP decays 2%/s but ATK +100%, AoE +3" },
+    SkillDef { id: 143, class_id: 48, name: "Whirlwind", skill_type: SkillType::Active, element: Element::None, damage_mult: 1.5, cooldown: 2.0, range: RANGE_L, description: "Spin hit ALL in range, 150% ATK" },
+    SkillDef { id: 144, class_id: 48, name: "Blood Frenzy", skill_type: SkillType::Active, element: Element::None, damage_mult: 0.0, cooldown: 10.0, range: 0.0, description: "5s: ATK x3, speed x2, can't be slowed" },
+];
+
+pub static SKILLS_C49: [SkillDef; 3] = [
+    SkillDef { id: 145, class_id: 49, name: "Death Mark", skill_type: SkillType::Active, element: Element::None, damage_mult: 5.0, cooldown: 4.0, range: RANGE_L, description: "Mark target: next hit = 500% guaranteed crit" },
+    SkillDef { id: 146, class_id: 49, name: "Shadow Step", skill_type: SkillType::Active, element: Element::None, damage_mult: 1.0, cooldown: 3.0, range: RANGE_L, description: "Teleport behind enemy + backstab 100%" },
+    SkillDef { id: 147, class_id: 49, name: "Critical Mastery", skill_type: SkillType::Passive, element: Element::None, damage_mult: 0.0, cooldown: 0.0, range: 0.0, description: "Crit = 4x (not 2.5x). Crit chance +20%" },
+];
+
+pub static SKILLS_C50: [SkillDef; 3] = [
+    SkillDef { id: 148, class_id: 50, name: "Wind Blade", skill_type: SkillType::Passive, element: Element::None, damage_mult: 0.5, cooldown: 0.0, range: RANGE_S, description: "Moving = deal 50% ATK/s to nearby" },
+    SkillDef { id: 149, class_id: 50, name: "Gale Dash", skill_type: SkillType::Active, element: Element::None, damage_mult: 2.0, cooldown: 1.5, range: RANGE_M, description: "Dash deals 200% ATK, no cooldown cost" },
+    SkillDef { id: 150, class_id: 50, name: "Evasion", skill_type: SkillType::Passive, element: Element::None, damage_mult: 0.0, cooldown: 0.0, range: 0.0, description: "40% dodge chance. Dodge = counter 100% ATK" },
 ];

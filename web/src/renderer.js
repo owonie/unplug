@@ -199,9 +199,37 @@ export class ThreeRenderer {
 
       // Determine animation state
       let targetAnim = 'idle';
-      if (state.playerHit) targetAnim = 'hit';
+      if (state.playerDashing) targetAnim = 'run'; // use run frames for dash
+      else if (state.playerHit) targetAnim = 'hit';
       else if (state.playerAttacking) targetAnim = 'attack';
       else if (playerMoving) targetAnim = 'run';
+
+      // Dash visual: semi-transparent + afterimage
+      if (state.playerDashing) {
+        this.playerSpriteMat.opacity = 0.5;
+        // Spawn afterimage
+        if (!this._dashTrail) this._dashTrail = [];
+        const ghost = this.playerGroup.clone();
+        ghost.traverse(c => { if (c.material) { c.material = c.material.clone(); c.material.opacity = 0.3; c.material.transparent = true; } });
+        ghost.position.copy(this.playerGroup.position);
+        this.scene.add(ghost);
+        this._dashTrail.push({ mesh: ghost, life: 0.2 });
+      } else {
+        this.playerSpriteMat.opacity = 1.0;
+      }
+
+      // Update dash trail
+      if (this._dashTrail) {
+        for (let i = this._dashTrail.length - 1; i >= 0; i--) {
+          this._dashTrail[i].life -= dt;
+          if (this._dashTrail[i].life <= 0) {
+            this.scene.remove(this._dashTrail[i].mesh);
+            this._dashTrail.splice(i, 1);
+          } else {
+            this._dashTrail[i].mesh.traverse(c => { if (c.material) c.material.opacity = this._dashTrail[i].life * 1.5; });
+          }
+        }
+      }
 
       // Switch animation
       if (targetAnim !== this.playerCurrentAnim && this.sprites[targetAnim]) {

@@ -59,9 +59,9 @@ impl GameEngine {
     pub fn player_promoted(&self) -> bool { self.world.player.promoted }
     pub fn player_promoted_element(&self) -> u32 { self.world.player.promoted_element }
     pub fn player_hit(&self) -> bool { self.world.player.invuln_timer > 0.3 }
-    pub fn player_attacking(&self) -> bool {
-        self.world.attacking
-    }
+    pub fn player_attacking(&self) -> bool { self.world.attacking }
+    pub fn player_dashing(&self) -> bool { self.world.player.is_dashing() }
+    pub fn player_dash_cooldown(&self) -> f32 { self.world.player.dash_cooldown }
     pub fn nearest_enemy_dir_x(&self) -> f32 {
         let px = self.world.player.x;
         let pz = self.world.player.z;
@@ -151,15 +151,23 @@ impl GameEngine {
     pub fn ice_level(&self) -> u32 { self.world.player.ice_level as u32 }
     pub fn thunder_level(&self) -> u32 { self.world.player.thunder_level as u32 }
     pub fn poison_level(&self) -> u32 { self.world.player.poison_level as u32 }
+    pub fn element_total(&self) -> u32 { self.world.player.total_elements() as u32 }
+    pub fn element_cap(&self) -> u32 { self.world.player.element_cap() as u32 }
 
     // New class system getters
     pub fn player_class_id(&self) -> u32 { self.world.player.class_id as u32 }
     pub fn player_class_tier(&self) -> u32 { self.world.player.class_tier as u32 }
     pub fn player_class_name(&self) -> String {
         if self.world.player.class_id == 0 { return "None".into(); }
-        game::class_data::class_by_id(self.world.player.class_id)
-            .map(|c| c.name.to_string())
-            .unwrap_or_else(|| "Unknown".into())
+        // Try normal class
+        if let Some(c) = game::class_data::class_by_id(self.world.player.class_id) {
+            return c.name.to_string();
+        }
+        // Try hidden class
+        if let Some(h) = game::class_data::hidden_class_by_id(self.world.player.class_id) {
+            return h.name.to_string();
+        }
+        "Unknown".into()
     }
     pub fn learned_skill_count(&self) -> u32 { self.world.player.learned_skills.len() as u32 }
     pub fn learned_skill_id(&self, i: u32) -> u32 {

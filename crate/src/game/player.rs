@@ -40,6 +40,11 @@ pub struct Player {
     pub dir_z: f32,
     pub moving: bool,
     pub invuln_timer: f32,
+    // Dash
+    pub dash_timer: f32,      // > 0 means dashing
+    pub dash_cooldown: f32,   // time until next dash
+    pub dash_dir_x: f32,
+    pub dash_dir_z: f32,
     // Skill cooldown tracking
     pub skill_timers: Vec<f32>, // last-used time per learned skill index
 }
@@ -99,16 +104,53 @@ impl Player {
             dir_z: 0.0,
             moving: false,
             invuln_timer: 0.0,
+            // Dash
+            dash_timer: 0.0,
+            dash_cooldown: 0.0,
+            dash_dir_x: 0.0,
+            dash_dir_z: 0.0,
             skill_timers: Vec::new(),
         }
     }
 
     pub fn update(&mut self, dt: f32) {
         if self.invuln_timer > 0.0 { self.invuln_timer -= dt; }
-        if self.moving {
+        if self.dash_cooldown > 0.0 { self.dash_cooldown -= dt; }
+
+        // Dashing: fast movement + invulnerable
+        if self.dash_timer > 0.0 {
+            self.dash_timer -= dt;
+            let dash_speed = 25.0; // very fast
+            self.x += self.dash_dir_x * dash_speed * dt;
+            self.z += self.dash_dir_z * dash_speed * dt;
+            self.invuln_timer = 0.1; // stay invuln during dash
+        } else if self.moving {
             self.x += self.dir_x * self.speed * dt;
             self.z += self.dir_z * self.speed * dt;
         }
+    }
+
+    pub fn try_dash(&mut self) -> bool {
+        if self.dash_cooldown > 0.0 { return false; }
+        // Dash in current move direction, or facing direction
+        if self.moving {
+            self.dash_dir_x = self.dir_x;
+            self.dash_dir_z = self.dir_z;
+        } else {
+            // Default: dash forward (positive z or last dir)
+            if self.dash_dir_x == 0.0 && self.dash_dir_z == 0.0 {
+                self.dash_dir_z = -1.0;
+            }
+            // Keep last dash direction
+        }
+        self.dash_timer = 0.15;   // dash duration
+        self.dash_cooldown = 2.0; // cooldown
+        self.invuln_timer = 0.2;  // invuln slightly longer than dash
+        true
+    }
+
+    pub fn is_dashing(&self) -> bool {
+        self.dash_timer > 0.0
     }
 
     pub fn set_direction(&mut self, dx: f32, dz: f32) {
@@ -150,15 +192,29 @@ impl Player {
         false
     }
 
-    // === Element System (no cap) ===
-    pub fn add_element(&mut self, element: u8) {
+    // === Element System (cap based on class tier) ===
+    pub fn element_cap(&self) -> u8 {
+        match self.class_tier {
+            0 => 4,   // pre-promotion: max 4 total orbs
+            1 => 8,   // post-1st: max 8
+            2 => 12,  // post-2nd: max 12
+            3 => 16,  // post-3rd: max 16
+            _ => 4,
+        }
+    }
+
+    pub fn add_element(&mut self, element: u8) -> bool {
+        if self.total_elements() >= self.element_cap() {
+            return false; // at cap
+        }
         match element {
             1 => self.fire_level += 1,
             2 => self.ice_level += 1,
             3 => self.thunder_level += 1,
             4 => self.poison_level += 1,
-            _ => {}
+            _ => return false,
         }
+        true
     }
 
     pub fn total_elements(&self) -> u8 {

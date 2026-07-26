@@ -26,7 +26,12 @@ pub fn can_promote_to(class: &ClassDef, fire: u8, ice: u8, thunder: u8, poison: 
     // Prerequisite class check
     if class.from_class > 0 && current_class != class.from_class { return false; }
 
-    // Element check
+    // Total orbs minimum: tier 1 = 4, tier 2 = 8, tier 3 = 12
+    let total = fire + ice + thunder + poison;
+    let min_total = match class.tier { 1 => 4, 2 => 8, 3 => 12, _ => 4 };
+    if total < min_total { return false; }
+
+    // Individual element requirements
     fire >= class.req_fire && ice >= class.req_ice && thunder >= class.req_thunder && poison >= class.req_poison
 }
 
@@ -111,3 +116,54 @@ pub static ALL_CLASSES: [ClassDef; 45] = [
     ClassDef { id: 44, name: "Avatar",            tier: 3, from_class: 30, req_fire: 5, req_ice: 5, req_thunder: 5, req_poison: 0 },
     ClassDef { id: 45, name: "Primordial God",    tier: 3, from_class: 34, req_fire: 5, req_ice: 5, req_thunder: 5, req_poison: 5 },
 ];
+
+// === Hidden Stat-based Classes (C46~C50) ===
+// These unlock based on player stats, not element orbs
+
+#[derive(Clone, Copy)]
+pub struct HiddenClassDef {
+    pub id: u8,
+    pub name: &'static str,
+    pub tier: u8,
+    pub description: &'static str,
+}
+
+pub static HIDDEN_CLASSES: [HiddenClassDef; 5] = [
+    HiddenClassDef { id: 46, name: "Weapon Master", tier: 1, description: "Pure physical. Basic attack amplified to extreme." },
+    HiddenClassDef { id: 47, name: "Vampire Lord", tier: 1, description: "Lifesteal god. Kill = full heal. Undying." },
+    HiddenClassDef { id: 48, name: "Berserker", tier: 1, description: "Rage mode. Massive AoE. HP decays but damage insane." },
+    HiddenClassDef { id: 49, name: "Assassin", tier: 1, description: "Critical 4x. Stealth. One-shot potential." },
+    HiddenClassDef { id: 50, name: "Windwalker", tier: 1, description: "Movement = attack. Contact damage. Near-permanent dodge." },
+];
+
+/// Check if player qualifies for a hidden stat-based class
+/// Returns vec of eligible hidden class IDs
+pub fn available_hidden_promotions(
+    attack_damage: f32,
+    lifesteal: f32,
+    aoe_radius: f32,
+    crit_chance: f32,
+    speed: f32,
+    current_class: u8,
+    level: u32,
+) -> Vec<u8> {
+    if level < 10 { return Vec::new(); }
+    // Hidden classes only available if no class yet (first promotion)
+    // or as a 2nd/3rd tier "awakening" of existing hidden class
+    let mut result = Vec::new();
+
+    if current_class == 0 {
+        // First-time hidden promotions (stat thresholds for Lv10+)
+        if attack_damage >= 120.0 { result.push(46); } // Weapon Master
+        if lifesteal >= 0.25 { result.push(47); }       // Vampire Lord
+        if aoe_radius >= 6.0 { result.push(48); }       // Berserker
+        if crit_chance >= 0.50 { result.push(49); }      // Assassin
+        if speed >= 9.0 { result.push(50); }             // Windwalker
+    }
+
+    result
+}
+
+pub fn hidden_class_by_id(id: u8) -> Option<&'static HiddenClassDef> {
+    HIDDEN_CLASSES.iter().find(|c| c.id == id)
+}
