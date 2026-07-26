@@ -188,64 +188,72 @@ export class SoundManager {
     osc.start(this.ctx.currentTime); osc.stop(this.ctx.currentTime + 0.2);
   }
 
-  // === BGM: Dark fantasy ambient loop ===
+  // === BGM: Stylish fast-paced beat ===
   startBGM() {
     if (!this.ctx || this.bgmPlaying) return;
     this.bgmPlaying = true;
+    this._bgmNodes = [];
+    this._bgmInterval = null;
 
-    // Low drone
-    const drone = this.ctx.createOscillator();
-    drone.type = 'sawtooth';
-    drone.frequency.value = 55; // low A
-    const droneGain = this.ctx.createGain();
-    droneGain.gain.value = 0.04;
-    const droneFilter = this.ctx.createBiquadFilter();
-    droneFilter.type = 'lowpass';
-    droneFilter.frequency.value = 200;
-    drone.connect(droneFilter).connect(droneGain).connect(this.ctx.destination);
-    drone.start();
-    this._bgmNodes = [drone];
+    const ctx = this.ctx;
+    const bpm = 140;
+    const beatTime = 60 / bpm;
 
-    // Pad chord (minor)
-    const padNotes = [110, 130.81, 164.81]; // A2, C3, E3 (Am)
-    padNotes.forEach(freq => {
-      const osc = this.ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      const g = this.ctx.createGain();
-      g.gain.value = 0.02;
-      // Slow LFO for movement
-      const lfo = this.ctx.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.1 + Math.random() * 0.1;
-      const lfoGain = this.ctx.createGain();
-      lfoGain.gain.value = 0.01;
-      lfo.connect(lfoGain).connect(g.gain);
-      lfo.start();
-      osc.connect(g).connect(this.ctx.destination);
-      osc.start();
-      this._bgmNodes.push(osc, lfo);
-    });
+    // Kick + hihat pattern loop
+    let beat = 0;
+    this._bgmInterval = setInterval(() => {
+      if (!this.bgmPlaying) return;
+      const t = ctx.currentTime;
 
-    // Subtle high shimmer
-    const shimmer = this.ctx.createOscillator();
-    shimmer.type = 'sine';
-    shimmer.frequency.value = 880;
-    const shimGain = this.ctx.createGain();
-    shimGain.gain.value = 0.008;
-    const shimLfo = this.ctx.createOscillator();
-    shimLfo.type = 'sine';
-    shimLfo.frequency.value = 0.3;
-    const shimLfoGain = this.ctx.createGain();
-    shimLfoGain.gain.value = 0.006;
-    shimLfo.connect(shimLfoGain).connect(shimGain.gain);
-    shimLfo.start();
-    shimmer.connect(shimGain).connect(this.ctx.destination);
-    shimmer.start();
-    this._bgmNodes.push(shimmer, shimLfo);
+      // Kick on 1,3
+      if (beat % 4 === 0 || beat % 4 === 2) {
+        const kick = ctx.createOscillator();
+        kick.type = 'sine';
+        kick.frequency.setValueAtTime(150, t);
+        kick.frequency.exponentialRampToValueAtTime(40, t + 0.08);
+        const kg = ctx.createGain();
+        kg.gain.setValueAtTime(0.15, t);
+        kg.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        kick.connect(kg).connect(ctx.destination);
+        kick.start(t); kick.stop(t + 0.12);
+      }
+
+      // Hihat on every beat
+      const noise = ctx.createBufferSource();
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.03, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() - 0.5) * 0.5;
+      noise.buffer = buf;
+      const hg = ctx.createGain();
+      hg.gain.setValueAtTime(beat % 2 === 0 ? 0.06 : 0.03, t);
+      hg.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+      const hf = ctx.createBiquadFilter();
+      hf.type = 'highpass'; hf.frequency.value = 8000;
+      noise.connect(hf).connect(hg).connect(ctx.destination);
+      noise.start(t);
+
+      // Bass line (Em pentatonic)
+      if (beat % 2 === 0) {
+        const bassNotes = [82.41, 98.0, 110.0, 123.47, 146.83]; // E2,G2,A2,B2,D3
+        const note = bassNotes[Math.floor(beat / 2) % bassNotes.length];
+        const bass = ctx.createOscillator();
+        bass.type = 'square';
+        bass.frequency.value = note;
+        const bg = ctx.createGain();
+        bg.gain.setValueAtTime(0.06, t);
+        bg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 0.8);
+        const bf = ctx.createBiquadFilter();
+        bf.type = 'lowpass'; bf.frequency.value = 400;
+        bass.connect(bf).connect(bg).connect(ctx.destination);
+        bass.start(t); bass.stop(t + beatTime * 0.9);
+      }
+
+      beat++;
+    }, beatTime * 1000);
   }
 
   stopBGM() {
+    if (this._bgmInterval) { clearInterval(this._bgmInterval); this._bgmInterval = null; }
     if (this._bgmNodes) {
       this._bgmNodes.forEach(n => { try { n.stop(); } catch(e) {} });
       this._bgmNodes = null;
