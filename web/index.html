@@ -93,7 +93,7 @@
     </div>
   </div>
   <div id="timer">0:00</div>
-  <div id="bgm-btn" style="position:fixed;top:16px;right:80px;color:#666;font-size:11px;cursor:pointer;pointer-events:all;background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:4px;border:1px solid #333" onclick="if(window._sound)window._sound.nextBGM()">🎵 NEXT</div>
+  <div id="bgm-btn" style="position:fixed;top:16px;right:80px;color:#666;font-size:11px;cursor:pointer;pointer-events:all;background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:4px;border:1px solid #333" onclick="if(window._sound){window._sound.init();window._sound.nextBGM()}">🎵 NEXT</div>
   <div id="kills">0 kills</div>
   <div id="log"></div>
   <div id="controls-hint">[WASD] Move | [SPACE] Dash | [Click/Drag] Skill | Survive!</div>

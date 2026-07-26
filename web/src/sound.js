@@ -201,7 +201,7 @@ export class SoundManager {
     // Master gain for BGM (allows instant mute on stop)
     if (!this._bgmGain) {
       this._bgmGain = this.ctx.createGain();
-      this._bgmGain.connect(this.dest);
+      this._bgmGain.connect(this.ctx.destination);
     }
     this._bgmGain.gain.value = 1.0;
     const dest = this._bgmGain; // route all BGM through this
