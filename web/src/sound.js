@@ -439,83 +439,139 @@ export class SoundManager {
     if (!this.ctx) return;
     this.bgmPlaying = true;
     this.bgmSet = setIdx % 3;
-    // Create fresh gain node each time (old one stays disconnected, killing leftover oscillators)
+    // Create fresh gain node each time
     this._bgmGain = this.ctx.createGain();
     this._bgmGain.connect(this.ctx.destination);
     this._bgmGain.gain.value = 1.0;
-    const dest = this._bgmGain; // route all BGM through this
+    const dest = this._bgmGain;
     const ctx = this.ctx;
+
+    // 3 distinct fast-paced sets for stylish hack-and-slash
     const sets = [
-      { bpm: 80, pad: [130.81,164.81,196],
-        melA:[261.63,293.66,329.63,0,293.66,261.63,0,0],
-        melB:[329.63,392,440,392,329.63,293.66,261.63,0],
-        melC:[440,523.25,493.88,440,392,329.63,293.66,261.63],
-        melD:[293.66,261.63,0,0,196,0,261.63,0] },
-      { bpm: 90, pad: [110,130.81,164.81],
-        melA:[220,261.63,293.66,0,261.63,220,0,0],
-        melB:[293.66,329.63,392,329.63,293.66,261.63,220,0],
-        melC:[392,440,523.25,440,392,329.63,293.66,261.63],
-        melD:[261.63,220,196,0,0,220,0,0] },
-      { bpm: 100, pad: [82.41,123.47,164.81],
-        melA:[164.81,196,220,0,196,164.81,0,0],
-        melB:[220,246.94,293.66,329.63,293.66,246.94,220,0],
-        melC:[329.63,392,440,493.88,440,392,329.63,293.66],
-        melD:[246.94,220,196,164.81,0,0,164.81,0] },
+      { // Set 1: Synthwave Drive (140bpm) — energetic, pulsing
+        bpm: 140,
+        bass: [55, 55, 73.42, 65.41, 55, 55, 82.41, 73.42], // A bass pattern
+        melA: [440, 0, 523.25, 0, 587.33, 0, 523.25, 440, 0, 587.33, 0, 0, 440, 523.25, 0, 0],
+        melB: [659.25, 0, 587.33, 523.25, 0, 587.33, 659.25, 0, 783.99, 0, 659.25, 587.33, 0, 523.25, 0, 0],
+        melC: [880, 783.99, 0, 659.25, 783.99, 0, 880, 0, 987.77, 880, 783.99, 0, 659.25, 0, 587.33, 0],
+        melD: [523.25, 0, 440, 0, 0, 392, 0, 440, 0, 0, 349.23, 0, 0, 0, 440, 0],
+        padFreqs: [110, 164.81, 220],
+        wave: 'square'
+      },
+      { // Set 2: Dark DnB (160bpm) — aggressive, relentless
+        bpm: 160,
+        bass: [41.2, 0, 41.2, 0, 55, 0, 41.2, 0, 48.99, 0, 41.2, 55, 0, 41.2, 0, 0],
+        melA: [329.63, 0, 349.23, 0, 392, 0, 0, 329.63, 0, 392, 349.23, 0, 0, 329.63, 0, 0],
+        melB: [440, 0, 0, 392, 440, 523.25, 0, 0, 440, 0, 392, 0, 349.23, 0, 392, 0],
+        melC: [523.25, 587.33, 0, 523.25, 0, 659.25, 0, 587.33, 523.25, 0, 0, 659.25, 587.33, 0, 523.25, 0],
+        melD: [392, 0, 0, 349.23, 0, 0, 329.63, 0, 0, 0, 349.23, 0, 0, 329.63, 0, 0],
+        padFreqs: [82.41, 123.47, 155.56],
+        wave: 'sawtooth'
+      },
+      { // Set 3: Epic Tension (150bpm) — dramatic, building
+        bpm: 150,
+        bass: [65.41, 65.41, 0, 87.31, 0, 65.41, 0, 73.42, 65.41, 0, 87.31, 0, 0, 65.41, 73.42, 0],
+        melA: [523.25, 0, 659.25, 0, 587.33, 0, 523.25, 0, 493.88, 0, 523.25, 0, 587.33, 0, 0, 0],
+        melB: [659.25, 783.99, 0, 659.25, 0, 587.33, 659.25, 0, 783.99, 0, 880, 0, 783.99, 659.25, 0, 0],
+        melC: [880, 0, 987.77, 880, 0, 783.99, 880, 987.77, 0, 1046.5, 0, 987.77, 880, 0, 783.99, 0],
+        melD: [659.25, 0, 587.33, 0, 523.25, 0, 0, 493.88, 0, 523.25, 0, 0, 0, 440, 0, 0],
+        padFreqs: [130.81, 196, 261.63],
+        wave: 'triangle'
+      }
     ];
+
     const s = sets[this.bgmSet];
     const beatTime = 60 / s.bpm;
     let beat = 0, section = 0;
+
     this._bgmInterval = setInterval(() => {
       if (!this.bgmPlaying) return;
       const t = ctx.currentTime;
       const mels = [s.melA, s.melB, s.melC, s.melD];
-      const freq = mels[section][beat % 8];
-      // Piano note
+      const freq = mels[section][beat % 16];
+
+      // Melody
       if (freq > 0) {
-        const m = ctx.createOscillator(); m.type='sine'; m.frequency.value=freq;
+        const m = ctx.createOscillator(); m.type = s.wave; m.frequency.value = freq;
         const mg = ctx.createGain();
-        const vol = section===2 ? 0.045 : section===3 ? 0.025 : 0.03;
+        const vol = section === 2 ? 0.04 : section === 3 ? 0.02 : 0.03;
         mg.gain.setValueAtTime(vol, t);
-        mg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 2.0);
-        m.connect(mg).connect(dest);
-        m.start(t); m.stop(t + beatTime * 2.2);
-        // Octave below at climax
-        if (section >= 2) {
-          const m2 = ctx.createOscillator(); m2.type='sine'; m2.frequency.value=freq*0.5;
-          const mg2 = ctx.createGain();
-          mg2.gain.setValueAtTime(0.018, t);
-          mg2.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 2.2);
-          m2.connect(mg2).connect(dest);
-          m2.start(t); m2.stop(t + beatTime * 2.5);
-        }
+        mg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 1.5);
+        const mf = ctx.createBiquadFilter(); mf.type = 'lowpass'; mf.frequency.value = 2000;
+        m.connect(mf).connect(mg).connect(dest);
+        m.start(t); m.stop(t + beatTime * 1.8);
       }
-      // Pad chord (every 16 beats)
-      if (beat % 16 === 0) {
-        const pv = section===0?0.008:section===2?0.02:0.012;
-        s.pad.forEach(pf => {
-          const p = ctx.createOscillator(); p.type='sine'; p.frequency.value=pf;
+
+      // Bass (every beat)
+      const bassFreq = s.bass[beat % s.bass.length];
+      if (bassFreq > 0) {
+        const b = ctx.createOscillator(); b.type = 'sine'; b.frequency.value = bassFreq;
+        const bg = ctx.createGain();
+        bg.gain.setValueAtTime(section >= 1 ? 0.05 : 0.035, t);
+        bg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 0.8);
+        b.connect(bg).connect(dest);
+        b.start(t); b.stop(t + beatTime * 0.9);
+      }
+
+      // Kick (every 4 beats)
+      if (beat % 4 === 0) {
+        const kick = ctx.createOscillator(); kick.type = 'sine';
+        kick.frequency.setValueAtTime(150, t);
+        kick.frequency.exponentialRampToValueAtTime(40, t + 0.06);
+        const kg = ctx.createGain();
+        kg.gain.setValueAtTime(0.08, t);
+        kg.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        kick.connect(kg).connect(dest);
+        kick.start(t); kick.stop(t + 0.1);
+      }
+
+      // Hihat (every 2 beats, more in climax)
+      if (beat % 2 === 0 || (section >= 2 && beat % 1 === 0)) {
+        const n = ctx.createBufferSource();
+        const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.03), ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.5;
+        n.buffer = buf;
+        const hf = ctx.createBiquadFilter(); hf.type = 'highpass'; hf.frequency.value = 7000;
+        const hg = ctx.createGain();
+        hg.gain.setValueAtTime(section >= 2 ? 0.025 : 0.015, t);
+        hg.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        n.connect(hf).connect(hg).connect(dest);
+        n.start(t); n.stop(t + 0.03);
+      }
+
+      // Snare (beat 4 and 12 of 16)
+      if (beat % 16 === 4 || beat % 16 === 12) {
+        const n = ctx.createBufferSource();
+        const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.08), ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.4;
+        n.buffer = buf;
+        const sf = ctx.createBiquadFilter(); sf.type = 'bandpass'; sf.frequency.value = 3000; sf.Q.value = 1;
+        const sg = ctx.createGain();
+        sg.gain.setValueAtTime(0.04, t);
+        sg.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+        n.connect(sf).connect(sg).connect(dest);
+        n.start(t); n.stop(t + 0.08);
+      }
+
+      // Pad (every 32 beats)
+      if (beat % 32 === 0) {
+        const pv = section === 2 ? 0.02 : 0.012;
+        s.padFreqs.forEach(pf => {
+          const p = ctx.createOscillator(); p.type = 'sine'; p.frequency.value = pf;
           const pg = ctx.createGain();
-          pg.gain.setValueAtTime(0,t);
-          pg.gain.linearRampToValueAtTime(pv, t+1.5);
-          pg.gain.setValueAtTime(pv, t+beatTime*13);
-          pg.gain.exponentialRampToValueAtTime(0.001, t+beatTime*15.5);
+          pg.gain.setValueAtTime(0, t);
+          pg.gain.linearRampToValueAtTime(pv, t + 1.0);
+          pg.gain.setValueAtTime(pv, t + beatTime * 28);
+          pg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 31);
           p.connect(pg).connect(dest);
-          p.start(t); p.stop(t+beatTime*16);
+          p.start(t); p.stop(t + beatTime * 32);
         });
       }
-      // Heartbeat bass (승/전 only)
-      if (section >= 1 && section <= 2 && beat % 4 === 0) {
-        const hb = ctx.createOscillator(); hb.type='sine';
-        hb.frequency.setValueAtTime(55,t);
-        hb.frequency.exponentialRampToValueAtTime(35,t+0.12);
-        const hg = ctx.createGain();
-        hg.gain.setValueAtTime(section===2?0.04:0.025, t);
-        hg.gain.exponentialRampToValueAtTime(0.001,t+0.18);
-        hb.connect(hg).connect(dest);
-        hb.start(t); hb.stop(t+0.18);
-      }
+
       beat++;
-      if (beat % 16 === 0) section = (section + 1) % 4;
+      if (beat % 32 === 0) section = (section + 1) % 4;
     }, beatTime * 1000);
   }
 
