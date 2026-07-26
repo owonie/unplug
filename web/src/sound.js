@@ -20,16 +20,18 @@ export class SoundManager {
   // Hit sound (short click)
   playHit() {
     if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.1);
-    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
-    osc.start(this.ctx.currentTime);
-    osc.stop(this.ctx.currentTime + 0.1);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 800;
+    osc.connect(filter).connect(gain).connect(this.ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.exponentialRampToValueAtTime(100, t + 0.08);
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    osc.start(t); osc.stop(t + 0.08);
   }
 
   // Critical hit (higher pitch)
@@ -51,17 +53,18 @@ export class SoundManager {
   // Enemy death (soft pop)
   playDeath() {
     if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.12);
-    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
-    osc.start(this.ctx.currentTime);
-    osc.stop(this.ctx.currentTime + 0.12);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 600;
+    osc.connect(filter).connect(gain).connect(this.ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(60, t + 0.15);
+    gain.gain.setValueAtTime(0.06, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    osc.start(t); osc.stop(t + 0.15);
   }
 
   // Level up (short chime, once only)
@@ -188,127 +191,95 @@ export class SoundManager {
     osc.start(this.ctx.currentTime); osc.stop(this.ctx.currentTime + 0.2);
   }
 
-  // === BGM: Medieval fantasy — mystical and adventurous ===
-  startBGM() {
-    if (!this.ctx || this.bgmPlaying) return;
+  // === BGM: Lonely apocalypse, C418/minecraft style ===
+  // 3 sets with 기승전결 (intro-build-climax-resolve)
+  startBGM(setIdx = 0) {
+    this.stopBGM();
+    if (!this.ctx) return;
     this.bgmPlaying = true;
-    this._bgmNodes = [];
-
+    this.bgmSet = setIdx % 3;
     const ctx = this.ctx;
-    const bpm = 150;
-    const beatTime = 60 / bpm;
-
-    // Dm scale melodies (medieval/fantasy feel)
-    // Set A: adventurous ascending
-    const melodyA = [293.66, 349.23, 392.00, 440.00, 349.23, 329.63, 293.66, 261.63]; // D4,F4,G4,A4,F4,E4,D4,C4
-    // Set B: mystical descending
-    const melodyB = [440.00, 392.00, 349.23, 329.63, 293.66, 261.63, 293.66, 349.23]; // A4,G4,F4,E4,D4,C4,D4,F4
-
-    let beat = 0;
-    let currentSet = 0;
-
+    const sets = [
+      { bpm: 80, pad: [130.81,164.81,196],
+        melA:[261.63,293.66,329.63,0,293.66,261.63,0,0],
+        melB:[329.63,392,440,392,329.63,293.66,261.63,0],
+        melC:[440,523.25,493.88,440,392,329.63,293.66,261.63],
+        melD:[293.66,261.63,0,0,196,0,261.63,0] },
+      { bpm: 90, pad: [110,130.81,164.81],
+        melA:[220,261.63,293.66,0,261.63,220,0,0],
+        melB:[293.66,329.63,392,329.63,293.66,261.63,220,0],
+        melC:[392,440,523.25,440,392,329.63,293.66,261.63],
+        melD:[261.63,220,196,0,0,220,0,0] },
+      { bpm: 100, pad: [82.41,123.47,164.81],
+        melA:[164.81,196,220,0,196,164.81,0,0],
+        melB:[220,246.94,293.66,329.63,293.66,246.94,220,0],
+        melC:[329.63,392,440,493.88,440,392,329.63,293.66],
+        melD:[246.94,220,196,164.81,0,0,164.81,0] },
+    ];
+    const s = sets[this.bgmSet];
+    const beatTime = 60 / s.bpm;
+    let beat = 0, section = 0;
     this._bgmInterval = setInterval(() => {
       if (!this.bgmPlaying) return;
       const t = ctx.currentTime;
-
-      // Soft kick (timpani-like) on 1,3
-      if (beat % 4 === 0 || beat % 4 === 2) {
-        const kick = ctx.createOscillator();
-        kick.type = 'sine';
-        kick.frequency.setValueAtTime(100, t);
-        kick.frequency.exponentialRampToValueAtTime(50, t + 0.1);
-        const kg = ctx.createGain();
-        kg.gain.setValueAtTime(0.08, t);
-        kg.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-        kick.connect(kg).connect(ctx.destination);
-        kick.start(t); kick.stop(t + 0.15);
+      const mels = [s.melA, s.melB, s.melC, s.melD];
+      const freq = mels[section][beat % 8];
+      // Piano note
+      if (freq > 0) {
+        const m = ctx.createOscillator(); m.type='sine'; m.frequency.value=freq;
+        const mg = ctx.createGain();
+        const vol = section===2 ? 0.045 : section===3 ? 0.025 : 0.03;
+        mg.gain.setValueAtTime(vol, t);
+        mg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 2.0);
+        m.connect(mg).connect(ctx.destination);
+        m.start(t); m.stop(t + beatTime * 2.2);
+        // Octave below at climax
+        if (section >= 2) {
+          const m2 = ctx.createOscillator(); m2.type='sine'; m2.frequency.value=freq*0.5;
+          const mg2 = ctx.createGain();
+          mg2.gain.setValueAtTime(0.018, t);
+          mg2.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 2.2);
+          m2.connect(mg2).connect(ctx.destination);
+          m2.start(t); m2.stop(t + beatTime * 2.5);
+        }
       }
-
-      // Shaker (soft) on off-beats
-      if (beat % 2 === 1) {
-        const noise = ctx.createBufferSource();
-        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.015, ctx.sampleRate);
-        const d = buf.getChannelData(0);
-        for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.15;
-        noise.buffer = buf;
-        const sg = ctx.createGain();
-        sg.gain.setValueAtTime(0.03, t);
-        sg.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-        const sf = ctx.createBiquadFilter();
-        sf.type = 'bandpass'; sf.frequency.value = 5000; sf.Q.value = 2;
-        noise.connect(sf).connect(sg).connect(ctx.destination);
-        noise.start(t);
-      }
-
-      // Harp/lute bass (triangle wave — warm, medieval)
-      if (beat % 4 === 0) {
-        const bassNotes = [146.83, 130.81, 146.83, 174.61]; // D3,C3,D3,F3
-        const note = bassNotes[Math.floor(beat / 4) % bassNotes.length];
-        const bass = ctx.createOscillator();
-        bass.type = 'triangle';
-        bass.frequency.value = note;
-        const bg = ctx.createGain();
-        bg.gain.setValueAtTime(0.06, t);
-        bg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 2.5);
-        bass.connect(bg).connect(ctx.destination);
-        bass.start(t); bass.stop(t + beatTime * 2.8);
-      }
-
-      // Fiddle/flute melody (sine + slight vibrato = ethereal)
-      const melody = currentSet === 0 ? melodyA : melodyB;
-      const noteIdx = beat % melody.length;
-      const freq = melody[noteIdx];
-
-      // Play melody note
-      const mel = ctx.createOscillator();
-      mel.type = 'sine';
-      mel.frequency.value = freq;
-      // Gentle vibrato
-      const vib = ctx.createOscillator();
-      vib.type = 'sine';
-      vib.frequency.value = 4.5;
-      const vibG = ctx.createGain();
-      vibG.gain.value = 2;
-      vib.connect(vibG).connect(mel.frequency);
-      vib.start(t);
-      // Envelope (soft attack, gentle decay)
-      const mg = ctx.createGain();
-      mg.gain.setValueAtTime(0.0, t);
-      mg.gain.linearRampToValueAtTime(0.035, t + 0.04);
-      mg.gain.setValueAtTime(0.035, t + beatTime * 0.5);
-      mg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 0.85);
-      mel.connect(mg).connect(ctx.destination);
-      mel.start(t); mel.stop(t + beatTime * 0.9);
-      vib.stop(t + beatTime * 0.9);
-
-      // Pad (every 8 beats — sustained mystical chord)
-      if (beat % 8 === 0) {
-        const padNotes = [293.66, 349.23, 440.00]; // Dm chord: D4,F4,A4
-        padNotes.forEach(pf => {
-          const pad = ctx.createOscillator();
-          pad.type = 'sine';
-          pad.frequency.value = pf * 0.5; // octave lower
+      // Pad chord (every 16 beats)
+      if (beat % 16 === 0) {
+        const pv = section===0?0.008:section===2?0.02:0.012;
+        s.pad.forEach(pf => {
+          const p = ctx.createOscillator(); p.type='sine'; p.frequency.value=pf;
           const pg = ctx.createGain();
-          pg.gain.setValueAtTime(0.0, t);
-          pg.gain.linearRampToValueAtTime(0.02, t + 0.3);
-          pg.gain.setValueAtTime(0.02, t + beatTime * 6);
-          pg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 7.5);
-          pad.connect(pg).connect(ctx.destination);
-          pad.start(t); pad.stop(t + beatTime * 8);
+          pg.gain.setValueAtTime(0,t);
+          pg.gain.linearRampToValueAtTime(pv, t+1.5);
+          pg.gain.setValueAtTime(pv, t+beatTime*13);
+          pg.gain.exponentialRampToValueAtTime(0.001, t+beatTime*15.5);
+          p.connect(pg).connect(ctx.destination);
+          p.start(t); p.stop(t+beatTime*16);
         });
       }
-
+      // Heartbeat bass (승/전 only)
+      if (section >= 1 && section <= 2 && beat % 4 === 0) {
+        const hb = ctx.createOscillator(); hb.type='sine';
+        hb.frequency.setValueAtTime(55,t);
+        hb.frequency.exponentialRampToValueAtTime(35,t+0.12);
+        const hg = ctx.createGain();
+        hg.gain.setValueAtTime(section===2?0.04:0.025, t);
+        hg.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+        hb.connect(hg).connect(ctx.destination);
+        hb.start(t); hb.stop(t+0.18);
+      }
       beat++;
-      if (beat % 16 === 0) currentSet = (currentSet + 1) % 2;
+      if (beat % 16 === 0) section = (section + 1) % 4;
     }, beatTime * 1000);
+  }
+
+  nextBGM() {
+    const next = ((this.bgmSet || 0) + 1) % 3;
+    this.startBGM(next);
   }
 
   stopBGM() {
     if (this._bgmInterval) { clearInterval(this._bgmInterval); this._bgmInterval = null; }
-    if (this._bgmNodes) {
-      this._bgmNodes.forEach(n => { try { n.stop(); } catch(e) {} });
-      this._bgmNodes = null;
-    }
     this.bgmPlaying = false;
   }
 }
