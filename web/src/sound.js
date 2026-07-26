@@ -255,11 +255,9 @@ export class SoundManager {
     if (!this.ctx) return;
     this.bgmPlaying = true;
     this.bgmSet = setIdx % 3;
-    // Master gain for BGM (allows instant mute on stop)
-    if (!this._bgmGain) {
-      this._bgmGain = this.ctx.createGain();
-      this._bgmGain.connect(this.ctx.destination);
-    }
+    // Create fresh gain node each time (old one stays disconnected, killing leftover oscillators)
+    this._bgmGain = this.ctx.createGain();
+    this._bgmGain.connect(this.ctx.destination);
     this._bgmGain.gain.value = 1.0;
     const dest = this._bgmGain; // route all BGM through this
     const ctx = this.ctx;
@@ -344,7 +342,7 @@ export class SoundManager {
 
   stopBGM() {
     if (this._bgmInterval) { clearInterval(this._bgmInterval); this._bgmInterval = null; }
-    if (this._bgmGain) { this._bgmGain.gain.value = 0; } // instant mute
+    if (this._bgmGain) { this._bgmGain.disconnect(); this._bgmGain = null; } // disconnect kills all routed audio
     this.bgmPlaying = false;
   }
 }
