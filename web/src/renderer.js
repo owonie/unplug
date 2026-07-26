@@ -810,22 +810,28 @@ export class ThreeRenderer {
     };
   }
 
-  // === Shield bubble around player ===
+  // === Shield: thin ring → expands → explodes (Sion W) ===
   spawnShieldEffect(x, z) {
-    const geo = new THREE.SphereGeometry(1.2, 16, 12);
-    const mat = new THREE.MeshBasicMaterial({ color: 0x44ffaa, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
-    const shield = new THREE.Mesh(geo, mat);
-    shield.position.set(x, 0.8, z);
-    this.scene.add(shield);
-    this.deathParticles.push({ mesh: shield, vx: 0, vy: 0, vz: 0, life: 2.0, isRing: true, scale: 1 });
-    // Inner glow
-    const inner = new THREE.Mesh(
-      new THREE.SphereGeometry(1.0, 12, 8),
-      new THREE.MeshBasicMaterial({ color: 0x88ffcc, transparent: true, opacity: 0.1, side: THREE.DoubleSide })
-    );
-    inner.position.set(x, 0.8, z);
-    this.scene.add(inner);
-    this.deathParticles.push({ mesh: inner, vx: 0, vy: 0, vz: 0, life: 2.0, isRing: true, scale: 1 });
+    // Thin ring around player
+    const ringGeo = new THREE.TorusGeometry(0.8, 0.04, 8, 24);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.set(x, 0.6, z);
+    ring.rotation.x = Math.PI / 2;
+    this.scene.add(ring);
+    // Ring stays 1.5s then pops
+    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 1.8, isRing: true, scale: 1, isShield: true });
+
+    // After 1.5s → explosion ring (handled in particle update)
+    setTimeout(() => {
+      const burstGeo = new THREE.RingGeometry(0.5, 2.0, 20);
+      const burstMat = new THREE.MeshBasicMaterial({ color: 0xaaddff, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+      const burst = new THREE.Mesh(burstGeo, burstMat);
+      burst.position.set(x, 0.3, z);
+      burst.rotation.x = -Math.PI / 2;
+      this.scene.add(burst);
+      this.deathParticles.push({ mesh: burst, vx: 0, vy: 0, vz: 0, life: 0.3, isRing: true, scale: 1 });
+    }, 1500);
   }
 
   // === Ultimate: big magic circle on ground + screen flash ===

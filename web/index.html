@@ -368,7 +368,7 @@
           }
 
           const size = Math.min(50 + dist * 0.4, 100);
-          const elem = engine.active_element();
+          const elem = engine.player_class_element() || engine.active_element();
           const isRight = dragStart.button === 2;
           const colors = isRight
             ? { 1:'#ff88cc', 2:'#88ffcc', 3:'#ccff88', 4:'#cc88ff', 0:'#ccaaff' }
@@ -434,7 +434,7 @@
 
             if (gesture === 'outward') {
               engine.use_directional_skill(angle);
-              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, engine.active_element(), 5);
+              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, engine.player_class_element() || engine.active_element(), 5);
               renderer.shake(0.35, 0.1);
               showSkillName('outward');
             } else if (gesture === 'inward') {
@@ -444,7 +444,7 @@
               showSkillName('inward');
             } else if (gesture === 'circle') {
               engine.use_ultimate_skill();
-              renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), engine.active_element(), 8);
+              renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), engine.player_class_element() || engine.active_element(), 8);
               renderer.shake(0.6, 0.2);
               showSkillName('circle');
               // Screen flash
@@ -465,12 +465,12 @@
 
             if (gesture === 'outward') {
               engine.use_directional_skill(angle);
-              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, engine.active_element(), 7);
+              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, engine.player_class_element() || engine.active_element(), 7);
               renderer.shake(0.4, 0.12);
               showSkillName('outward');
             } else if (gesture === 'circle') {
               engine.use_ultimate_skill();
-              renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), engine.active_element(), 10);
+              renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), engine.player_class_element() || engine.active_element(), 10);
               renderer.shake(0.7, 0.25);
               showSkillName('circle');
             } else {
