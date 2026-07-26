@@ -136,59 +136,72 @@ export class SoundManager {
 
   // Element sounds
   playElementFire() {
+    // 🔥 Soft crackle/woosh (filtered noise + low sweep)
     if (!this.enabled || !this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.connect(gain); gain.connect(this.ctx.destination);
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.2);
-    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-    osc.start(this.ctx.currentTime); osc.stop(this.ctx.currentTime + 0.2);
+    const t = this.ctx.currentTime;
+    const noise = this.ctx.createBufferSource();
+    const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.12, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.4;
+    noise.buffer = buf;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass'; filter.frequency.value = 600; filter.Q.value = 1;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.06, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    noise.connect(filter).connect(g).connect(this.ctx.destination);
+    noise.start(t);
   }
 
   playElementIce() {
+    // ❄️ Crystalline shimmer (high sine, short, gentle)
     if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.connect(gain); gain.connect(this.ctx.destination);
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-    osc.start(this.ctx.currentTime); osc.stop(this.ctx.currentTime + 0.15);
+    osc.frequency.setValueAtTime(2000, t);
+    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.08);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.04, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc.connect(g).connect(this.ctx.destination);
+    osc.start(t); osc.stop(t + 0.1);
   }
 
   playElementThunder() {
+    // ⚡ Soft electric crackle (filtered noise, very short)
     if (!this.enabled || !this.ctx) return;
-    // White noise burst
-    const bufferSize = this.ctx.sampleRate * 0.08;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
-    const source = this.ctx.createBufferSource();
-    const gain = this.ctx.createGain();
-    source.buffer = buffer;
-    source.connect(gain); gain.connect(this.ctx.destination);
-    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
-    source.start(this.ctx.currentTime);
+    const t = this.ctx.currentTime;
+    const noise = this.ctx.createBufferSource();
+    const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.05, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.3;
+    noise.buffer = buf;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'highpass'; filter.frequency.value = 3000;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.05, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    noise.connect(filter).connect(g).connect(this.ctx.destination);
+    noise.start(t);
   }
 
   playElementPoison() {
+    // ☠️ Bubble/gurgle (low sine wobble)
     if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.connect(gain); gain.connect(this.ctx.destination);
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(200, this.ctx.currentTime + 0.1);
-    osc.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.2);
-    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-    osc.start(this.ctx.currentTime); osc.stop(this.ctx.currentTime + 0.2);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(80, t);
+    osc.frequency.linearRampToValueAtTime(120, t + 0.04);
+    osc.frequency.linearRampToValueAtTime(70, t + 0.1);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.04, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 300;
+    osc.connect(filter).connect(g).connect(this.ctx.destination);
+    osc.start(t); osc.stop(t + 0.12);
   }
 
   // === BGM: Lonely apocalypse, C418/minecraft style ===
