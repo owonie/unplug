@@ -58,6 +58,7 @@
     @keyframes flash-fade{0%{opacity:1}100%{opacity:0}}
     @keyframes lvlflash{0%{opacity:1}100%{opacity:0}}
     @keyframes promo-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}30%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(0.8) translateY(-30px)}}
+    @keyframes skill-acquired{0%{opacity:0;transform:translateX(-50%) translateY(10px) scale(0.8)}15%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.05)}30%{transform:translateX(-50%) translateY(0) scale(1)}75%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(-20px)}}
   </style>
 </head>
 <body>
@@ -384,9 +385,9 @@
         // Level up choice
         if (engine.level_up_pending()) {
           const prevTier = engine.player_class_tier();
-          if (k === '1') { engine.choose_upgrade(0); if(engine.player_class_tier()>prevTier) showPromotionEffect(engine.player_class_tier()); hideLevelUp(); }
-          if (k === '2') { engine.choose_upgrade(1); if(engine.player_class_tier()>prevTier) showPromotionEffect(engine.player_class_tier()); hideLevelUp(); }
-          if (k === '3') { engine.choose_upgrade(2); if(engine.player_class_tier()>prevTier) showPromotionEffect(engine.player_class_tier()); hideLevelUp(); }
+          if (k === '1') { const n=getUpgradeName(engine.level_up_choice(0)); engine.choose_upgrade(0); if(engine.player_class_tier()>prevTier) showPromotionEffect(engine.player_class_tier()); else showSkillAcquired(n); hideLevelUp(); }
+          if (k === '2') { const n=getUpgradeName(engine.level_up_choice(1)); engine.choose_upgrade(1); if(engine.player_class_tier()>prevTier) showPromotionEffect(engine.player_class_tier()); else showSkillAcquired(n); hideLevelUp(); }
+          if (k === '3') { const n=getUpgradeName(engine.level_up_choice(2)); engine.choose_upgrade(2); if(engine.player_class_tier()>prevTier) showPromotionEffect(engine.player_class_tier()); else showSkillAcquired(n); hideLevelUp(); }
         }
       });
       document.addEventListener('keyup', e => {
@@ -794,10 +795,13 @@
       // Level up buttons
       for (let i = 0; i < 3; i++) {
         document.getElementById(`choice-${i}`).addEventListener('click', () => {
+          const choiceId = engine.level_up_choice(i);
+          const choiceName = getUpgradeName(choiceId);
           const prevTier = engine.player_class_tier();
           engine.choose_upgrade(i);
           const newTier = engine.player_class_tier();
           if (newTier > prevTier) showPromotionEffect(newTier);
+          else showSkillAcquired(choiceName);
           hideLevelUp();
         });
       }
@@ -812,6 +816,23 @@
           const desc = getUpgradeDesc(id);
           document.getElementById(`choice-${i}`).innerHTML = `<span>[${i+1}]</span> ${name}<br><small style="color:#999;font-size:11px">${desc}</small>`;
         }
+        // 초반 힌트
+        let hint = document.getElementById('levelup-hint');
+        if (!hint) {
+          hint = document.createElement('div');
+          hint.id = 'levelup-hint';
+          hint.style.cssText = 'color:#ffcc44;font-size:11px;margin-top:10px;text-align:center;opacity:0.8';
+          el.appendChild(hint);
+        }
+        if (engine.player_class_tier() === 0 && engine.player_level() <= 4) {
+          hint.textContent = '💡 원소를 먼저 올리면 전직이 빨라집니다!';
+          hint.style.display = 'block';
+        } else if (engine.player_class_tier() === 0) {
+          hint.textContent = '💡 원소 오브 2개 이상 모으면 전직 가능!';
+          hint.style.display = 'block';
+        } else {
+          hint.style.display = 'none';
+        }
       }
       function hideLevelUp() {
         const el = document.getElementById('levelup');
@@ -819,6 +840,14 @@
         el.classList.remove('shown');
         levelUpShown = false;
         sound.playPickup();
+      }
+
+      function showSkillAcquired(name) {
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;top:18%;left:50%;transform:translateX(-50%);z-index:9998;pointer-events:none;text-align:center;animation:skill-acquired 1.8s ease-out forwards';
+        toast.innerHTML = `<div style="font-size:16px;color:#fff;text-shadow:0 0 8px rgba(255,200,50,0.8);background:rgba(0,0,0,0.7);padding:8px 20px;border-radius:20px;border:1px solid rgba(255,200,50,0.4)">✨ ${name}</div>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 1800);
       }
 
       function showPromotionEffect(tier) {
