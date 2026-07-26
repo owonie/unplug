@@ -148,8 +148,8 @@
     // Helper: 전직 전이면 원소 없음 (무색 공격)
     function getElement() {
       if (!engine) return 0;
-      if (engine.player_class_tier() === 0) return 0; // 전직 전 = 무색
-      return getElement() || 0;
+      if (engine.player_class_tier() === 0) return 0;
+      return engine.player_class_element() || 0;
     }
 
     const sound = new SoundManager();
