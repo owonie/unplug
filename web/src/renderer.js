@@ -720,4 +720,16 @@ export class ThreeRenderer {
   hitStop(duration = 0.04) {
     this._hitStopTimer = duration;
   }
+
+  // Convert world position to screen pixel coordinates
+  projectToScreen(wx, wy, wz) {
+    const vec = new THREE.Vector3(wx, wy, wz);
+    vec.project(this.camera);
+    const w = this.renderer.domElement.clientWidth;
+    const h = this.renderer.domElement.clientHeight;
+    return {
+      x: (vec.x * 0.5 + 0.5) * w,
+      y: (-vec.y * 0.5 + 0.5) * h,
+    };
+  }
 }

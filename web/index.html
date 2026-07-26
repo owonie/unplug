@@ -503,15 +503,12 @@
         const bonusSize = Math.min(12, Math.floor(amount / 30));
         el.style.fontSize = (baseSize + bonusSize) + 'px';
 
-        // Convert world pos to screen pos (using renderer camera)
+        // Convert world pos to screen pos
         const canvas = document.getElementById('game-canvas');
         if (renderer && renderer.camera) {
-          const vec = new THREE.Vector3(wx, 1.8, wz); // head height
-          vec.project(renderer.camera);
-          const x = (vec.x * 0.5 + 0.5) * canvas.clientWidth;
-          const y = (-vec.y * 0.5 + 0.5) * canvas.clientHeight;
-          el.style.left = x + 'px';
-          el.style.top = (y - 20) + 'px'; // slightly above head
+          const pos = renderer.projectToScreen(wx, 1.8, wz);
+          el.style.left = pos.x + 'px';
+          el.style.top = (pos.y - 20) + 'px';
         } else {
           el.style.left = (window.innerWidth / 2) + 'px';
           el.style.top = (window.innerHeight / 2 - 50) + 'px';
