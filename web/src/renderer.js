@@ -140,33 +140,37 @@ export class ThreeRenderer {
       const r = d[i], g = d[i+1], b = d[i+2];
       const lum = (r + g + b) / 3;
 
-      // Warm bright tones (R>G>B, lum high) = clothing/cape → deep dark purple
-      if (r > g && r > b && (r - b) > 30 && lum > 100 && lum < 230) {
-        d[i] = Math.min(80, lum * 0.25 + 15);
-        d[i+1] = Math.max(0, lum * 0.1 + 5);
-        d[i+2] = Math.min(100, lum * 0.3 + 30);
+      // Skin: R much higher than G (r-g > 25, warm reddish)
+      if ((r - g) > 25 && r > 50 && lum > 30 && lum < 180) {
+        // → fair peach skin
+        const t = lum / 100;
+        d[i] = Math.min(255, 180 + t * 50);    // R: peachy
+        d[i+1] = Math.min(240, 140 + t * 50);  // G: warm
+        d[i+2] = Math.min(230, 120 + t * 50);  // B: slightly less
       }
-      // Dark warm tones (skin/brown, lum 50-120, warm) → light peach skin
-      else if (lum > 40 && lum < 130 && r > b && (r - b) > 10) {
-        d[i] = Math.min(255, lum + 110);    // R high (peachy)
-        d[i+1] = Math.min(240, lum + 80);   // G warm
-        d[i+2] = Math.min(230, lum + 70);   // B slightly less
+      // Very dark / outlines (lum < 25)
+      else if (lum < 25) {
+        d[i] = Math.min(30, r * 0.3 + 10);
+        d[i+1] = Math.max(0, g * 0.2 + 5);
+        d[i+2] = Math.min(40, b * 0.3 + 15);
       }
-      // Very dark (outlines) → keep dark with slight purple
-      else if (lum < 40) {
-        d[i] = Math.min(60, r * 0.5 + 15);
-        d[i+1] = Math.max(0, g * 0.3 + 5);
-        d[i+2] = Math.min(70, b * 0.4 + 25);
+      // Clothing/cape/hair: warm or neutral, lum 25-150, not skin
+      else if (lum < 150) {
+        // → deep dark purple/indigo
+        const t = lum / 150;
+        d[i] = Math.min(60, 20 + t * 30);
+        d[i+1] = Math.max(0, 5 + t * 10);
+        d[i+2] = Math.min(80, 30 + t * 40);
       }
-      // Near white/bright highlights → keep
-      else if (lum > 220) {
+      // Bright highlights (lum > 200) — keep as-is (whites/glints)
+      else if (lum > 200) {
         // untouched
       }
-      // Cool mid tones → slight purple
+      // Mid-bright (150-200) — slight cool tint
       else {
-        d[i] = Math.min(200, r * 0.8 + 20);
-        d[i+1] = Math.max(0, g * 0.65 + 10);
-        d[i+2] = Math.min(210, b * 0.7 + 40);
+        d[i] = Math.min(220, r * 0.85 + 20);
+        d[i+1] = Math.min(210, g * 0.8 + 15);
+        d[i+2] = Math.min(230, b * 0.8 + 40);
       }
     }
 
