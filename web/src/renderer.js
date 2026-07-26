@@ -140,37 +140,16 @@ export class ThreeRenderer {
       const r = d[i], g = d[i+1], b = d[i+2];
       const lum = (r + g + b) / 3;
 
-      // Skin: R much higher than G (r-g > 25, warm reddish)
-      if ((r - g) > 25 && r > 50 && lum > 30 && lum < 180) {
-        // → fair peach skin
-        const t = lum / 100;
-        d[i] = Math.min(255, 180 + t * 50);    // R: peachy
-        d[i+1] = Math.min(240, 140 + t * 50);  // G: warm
-        d[i+2] = Math.min(230, 120 + t * 50);  // B: slightly less
-      }
-      // Very dark / outlines (lum < 25)
-      else if (lum < 25) {
-        d[i] = Math.min(30, r * 0.3 + 10);
-        d[i+1] = Math.max(0, g * 0.2 + 5);
-        d[i+2] = Math.min(40, b * 0.3 + 15);
-      }
-      // Clothing/cape/hair: warm or neutral, lum 25-150, not skin
-      else if (lum < 150) {
-        // → deep dark purple/indigo
-        const t = lum / 150;
-        d[i] = Math.min(60, 20 + t * 30);
-        d[i+1] = Math.max(0, 5 + t * 10);
-        d[i+2] = Math.min(80, 30 + t * 40);
-      }
-      // Bright highlights (lum > 200) — keep as-is (whites/glints)
-      else if (lum > 200) {
-        // untouched
-      }
-      // Mid-bright (150-200) — slight cool tint
-      else {
-        d[i] = Math.min(220, r * 0.85 + 20);
-        d[i+1] = Math.min(210, g * 0.8 + 15);
-        d[i+2] = Math.min(230, b * 0.8 + 40);
+      // Map everything on a dark purple↔black gradient based on luminance
+      // Brighter original → deeper purple (머리/망토)
+      // Darker original → near black (발/외곽)
+      if (lum > 180) {
+        // Very bright highlights → keep (눈 반짝임 등)
+      } else {
+        const t = Math.min(1, lum / 120); // 0=darkest, 1=brightest clothing
+        d[i] = Math.round(10 + t * 45);     // R: 10-55
+        d[i+1] = Math.round(3 + t * 12);    // G: 3-15
+        d[i+2] = Math.round(15 + t * 55);   // B: 15-70 (purple)
       }
     }
 
