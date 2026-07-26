@@ -595,10 +595,14 @@ impl World {
 
         match class_tier {
             0 => {
-                // Pre-promotion: 2 different element orbs + 1 stat
+                // Pre-promotion: 1 element orb + 2 different stats
                 self.level_up_choices[0] = self.random_element_choice(seed);
-                self.level_up_choices[1] = self.random_element_choice_exclude(seed / 5, self.level_up_choices[0]);
+                self.level_up_choices[1] = self.random_stat_choice(seed / 3);
                 self.level_up_choices[2] = self.random_stat_choice(seed / 7);
+                // Ensure different stats
+                if self.level_up_choices[2] == self.level_up_choices[1] {
+                    self.level_up_choices[2] = self.random_stat_choice(seed / 13);
+                }
             }
             1 => {
                 // Post-1st: 1 class skill + 1 element + 1 stat
@@ -653,7 +657,8 @@ impl World {
 
     /// Stat choice: 60~69
     fn random_stat_choice(&self, seed: u32) -> u32 {
-        let stats = [60, 61, 62, 63, 64, 65, 66, 67, 68]; // dmg, spd, aspd, range, cleave, hp, crit, steal, magnet
+        // Weighted: ATK(60) and ASPD(62) and CRIT(66) appear more often
+        let stats = [60, 60, 62, 62, 66, 61, 63, 64, 65, 67, 68]; // dmg×2, aspd×2, crit×1, rest×1
         stats[(seed as usize) % stats.len()] as u32
     }
 
