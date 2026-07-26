@@ -18,7 +18,7 @@
     .skill-icon:hover .sk-tooltip{display:block}
     .sk-tooltip{display:none;position:absolute;bottom:34px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.95);border:1px solid #555;border-radius:6px;padding:8px 10px;font-size:10px;color:#ccc;white-space:nowrap;z-index:3000;min-width:160px;text-align:left;line-height:1.5;pointer-events:none}
     .skill-icon.active-tip .sk-tooltip{display:block}
-    #hp-bar-bg{width:200px;height:12px;background:#333;border-radius:6px;margin:4px 0;border:1px solid #555}
+    #hp-bar-bg{width:200px;height:12px;background:#333;border-radius:6px;margin:4px 0;border:1px solid #555;position:relative;overflow:hidden}
     #hp-bar-fill{height:100%;background:linear-gradient(90deg,#ff2222,#ff6644);border-radius:5px;transition:width 0.2s}
     #xp-bar-bg{width:200px;height:8px;background:#222;border-radius:4px;margin:2px 0;border:1px solid #444}
     #xp-bar-fill{height:100%;background:linear-gradient(90deg,#4488ff,#44ddff);border-radius:3px;transition:width 0.1s}
@@ -84,7 +84,7 @@
         <div id="portrait" style="width:40px;height:40px;border-radius:50%;border:2px solid #555;display:flex;align-items:center;justify-content:center;font-size:20px;background:#111">🗡️</div>
         <div>
           <div>LV.<span id="level">1</span></div>
-          <div id="hp-bar-bg"><div id="hp-bar-fill" style="width:100%"></div></div>
+          <div id="hp-bar-bg"><div id="hp-bar-fill" style="width:100%"></div><div id="shield-bar-fill" style="width:0%;position:absolute;top:0;left:0;height:100%;background:rgba(180,200,220,0.6);border-radius:5px;transition:width 0.2s"></div></div>
           <div id="xp-bar-bg"><div id="xp-bar-fill" style="width:0%"></div></div>
           <div id="stamina-bar-bg" style="width:200px;height:6px;background:#1a1a1a;border-radius:3px;margin:2px 0;border:1px solid #2a4a2a;display:none"><div id="stamina-bar-fill" style="width:100%;height:100%;background:linear-gradient(90deg,#22aa44,#44ff66);border-radius:2px;transition:width 0.1s"></div></div>
         </div>
@@ -556,9 +556,9 @@
             const dot = ax * bx + ay * by;
             totalAngle += Math.atan2(cross, dot);
           }
-          // Must rotate 340°+ AND end near start (within 80px)
+          // Must rotate 340°+ AND end reasonably near start (within 120px)
           const endDist = Math.sqrt((last.x - start.x)**2 + (last.y - start.y)**2);
-          if (Math.abs(totalAngle) > Math.PI * 1.9 && endDist < 80) return 'circle';
+          if (Math.abs(totalAngle) > Math.PI * 1.9 && endDist < 120) return 'circle';
         }
 
         // Check direction relative to player screen position
@@ -721,6 +721,9 @@
         else portrait.style.boxShadow = 'none';
         const hpPct = Math.max(0, engine.player_hp() / engine.player_max_hp() * 100);
         document.getElementById('hp-bar-fill').style.width = hpPct + '%';
+        // Shield overlay on HP bar
+        const shieldPct = Math.max(0, engine.player_shield() / engine.player_max_hp() * 100);
+        document.getElementById('shield-bar-fill').style.width = shieldPct + '%';
         const xpPct = engine.player_xp() / engine.player_xp_max() * 100;
         document.getElementById('xp-bar-fill').style.width = xpPct + '%';
 

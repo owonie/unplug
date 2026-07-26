@@ -52,6 +52,9 @@ pub struct Player {
     pub stamina: f32,
     pub max_stamina: f32,
     pub active_skill_cd: f32,  // remaining cooldown
+    // Shield
+    pub shield_hp: f32,        // absorbs damage before HP
+    pub shield_timer: f32,     // time until shield explodes
     // Skill cooldown tracking
     pub skill_timers: Vec<f32>, // last-used time per learned skill index
 }
@@ -124,6 +127,8 @@ impl Player {
             stamina: 100.0,
             max_stamina: 100.0,
             active_skill_cd: 0.0,
+            shield_hp: 0.0,
+            shield_timer: 0.0,
             skill_timers: Vec::new(),
         }
     }
@@ -132,6 +137,7 @@ impl Player {
         if self.invuln_timer > 0.0 { self.invuln_timer -= dt; }
         if self.dash_cooldown > 0.0 { self.dash_cooldown -= dt; }
         if self.active_skill_cd > 0.0 { self.active_skill_cd -= dt; }
+        if self.shield_timer > 0.0 { self.shield_timer -= dt; }
 
         // Thunder dash charge recovery (1 charge per 1.5s)
         if self.dash_element == 3 && self.dash_charges < 3 {
@@ -261,7 +267,19 @@ impl Player {
 
     pub fn take_damage(&mut self, amount: f32) {
         if self.invuln_timer > 0.0 { return; }
-        self.hp -= amount;
+        // Shield absorbs damage first
+        if self.shield_hp > 0.0 {
+            if self.shield_hp >= amount {
+                self.shield_hp -= amount;
+                return;
+            } else {
+                let remaining = amount - self.shield_hp;
+                self.shield_hp = 0.0;
+                self.hp -= remaining;
+            }
+        } else {
+            self.hp -= amount;
+        }
         self.invuln_timer = 0.5;
         if self.hp <= 0.0 { self.hp = 0.0; self.alive = false; }
     }

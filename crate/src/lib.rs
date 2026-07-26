@@ -72,6 +72,8 @@ impl GameEngine {
     }
     pub fn player_stamina(&self) -> f32 { self.world.player.stamina }
     pub fn player_max_stamina(&self) -> f32 { self.world.player.max_stamina }
+    pub fn player_shield(&self) -> f32 { self.world.player.shield_hp }
+    pub fn player_shield_timer(&self) -> f32 { self.world.player.shield_timer }
     pub fn player_skill_cd(&self) -> f32 { self.world.player.active_skill_cd }
     pub fn use_active_skill(&mut self) { self.world.use_active_skill(); }
     pub fn use_directional_skill(&mut self, angle: f32) { self.world.use_directional_skill(angle); }

@@ -107,6 +107,27 @@ impl World {
             }
         }
         self.update_passive_skills(dt);
+
+        // Shield explosion when timer reaches 0
+        if self.player.shield_hp > 0.0 && self.player.shield_timer <= 0.0 {
+            let px = self.player.x;
+            let pz = self.player.z;
+            let shield_dmg = self.player.shield_hp + self.player.attack_damage * 2.0;
+            let range = 5.0;
+            self.player.shield_hp = 0.0;
+
+            for enemy in &mut self.enemies {
+                if !enemy.alive { continue; }
+                let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
+                if dist < range {
+                    enemy.take_damage(shield_dmg);
+                    enemy.apply_knockback(px, pz, 12.0);
+                    self.damage_events.push((enemy.x, enemy.z, shield_dmg, true));
+                }
+            }
+            self.skill_events.push((px, pz, self.player.dash_element, range));
+            self.log("💥 Shield Burst!".into());
+        }
         self.update_enemies(dt);
         self.finalize_deaths();
         self.update_xp_pickup();
@@ -895,16 +916,17 @@ impl World {
         self.log("⚔️ Directional Strike!".into());
     }
 
-    /// Shield skill (drag inward) — temporary invulnerability + heal
+    /// Shield skill (drag inward) — grants shield HP, explodes after 5s
     pub fn use_shield_skill(&mut self) {
         if self.player.class_tier == 0 { return; }
-        let cost = 40.0;
+        let cost = 35.0;
         if self.player.stamina < cost { return; }
+        if self.player.shield_hp > 0.0 { return; } // already shielded
 
         self.player.stamina -= cost;
-        self.player.invuln_timer = 2.0; // 2s invulnerability
-        self.player.heal(self.player.max_hp * 0.15); // heal 15%
-        self.log("🛡️ Shield activated!".into());
+        self.player.shield_hp = self.player.max_hp * 0.4; // 40% of max HP as shield
+        self.player.shield_timer = 5.0; // explodes in 5s
+        self.log("🛡️ Shield!".into());
     }
 
     /// Ultimate skill (circle gesture) — massive AoE
