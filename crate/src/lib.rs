@@ -114,6 +114,13 @@ impl GameEngine {
     pub fn death_event_x(&self, i: u32) -> f32 { self.world.death_events.get(i as usize).map(|d| d.0).unwrap_or(0.0) }
     pub fn death_event_z(&self, i: u32) -> f32 { self.world.death_events.get(i as usize).map(|d| d.1).unwrap_or(0.0) }
 
+    // === Skill visual events ===
+    pub fn skill_event_count(&self) -> u32 { self.world.skill_events.len() as u32 }
+    pub fn skill_event_x(&self, i: u32) -> f32 { self.world.skill_events.get(i as usize).map(|s| s.0).unwrap_or(0.0) }
+    pub fn skill_event_z(&self, i: u32) -> f32 { self.world.skill_events.get(i as usize).map(|s| s.1).unwrap_or(0.0) }
+    pub fn skill_event_element(&self, i: u32) -> u32 { self.world.skill_events.get(i as usize).map(|s| s.2 as u32).unwrap_or(0) }
+    pub fn skill_event_range(&self, i: u32) -> f32 { self.world.skill_events.get(i as usize).map(|s| s.3).unwrap_or(4.0) }
+
     // === Bullets ===
     pub fn bullet_count(&self) -> u32 { self.world.bullets.len() as u32 }
     pub fn bullet_x(&self, i: u32) -> f32 { self.world.bullets.get(i as usize).map(|b| b.x).unwrap_or(0.0) }

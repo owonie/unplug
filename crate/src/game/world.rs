@@ -36,6 +36,8 @@ pub struct World {
     pub damage_events: Vec<(f32, f32, f32, bool)>,
     // Death events (x, z) for explosion particles
     pub death_events: Vec<(f32, f32)>,
+    // Skill visual events (x, z, element: 1-4, skill_range)
+    pub skill_events: Vec<(f32, f32, u8, f32)>,
     // Attack wind-up
     pub attack_windup: f32,      // > 0 means winding up
     pub attack_windup_max: f32,  // total windup time
@@ -71,6 +73,7 @@ impl World {
             paused: false,
             damage_events: Vec::new(),
             death_events: Vec::new(),
+            skill_events: Vec::new(),
             attack_windup: 0.0,
             attack_windup_max: 0.2,
             attacking: false,
@@ -86,6 +89,7 @@ impl World {
         self.game_time += dt;
         self.damage_events.clear();
         self.death_events.clear();
+        self.skill_events.clear();
 
         // Increase difficulty over time (slower curve)
         self.difficulty = 1.0 + self.game_time / 60.0; // +1 every 60s (was 30s)
@@ -642,6 +646,15 @@ impl World {
             if hit_any {
                 let cd = skill_def.cooldown * (1.0 - self.player.learned_skills[idx].level as f32 * 0.05);
                 self.player.learned_skills[idx].cooldown_remaining = cd.max(0.5);
+                // Push skill visual event (player pos, element, range)
+                let elem = match skill_def.element {
+                    super::skill_data::Element::Fire => 1u8,
+                    super::skill_data::Element::Ice => 2,
+                    super::skill_data::Element::Thunder => 3,
+                    super::skill_data::Element::Poison => 4,
+                    _ => self.player.dominant_element(),
+                };
+                self.skill_events.push((px, pz, elem, range));
             }
         }
     }

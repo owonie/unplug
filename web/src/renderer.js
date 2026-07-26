@@ -737,4 +737,106 @@ export class ThreeRenderer {
       y: (-vec.y * 0.5 + 0.5) * h,
     };
   }
+
+  // === Element Skill Visual Effects ===
+  spawnSkillEffect(x, z, element, range) {
+    switch (element) {
+      case 1: this._spawnFireBurst(x, z, range); break;
+      case 2: this._spawnIceShatter(x, z, range); break;
+      case 3: this._spawnLightningChain(x, z, range); break;
+      case 4: this._spawnPoisonCloud(x, z, range); break;
+      default: this._spawnFireBurst(x, z, range); break;
+    }
+  }
+
+  _spawnFireBurst(x, z, range) {
+    // Expanding fire ring + flame particles
+    const ringGeo = new THREE.RingGeometry(0.3, range * 0.8, 24);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.set(x, 0.15, z);
+    ring.rotation.x = -Math.PI / 2;
+    this.scene.add(ring);
+    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 0.4, isRing: true, scale: 0.3 });
+
+    // Fire particles shooting outward
+    for (let i = 0; i < 10; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const geo = new THREE.SphereGeometry(0.08 + Math.random() * 0.06, 4, 4);
+      const mat = new THREE.MeshBasicMaterial({ color: Math.random() > 0.5 ? 0xff6600 : 0xffcc00, transparent: true, opacity: 0.9 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, 0.5, z);
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: Math.cos(angle) * 5, vy: 2 + Math.random() * 3, vz: Math.sin(angle) * 5, life: 0.5 });
+    }
+  }
+
+  _spawnIceShatter(x, z, range) {
+    // Ice crystal shards flying out
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const geo = new THREE.ConeGeometry(0.06, 0.3, 4);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x88ddff, transparent: true, opacity: 0.9 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, 0.4, z);
+      mesh.rotation.z = angle;
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: Math.cos(angle) * 4, vy: 1.5, vz: Math.sin(angle) * 4, life: 0.6 });
+    }
+    // Frost ground circle
+    const circGeo = new THREE.CircleGeometry(range * 0.6, 24);
+    const circMat = new THREE.MeshBasicMaterial({ color: 0x44ccff, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+    const circ = new THREE.Mesh(circGeo, circMat);
+    circ.position.set(x, 0.05, z);
+    circ.rotation.x = -Math.PI / 2;
+    this.scene.add(circ);
+    this.deathParticles.push({ mesh: circ, vx: 0, vy: 0, vz: 0, life: 0.8, isRing: true, scale: 1 });
+  }
+
+  _spawnLightningChain(x, z, range) {
+    // Zigzag lightning bolts from center to random directions
+    for (let i = 0; i < 5; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = range * 0.5 + Math.random() * range * 0.5;
+      const points = [];
+      const segments = 4 + Math.floor(Math.random() * 3);
+      for (let j = 0; j <= segments; j++) {
+        const t = j / segments;
+        const jitter = j > 0 && j < segments ? (Math.random() - 0.5) * 0.8 : 0;
+        points.push(new THREE.Vector3(
+          x + Math.cos(angle) * dist * t + jitter,
+          0.5 + Math.random() * 0.5,
+          z + Math.sin(angle) * dist * t + jitter
+        ));
+      }
+      const curve = new THREE.CatmullRomCurve3(points);
+      const tubeGeo = new THREE.TubeGeometry(curve, 8, 0.03, 4, false);
+      const tubeMat = new THREE.MeshBasicMaterial({ color: 0xffff44, transparent: true, opacity: 0.9 });
+      const tube = new THREE.Mesh(tubeGeo, tubeMat);
+      this.scene.add(tube);
+      this.deathParticles.push({ mesh: tube, vx: 0, vy: 0, vz: 0, life: 0.2 + Math.random() * 0.15, isRing: true, scale: 1 });
+    }
+    // Central flash
+    const flashGeo = new THREE.SphereGeometry(0.3, 8, 8);
+    const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffaa, transparent: true, opacity: 0.8 });
+    const flash = new THREE.Mesh(flashGeo, flashMat);
+    flash.position.set(x, 0.6, z);
+    this.scene.add(flash);
+    this.deathParticles.push({ mesh: flash, vx: 0, vy: 0, vz: 0, life: 0.15, isRing: true, scale: 1 });
+  }
+
+  _spawnPoisonCloud(x, z, range) {
+    // Green cloud spheres
+    for (let i = 0; i < 6; i++) {
+      const ox = (Math.random() - 0.5) * range * 0.8;
+      const oz = (Math.random() - 0.5) * range * 0.8;
+      const size = 0.3 + Math.random() * 0.4;
+      const geo = new THREE.SphereGeometry(size, 8, 6);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x33ff33, transparent: true, opacity: 0.3 + Math.random() * 0.2 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x + ox, 0.3 + Math.random() * 0.5, z + oz);
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: (Math.random()-0.5)*0.5, vy: 0.5, vz: (Math.random()-0.5)*0.5, life: 1.0 + Math.random() * 0.5, isRing: true, scale: 1 });
+    }
+  }
 }
