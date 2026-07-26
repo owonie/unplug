@@ -39,6 +39,7 @@
     @keyframes skill-name-fade{0%{opacity:1;transform:translateX(-50%) scale(1.2)}30%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) translateY(-30px) scale(0.8)}}
     @keyframes flash-fade{0%{opacity:1}100%{opacity:0}}
     @keyframes lvlflash{0%{opacity:1}100%{opacity:0}}
+    @keyframes promo-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}30%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(0.8) translateY(-30px)}}
   </style>
 </head>
 <body>
@@ -349,9 +350,10 @@
 
         // Level up choice
         if (engine.level_up_pending()) {
-          if (k === '1') { engine.choose_upgrade(0); hideLevelUp(); }
-          if (k === '2') { engine.choose_upgrade(1); hideLevelUp(); }
-          if (k === '3') { engine.choose_upgrade(2); hideLevelUp(); }
+          const prevTier = engine.player_class_tier();
+          if (k === '1') { engine.choose_upgrade(0); if(engine.player_class_tier()>prevTier) showPromotionEffect(engine.player_class_tier()); hideLevelUp(); }
+          if (k === '2') { engine.choose_upgrade(1); if(engine.player_class_tier()>prevTier) showPromotionEffect(engine.player_class_tier()); hideLevelUp(); }
+          if (k === '3') { engine.choose_upgrade(2); if(engine.player_class_tier()>prevTier) showPromotionEffect(engine.player_class_tier()); hideLevelUp(); }
         }
       });
       document.addEventListener('keyup', e => {
@@ -759,7 +761,10 @@
       // Level up buttons
       for (let i = 0; i < 3; i++) {
         document.getElementById(`choice-${i}`).addEventListener('click', () => {
+          const prevTier = engine.player_class_tier();
           engine.choose_upgrade(i);
+          const newTier = engine.player_class_tier();
+          if (newTier > prevTier) showPromotionEffect(newTier);
           hideLevelUp();
         });
       }
@@ -780,7 +785,34 @@
         el.style.display = 'none';
         el.classList.remove('shown');
         levelUpShown = false;
-        sound.playPickup(); // 스킬 선택 확인 사운드
+        sound.playPickup();
+      }
+
+      function showPromotionEffect(tier) {
+        // Sound
+        sound.playLevelUp();
+        setTimeout(() => sound.playShield(), 200);
+
+        // Screen flash (gold/element color)
+        const colors = ['', 'rgba(255,200,50,0.4)', 'rgba(100,200,255,0.4)', 'rgba(255,100,255,0.4)'];
+        const flash = document.createElement('div');
+        flash.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:${colors[tier]||colors[1]};pointer-events:none;z-index:9999;transition:opacity 0.8s`;
+        document.body.appendChild(flash);
+        setTimeout(() => { flash.style.opacity = '0'; }, 100);
+        setTimeout(() => flash.remove(), 900);
+
+        // Big text announcement
+        const tierNames = ['', '⚔️ 1차 전직!', '🌟 2차 전직!', '👑 3차 전직!'];
+        const className = engine.player_class_name() || '';
+        const txt = document.createElement('div');
+        txt.style.cssText = 'position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);z-index:9999;pointer-events:none;text-align:center;animation:promo-pop 1.5s ease-out forwards';
+        txt.innerHTML = `<div style="font-size:36px;color:#ffd700;text-shadow:0 0 20px #ff8800,0 0 40px #ff4400;font-weight:bold">${tierNames[tier]}</div><div style="font-size:20px;color:#fff;margin-top:8px;text-shadow:0 0 10px rgba(255,255,255,0.8)">${className}</div>`;
+        document.body.appendChild(txt);
+        setTimeout(() => txt.remove(), 2000);
+
+        // Camera + hit stop for drama
+        renderer.shake(0.4, 0.2);
+        renderer.hitStop(0.15);
       }
 
       // HUD
@@ -1098,13 +1130,16 @@
           if (hasCrit) { renderer.shake(0.4, 0.12); renderer.hitStop(0.04); }
           else if (dmgCount >= 3) { renderer.shake(0.2, 0.08); }
 
-          // Death events → particles + sound
+          // Death events → particles + sound + hit stop
           const deathCount = engine.death_event_count();
           for (let i = 0; i < deathCount; i++) {
             renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i), engine.active_element());
             if (i === 0) sound.playDeath();
           }
-          if (deathCount > 0) { renderer.shake(0.25 + deathCount * 0.1, 0.1); }
+          if (deathCount > 0) {
+            renderer.shake(0.25 + deathCount * 0.1, 0.1);
+            renderer.hitStop(0.03 * Math.min(deathCount, 3)); // brief freeze on kill
+          }
 
           // Skill visual events
           const skillEvtCount = engine.skill_event_count();

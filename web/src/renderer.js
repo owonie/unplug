@@ -481,16 +481,20 @@ export class ThreeRenderer {
         m.traverse(child => {
           if (child.isMesh && child.material) {
             if (isHit) {
-              child.material.emissive = child.material.emissive || new THREE.Color();
+              if (!child.material._origColor) child.material._origColor = child.material.color.getHex();
+              child.material.color.set(0xffffff);
               child.material.emissive.set(0xffffff);
-              child.material.emissiveIntensity = 2;
+              child.material.emissiveIntensity = 3;
             } else {
+              if (child.material._origColor) {
+                child.material.color.set(child.material._origColor);
+              }
               child.material.emissiveIntensity = 0;
             }
           }
         });
-        // Scale pulse on hit
-        const s = isHit ? 1.15 : 1.0;
+        // Scale punch on hit
+        const s = isHit ? 1.2 : 1.0;
         m.scale.set(s, s, s);
       }
     });
