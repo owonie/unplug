@@ -343,12 +343,17 @@ impl Player {
             }
 
             // Lock dash element to class's primary element
+            // If tied, use player's highest element level
             let mut max_req = 0u8;
             let mut primary = 0u8;
             if class.req_fire > max_req { max_req = class.req_fire; primary = 1; }
             if class.req_ice > max_req { max_req = class.req_ice; primary = 2; }
             if class.req_thunder > max_req { max_req = class.req_thunder; primary = 3; }
-            if class.req_poison > max_req { primary = 4; }
+            if class.req_poison > max_req { max_req = class.req_poison; primary = 4; }
+            // If no clear winner (all req same), use player's dominant
+            if primary == 0 || max_req == 0 {
+                primary = self.dominant_element();
+            }
             if primary > 0 { self.dash_element = primary; }
 
             // Stat boost on promotion

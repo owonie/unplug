@@ -647,7 +647,7 @@ impl World {
     }
 
     fn update_passive_skills(&mut self, dt: f32) {
-        if self.player.class_tier == 0 { return; }
+        if self.player.class_tier < 2 { return; } // Only auto-fire from 2nd class onwards
 
         let px = self.player.x;
         let pz = self.player.z;

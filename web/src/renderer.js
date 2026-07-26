@@ -892,38 +892,50 @@ export class ThreeRenderer {
   }
 
   _spawnFireBreath(x, z, dirX, dirZ, range) {
-    // Fire breath: subtle stream
-    for (let i = 0; i < 8; i++) {
-      const t = (i / 8) * range;
-      const spread = (Math.random() - 0.5) * 0.3 * (t / range);
-      const geo = new THREE.SphereGeometry(0.06 + t * 0.02, 4, 4);
+    // Fire breath: dramatic cone stream
+    for (let i = 0; i < 12; i++) {
+      const t = (i / 12) * range * 0.9;
+      const spread = (Math.random() - 0.5) * 0.5 * (t / range);
+      const size = 0.05 + (t / range) * 0.08;
+      const geo = new THREE.SphereGeometry(size, 4, 4);
+      const colors = [0xffcc44, 0xff8800, 0xff5500, 0xcc2200];
       const mat = new THREE.MeshBasicMaterial({
-        color: i < 3 ? 0xffcc44 : i < 6 ? 0xff6600 : 0xcc2200,
-        transparent: true, opacity: 0.5
+        color: colors[Math.floor(i/3)],
+        transparent: true, opacity: 0.55 - (i/12) * 0.2
       });
       const mesh = new THREE.Mesh(geo, mat);
       const perpX = -dirZ, perpZ = dirX;
-      mesh.position.set(x + dirX * t + perpX * spread, 0.3 + Math.random() * 0.2, z + dirZ * t + perpZ * spread);
+      mesh.position.set(x + dirX * (t + 0.5) + perpX * spread, 0.3, z + dirZ * (t + 0.5) + perpZ * spread);
       this.scene.add(mesh);
-      this.deathParticles.push({ mesh, vx: dirX * 1.5, vy: 0.3, vz: dirZ * 1.5, life: 0.25 + i * 0.02 });
+      this.deathParticles.push({ mesh, vx: dirX * 6, vy: 0.2 + Math.random() * 0.5, vz: dirZ * 6, life: 0.2 + i * 0.015 });
     }
   }
 
   _spawnLightningBolt(x, z, dirX, dirZ, range) {
-    // Single bolt — thinner, quicker fade
+    // Fast lightning bolt + impact spark at end
     const points = [];
     for (let i = 0; i <= 6; i++) {
       const t = (i / 6) * range;
-      const jitter = i > 0 && i < 6 ? (Math.random() - 0.5) * 0.4 : 0;
+      const jitter = i > 0 && i < 6 ? (Math.random() - 0.5) * 0.5 : 0;
       const perpX = -dirZ, perpZ = dirX;
-      points.push(new THREE.Vector3(x + dirX * t + perpX * jitter, 0.4 + Math.random() * 0.2, z + dirZ * t + perpZ * jitter));
+      points.push(new THREE.Vector3(x + dirX * t + perpX * jitter, 0.4 + Math.random() * 0.15, z + dirZ * t + perpZ * jitter));
     }
     const curve = new THREE.CatmullRomCurve3(points);
-    const tubeGeo = new THREE.TubeGeometry(curve, 8, 0.04, 3, false);
-    const tubeMat = new THREE.MeshBasicMaterial({ color: 0xffff88, transparent: true, opacity: 0.7 });
+    const tubeGeo = new THREE.TubeGeometry(curve, 8, 0.035, 3, false);
+    const tubeMat = new THREE.MeshBasicMaterial({ color: 0xffff66, transparent: true, opacity: 0.75 });
     const tube = new THREE.Mesh(tubeGeo, tubeMat);
     this.scene.add(tube);
-    this.deathParticles.push({ mesh: tube, vx: 0, vy: 0, vz: 0, life: 0.15, isRing: true, scale: 1 });
+    this.deathParticles.push({ mesh: tube, vx: 0, vy: 0, vz: 0, life: 0.12, isRing: true, scale: 1 });
+
+    // Impact spark at end point
+    const endX = x + dirX * range;
+    const endZ = z + dirZ * range;
+    const sparkGeo = new THREE.SphereGeometry(0.15, 6, 6);
+    const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffffaa, transparent: true, opacity: 0.6 });
+    const spark = new THREE.Mesh(sparkGeo, sparkMat);
+    spark.position.set(endX, 0.4, endZ);
+    this.scene.add(spark);
+    this.deathParticles.push({ mesh: spark, vx: 0, vy: 0, vz: 0, life: 0.1, isRing: true, scale: 1 });
   }
 
   _spawnIceWave(x, z, dirX, dirZ, range) {
