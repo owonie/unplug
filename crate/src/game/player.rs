@@ -87,7 +87,7 @@ impl Player {
             alive: true,
             level: 1,
             xp: 0,
-            xp_to_next: 10,
+            xp_to_next: 20,
             attack_cooldown: 0.6,
             last_attack: 0.0,
             attack_damage: 25.0,
@@ -298,7 +298,7 @@ impl Player {
         if self.xp >= self.xp_to_next {
             self.xp -= self.xp_to_next;
             self.level += 1;
-            self.xp_to_next = 8 + self.level * 3; // faster leveling
+            self.xp_to_next = 15 + self.level * 5; // slower progression
             return true;
         }
         false

@@ -37,16 +37,16 @@ pub const BOSS: u32 = 8;       // 메인보스 (10웨이브)
 impl Enemy {
     pub fn new(x: f32, z: f32, enemy_type: u32) -> Self {
         let (hp, speed, damage) = match enemy_type {
-            SKELETON => (30.0, 3.5, 8.0),
-            GOLEM    => (80.0, 2.0, 5.0),
-            IMP      => (25.0, 5.5, 12.0),
-            WRAITH   => (40.0, 3.0, 10.0),
-            SWARM    => (10.0, 6.5, 4.0),      // 매우 약하지만 매우 빠름
-            ARCHER   => (35.0, 2.5, 15.0),     // 원거리 고데미지
-            BRUTE    => (60.0, 4.0, 20.0),     // 돌진 시 고데미지
-            ELITE    => (300.0, 3.0, 18.0),    // 중간보스
-            BOSS     => (800.0, 2.5, 25.0),    // 메인보스
-            _ => (30.0, 3.5, 8.0),
+            SKELETON => (30.0, 2.8, 8.0),
+            GOLEM    => (80.0, 1.5, 5.0),
+            IMP      => (25.0, 4.0, 12.0),
+            WRAITH   => (40.0, 2.5, 10.0),
+            SWARM    => (10.0, 3.8, 4.0),      // 빠르지만 플레이어보단 느림
+            ARCHER   => (35.0, 2.0, 15.0),
+            BRUTE    => (60.0, 2.5, 20.0),     // 돌진만 빠름
+            ELITE    => (300.0, 2.8, 18.0),
+            BOSS     => (800.0, 2.0, 25.0),
+            _ => (30.0, 2.8, 8.0),
         };
 
         Enemy {
@@ -72,7 +72,7 @@ impl Enemy {
         e.hp *= scale;
         e.max_hp = e.hp;
         e.damage *= 1.0 + wave as f32 * 0.1;
-        e.speed *= 1.0 + wave as f32 * 0.03;
+        e.speed *= 1.0 + wave as f32 * 0.015; // very slow speed scaling
         e
     }
 
@@ -143,8 +143,8 @@ impl Enemy {
 
         if self.is_charging {
             // Charging forward
-            self.x += self.charge_dir_x * self.speed * 3.0 * dt;
-            self.z += self.charge_dir_z * self.speed * 3.0 * dt;
+            self.x += self.charge_dir_x * self.speed * 2.0 * dt;
+            self.z += self.charge_dir_z * self.speed * 2.0 * dt;
             if self.state_timer <= 0.0 {
                 self.is_charging = false;
                 self.state_timer = 1.5; // rest after charge
