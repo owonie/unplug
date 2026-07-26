@@ -134,33 +134,95 @@ impl Player {
         // Dashing: fast movement + invulnerable
         if self.dash_timer > 0.0 {
             self.dash_timer -= dt;
-            let dash_speed = 25.0; // very fast
-            self.x += self.dash_dir_x * dash_speed * dt;
-            self.z += self.dash_dir_z * dash_speed * dt;
-            self.invuln_timer = 0.1; // stay invuln during dash
+            let elem = self.dominant_element();
+            match elem {
+                1 => {
+                    // 🔥 Blink: instant teleport (no gradual movement)
+                    // Already teleported in try_dash, just wait out timer
+                }
+                4 => {
+                    // ☠️ Smoke: smooth fast movement while invuln
+                    let smoke_speed = 18.0;
+                    self.x += self.dash_dir_x * smoke_speed * dt;
+                    self.z += self.dash_dir_z * smoke_speed * dt;
+                    self.invuln_timer = 0.1;
+                }
+                3 => {
+                    // ⚡ Triple Dash: fast short burst
+                    let dash_speed = 30.0;
+                    self.x += self.dash_dir_x * dash_speed * dt;
+                    self.z += self.dash_dir_z * dash_speed * dt;
+                    self.invuln_timer = 0.05;
+                }
+                _ => {
+                    // Default / Ice doesn't dash (passive speed)
+                    let dash_speed = 25.0;
+                    self.x += self.dash_dir_x * dash_speed * dt;
+                    self.z += self.dash_dir_z * dash_speed * dt;
+                    self.invuln_timer = 0.1;
+                }
+            }
         } else if self.moving {
-            self.x += self.dir_x * self.speed * dt;
-            self.z += self.dir_z * self.speed * dt;
+            let mut spd = self.speed;
+            // ❄️ Ice Skate: passive speed boost
+            if self.dominant_element() == 2 && self.class_tier > 0 {
+                spd *= 1.4;
+            }
+            self.x += self.dir_x * spd * dt;
+            self.z += self.dir_z * spd * dt;
         }
     }
 
-    pub fn try_dash(&mut self) -> bool {
-        if self.dash_cooldown > 0.0 { return false; }
-        // Dash in current move direction, or facing direction
+    /// Returns dash type: 0=normal, 1=blink(fire), 2=skate(ice), 3=triple(thunder), 4=smoke(poison)
+    pub fn try_dash(&mut self) -> u8 {
+        let elem = if self.class_tier > 0 { self.dominant_element() } else { 0 };
+
+        // Ice: no dash, passive speed instead
+        if elem == 2 { return 0; }
+
+        if self.dash_cooldown > 0.0 { return 0; }
+
+        // Set direction
         if self.moving {
             self.dash_dir_x = self.dir_x;
             self.dash_dir_z = self.dir_z;
-        } else {
-            // Default: dash forward (positive z or last dir)
-            if self.dash_dir_x == 0.0 && self.dash_dir_z == 0.0 {
-                self.dash_dir_z = -1.0;
-            }
-            // Keep last dash direction
+        } else if self.dash_dir_x == 0.0 && self.dash_dir_z == 0.0 {
+            self.dash_dir_z = -1.0;
         }
-        self.dash_timer = 0.15;   // dash duration
-        self.dash_cooldown = 2.0; // cooldown
-        self.invuln_timer = 0.2;  // invuln slightly longer than dash
-        true
+
+        match elem {
+            1 => {
+                // 🔥 Blink: instant teleport 5 units forward
+                let blink_dist = 5.0;
+                self.x += self.dash_dir_x * blink_dist;
+                self.z += self.dash_dir_z * blink_dist;
+                self.dash_timer = 0.05; // brief flash
+                self.dash_cooldown = 3.0;
+                self.invuln_timer = 0.1;
+                1
+            }
+            3 => {
+                // ⚡ Triple Dash: short dash, 3 charges (CD 0.8s each)
+                self.dash_timer = 0.08;
+                self.dash_cooldown = 0.8; // very short CD for chaining
+                self.invuln_timer = 0.1;
+                3
+            }
+            4 => {
+                // ☠️ Smoke: long invuln movement
+                self.dash_timer = 0.4; // longer duration
+                self.dash_cooldown = 4.0; // longer CD
+                self.invuln_timer = 0.5; // full invuln during smoke
+                4
+            }
+            _ => {
+                // Default dash
+                self.dash_timer = 0.15;
+                self.dash_cooldown = 2.0;
+                self.invuln_timer = 0.2;
+                5 // normal
+            }
+        }
     }
 
     pub fn is_dashing(&self) -> bool {

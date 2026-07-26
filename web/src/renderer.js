@@ -224,18 +224,62 @@ export class ThreeRenderer {
       else if (state.playerAttacking) targetAnim = 'attack';
       else if (playerMoving) targetAnim = 'run';
 
-      // Dash visual: semi-transparent + afterimage
+      // Dash visual: element-specific
+      const dashType = state.dashType || 5;
       if (state.playerDashing) {
-        this.playerSpriteMat.opacity = 0.5;
-        // Spawn afterimage
         if (!this._dashTrail) this._dashTrail = [];
-        const ghost = this.playerGroup.clone();
-        ghost.traverse(c => { if (c.material) { c.material = c.material.clone(); c.material.opacity = 0.3; c.material.transparent = true; } });
-        ghost.position.copy(this.playerGroup.position);
-        this.scene.add(ghost);
-        this._dashTrail.push({ mesh: ghost, life: 0.2 });
+
+        if (dashType === 4) {
+          // ☠️ Smoke: green transparent cloud, player invisible
+          this.playerSpriteMat.opacity = 0.15;
+          const cloud = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5, 6, 6),
+            new THREE.MeshBasicMaterial({ color: 0x44ff44, transparent: true, opacity: 0.4 })
+          );
+          cloud.position.copy(this.playerGroup.position);
+          cloud.position.y = 0.5;
+          this.scene.add(cloud);
+          this._dashTrail.push({ mesh: cloud, life: 0.5 });
+        } else if (dashType === 3) {
+          // ⚡ Triple: yellow electric sparks
+          this.playerSpriteMat.opacity = 0.6;
+          const spark = new THREE.Mesh(
+            new THREE.SphereGeometry(0.08, 4, 4),
+            new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.9 })
+          );
+          spark.position.set(
+            this.playerGroup.position.x + (Math.random()-0.5)*0.5,
+            0.5 + Math.random() * 0.8,
+            this.playerGroup.position.z + (Math.random()-0.5)*0.5
+          );
+          this.scene.add(spark);
+          this._dashTrail.push({ mesh: spark, life: 0.15 });
+        } else if (dashType === 1) {
+          // 🔥 Blink: already teleported, just flash
+          this.playerSpriteMat.opacity = 0.3;
+        } else {
+          // Default: afterimage
+          this.playerSpriteMat.opacity = 0.5;
+          const ghost = this.playerGroup.clone();
+          ghost.traverse(c => { if (c.material) { c.material = c.material.clone(); c.material.opacity = 0.3; c.material.transparent = true; } });
+          ghost.position.copy(this.playerGroup.position);
+          this.scene.add(ghost);
+          this._dashTrail.push({ mesh: ghost, life: 0.2 });
+        }
       } else {
         this.playerSpriteMat.opacity = 1.0;
+        // ❄️ Ice Skate: leave frost footprints while moving
+        if (dashType === 2 && playerMoving && Math.random() < 0.3) {
+          const footprint = new THREE.Mesh(
+            new THREE.CircleGeometry(0.15, 6),
+            new THREE.MeshBasicMaterial({ color: 0x88ddff, transparent: true, opacity: 0.4, side: THREE.DoubleSide })
+          );
+          footprint.position.set(playerX, 0.02, playerZ);
+          footprint.rotation.x = -Math.PI / 2;
+          this.scene.add(footprint);
+          if (!this._dashTrail) this._dashTrail = [];
+          this._dashTrail.push({ mesh: footprint, life: 1.5 });
+        }
       }
 
       // Update dash trail
@@ -246,7 +290,9 @@ export class ThreeRenderer {
             this.scene.remove(this._dashTrail[i].mesh);
             this._dashTrail.splice(i, 1);
           } else {
-            this._dashTrail[i].mesh.traverse(c => { if (c.material) c.material.opacity = this._dashTrail[i].life * 1.5; });
+            const opacity = this._dashTrail[i].life * 1.0;
+            this._dashTrail[i].mesh.traverse(c => { if (c.material && c.material.opacity !== undefined) c.material.opacity = Math.min(opacity, 0.5); });
+          }
           }
         }
       }

@@ -126,9 +126,41 @@ impl World {
 
         self.player.set_direction(dx, dz);
 
-        // Space = dash
+        // Space = element-specific dash
         if self.input.is_key_just_pressed(" ") {
-            self.player.try_dash();
+            let px_before = self.player.x;
+            let pz_before = self.player.z;
+            let dash_type = self.player.try_dash();
+
+            if dash_type == 1 {
+                // 🔥 Blink: AoE at departure + arrival
+                let dmg = self.player.attack_damage * 0.8;
+                // Departure explosion
+                for enemy in &mut self.enemies {
+                    if !enemy.alive { continue; }
+                    let dist = ((enemy.x - px_before).powi(2) + (enemy.z - pz_before).powi(2)).sqrt();
+                    if dist < 3.0 {
+                        enemy.take_damage(dmg);
+                        self.damage_events.push((enemy.x, enemy.z, dmg, false));
+                    }
+                }
+                // Arrival explosion
+                let ax = self.player.x;
+                let az = self.player.z;
+                for enemy in &mut self.enemies {
+                    if !enemy.alive { continue; }
+                    let dist = ((enemy.x - ax).powi(2) + (enemy.z - az).powi(2)).sqrt();
+                    if dist < 3.0 {
+                        enemy.take_damage(dmg);
+                        self.damage_events.push((enemy.x, enemy.z, dmg, true));
+                    }
+                }
+                self.skill_events.push((px_before, pz_before, 1, 3.0));
+                self.skill_events.push((ax, az, 1, 3.0));
+            } else if dash_type == 4 {
+                // ☠️ Smoke: visual event
+                self.skill_events.push((px_before, pz_before, 4, 2.0));
+            }
         }
     }
 
