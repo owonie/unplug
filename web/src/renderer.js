@@ -185,16 +185,17 @@ export class ThreeRenderer {
     let shakeX = 0, shakeZ = 0;
     if (this._shakeTimer > 0) {
       this._shakeTimer -= dt;
-      const intensity = this._shakeIntensity * (this._shakeTimer / this._shakeDuration);
+      const progress = Math.max(0, this._shakeTimer / this._shakeDuration);
+      const intensity = this._shakeIntensity * progress * progress; // ease-out decay
       shakeX = (Math.random() - 0.5) * intensity;
       shakeZ = (Math.random() - 0.5) * intensity;
     }
 
-    // Camera follows player smoothly (slower after blink)
-    const camSpeed = state.playerDashing && state.dashType === 1 ? 0.03 : 0.12;
+    // Camera follows player smoothly
+    const camSpeed = state.playerDashing && state.dashType === 1 ? 0.03 : 0.06;
     const targetCamPos = new THREE.Vector3(playerX + shakeX, 12, playerZ + 10 + shakeZ);
     this.camera.position.lerp(targetCamPos, camSpeed);
-    this.camera.lookAt(playerX + shakeX * 0.5, 0, playerZ + shakeZ * 0.5);
+    this.camera.lookAt(playerX, 0, playerZ); // NO shake on lookAt — prevents nausea
 
     this.playerLight.position.set(playerX, 3, playerZ);
 
