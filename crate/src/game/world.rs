@@ -132,6 +132,7 @@ impl World {
         self.finalize_deaths();
         self.update_xp_pickup();
         self.spawn_enemies(dt);
+        self.gc_cleanup();
 
         self.input.end_frame();
     }
@@ -445,12 +446,29 @@ impl World {
         self.enemies.retain(|e| e.alive);
     }
 
+    fn gc_cleanup(&mut self) {
+        let px = self.player.x;
+        let pz = self.player.z;
+        // Remove enemies too far from player
+        self.enemies.retain(|e| {
+            let dist = ((e.x - px).powi(2) + (e.z - pz).powi(2)).sqrt();
+            dist < 30.0
+        });
+        // Remove distant XP orbs
+        self.xp_orbs.retain(|o| {
+            let dist = ((o.x - px).powi(2) + (o.z - pz).powi(2)).sqrt();
+            dist < 20.0
+        });
+        // Remove expired bullets
+        self.bullets.retain(|b| b.active);
+    }
+
     fn spawn_enemies(&mut self, dt: f32) {
         self.spawn_timer += dt;
         self.wave_timer += dt;
 
-        // 25초마다 웨이브 변경
-        if self.wave_timer >= 25.0 {
+        // 35초마다 웨이브 변경
+        if self.wave_timer >= 35.0 {
             self.wave_timer = 0.0;
             self.wave_number += 1;
             self.difficulty = 1.0 + self.wave_number as f32 * 0.3;

@@ -836,6 +836,12 @@ export class ThreeRenderer {
   }
 
   updatePool(pool, data, createFn) {
+    // Remove excess meshes from pool (GC — prevent memory leak)
+    const maxPool = data.length + 10; // keep small buffer
+    while (pool.length > maxPool) {
+      const m = pool.pop();
+      if (m) { this.scene.remove(m); if(m.geometry) m.geometry.dispose(); }
+    }
     // Hide excess
     for (let i = data.length; i < pool.length; i++) {
       pool[i].visible = false;
