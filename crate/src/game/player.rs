@@ -45,6 +45,8 @@ pub struct Player {
     pub dash_cooldown: f32,   // time until next dash
     pub dash_dir_x: f32,
     pub dash_dir_z: f32,
+    pub dash_charges: u8,     // thunder: max 3 charges
+    pub dash_charge_timer: f32, // time until next charge restores
     // Stamina (for active skill)
     pub stamina: f32,
     pub max_stamina: f32,
@@ -114,6 +116,8 @@ impl Player {
             dash_cooldown: 0.0,
             dash_dir_x: 0.0,
             dash_dir_z: 0.0,
+            dash_charges: 3,
+            dash_charge_timer: 0.0,
             // Stamina
             stamina: 100.0,
             max_stamina: 100.0,
@@ -126,6 +130,15 @@ impl Player {
         if self.invuln_timer > 0.0 { self.invuln_timer -= dt; }
         if self.dash_cooldown > 0.0 { self.dash_cooldown -= dt; }
         if self.active_skill_cd > 0.0 { self.active_skill_cd -= dt; }
+
+        // Thunder dash charge recovery (1 charge per 1.5s)
+        if self.dominant_element() == 3 && self.class_tier > 0 && self.dash_charges < 3 {
+            self.dash_charge_timer += dt;
+            if self.dash_charge_timer >= 1.5 {
+                self.dash_charge_timer = 0.0;
+                self.dash_charges += 1;
+            }
+        }
 
         // Stamina regen (3/s base, 5/s if promoted)
         let regen = if self.class_tier > 0 { 5.0 } else { 3.0 };
@@ -202,9 +215,11 @@ impl Player {
                 1
             }
             3 => {
-                // ⚡ Triple Dash: short dash, 3 charges (CD 0.8s each)
+                // ⚡ Triple Dash: charge-based (3 charges, no CD between uses)
+                if self.dash_charges == 0 { return 0; }
+                self.dash_charges -= 1;
                 self.dash_timer = 0.08;
-                self.dash_cooldown = 0.8; // very short CD for chaining
+                self.dash_cooldown = 0.15; // tiny gap between chains
                 self.invuln_timer = 0.1;
                 3
             }

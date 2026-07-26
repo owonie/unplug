@@ -62,6 +62,7 @@ impl GameEngine {
     pub fn player_attacking(&self) -> bool { self.world.attacking }
     pub fn player_dashing(&self) -> bool { self.world.player.is_dashing() }
     pub fn player_dash_cooldown(&self) -> f32 { self.world.player.dash_cooldown }
+    pub fn player_dash_charges(&self) -> u32 { self.world.player.dash_charges as u32 }
     pub fn player_dash_type(&self) -> u32 {
         // 0=none, 1=blink, 2=skate, 3=triple, 4=smoke, 5=normal
         if self.world.player.class_tier == 0 { return 5; }
