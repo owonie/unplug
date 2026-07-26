@@ -1,3 +1,6 @@
+use super::class_data::class_by_id;
+use super::skill_data::skills_for_class;
+
 pub struct Player {
     pub x: f32,
     pub z: f32,
@@ -20,71 +23,42 @@ pub struct Player {
     pub lifesteal: f32,
     pub aoe_radius: f32,
     pub magnet_range: f32,
-    // Skills (learned, max 6 slots)
-    pub skills: Vec<SkillSlot>,
-    // Promotion
+    // Element levels (NO CAP)
+    pub fire_level: u8,
+    pub ice_level: u8,
+    pub thunder_level: u8,
+    pub poison_level: u8,
+    // Class system
+    pub class_id: u8,      // 0 = no class, 1~45
+    pub class_tier: u8,    // 0 = none, 1/2/3
+    pub learned_skills: Vec<LearnedSkill>, // skills unlocked from class
+    // Legacy compat
     pub promoted: bool,
-    pub promoted_element: u32, // 0=none, 1=fire, 2=ice, 3=thunder, 4=poison
+    pub promoted_element: u32,
     // Movement
     pub dir_x: f32,
     pub dir_z: f32,
     pub moving: bool,
     pub invuln_timer: f32,
+    // Skill cooldown tracking
+    pub skill_timers: Vec<f32>, // last-used time per learned skill index
 }
 
 #[derive(Clone)]
-pub struct SkillSlot {
-    pub skill_id: u32,
-    pub level: u32,    // 1~5
-    pub cooldown: f32,
+pub struct LearnedSkill {
+    pub skill_id: u16,
+    pub class_id: u8,
+    pub level: u8,    // 1~5 (upgradeable)
     pub last_used: f32,
 }
 
-impl SkillSlot {
-    pub fn new(skill_id: u32) -> Self {
-        SkillSlot { skill_id, level: 1, cooldown: 0.0, last_used: -999.0 }
-    }
-}
-
-// Skill definitions
-pub const MAX_SKILL_SLOTS: usize = 6;
-
-// Skill IDs:
-// 0 = Spin Attack (범위 회전 공격)
-// 1 = Holy Shield (피격 무효 3초)
-// 2 = Lightning Chain (연쇄 번개)
-// 3 = Fire Trail (이동 경로에 불)
-// 4 = Frost Nova (주변 슬로우)
-// 5 = Summon Spirits (소환수)
-// 6 = Meteor (대형 폭발)
-// 7 = Bloodlust (공속 + 흡혈 버프)
-
-pub fn skill_base_cooldown(id: u32) -> f32 {
-    match id {
-        0 => 3.0,   // Spin Attack
-        1 => 12.0,  // Holy Shield
-        2 => 4.0,   // Lightning Chain
-        3 => 0.0,   // Fire Trail (passive)
-        4 => 6.0,   // Frost Nova
-        5 => 10.0,  // Summon Spirits
-        6 => 15.0,  // Meteor
-        7 => 20.0,  // Bloodlust
-        _ => 5.0,
-    }
-}
-
-pub fn skill_name(id: u32) -> &'static str {
-    match id {
-        0 => "Spin Attack",
-        1 => "Holy Shield",
-        2 => "Lightning Chain",
-        3 => "Fire Trail",
-        4 => "Frost Nova",
-        5 => "Summon Spirits",
-        6 => "Meteor",
-        7 => "Bloodlust",
-        _ => "Unknown",
-    }
+// Legacy compat
+#[derive(Clone)]
+pub struct SkillSlot {
+    pub skill_id: u32,
+    pub level: u32,
+    pub cooldown: f32,
+    pub last_used: f32,
 }
 
 impl Player {
@@ -108,13 +82,24 @@ impl Player {
             lifesteal: 0.0,
             aoe_radius: 0.0,
             magnet_range: 1.5,
-            skills: Vec::new(),
+            // Elements start at 0, no cap
+            fire_level: 0,
+            ice_level: 0,
+            thunder_level: 0,
+            poison_level: 0,
+            // Class
+            class_id: 0,
+            class_tier: 0,
+            learned_skills: Vec::new(),
+            // Legacy
             promoted: false,
             promoted_element: 0,
+            // Movement
             dir_x: 0.0,
             dir_z: 0.0,
             moving: false,
             invuln_timer: 0.0,
+            skill_timers: Vec::new(),
         }
     }
 
@@ -141,8 +126,6 @@ impl Player {
 
     pub fn take_damage(&mut self, amount: f32) {
         if self.invuln_timer > 0.0 { return; }
-        // Holy Shield check
-        if self.has_skill_active(1) { return; }
         self.hp -= amount;
         self.invuln_timer = 0.5;
         if self.hp <= 0.0 { self.hp = 0.0; self.alive = false; }
@@ -167,28 +150,128 @@ impl Player {
         false
     }
 
-    // Skill management
-    pub fn learn_skill(&mut self, skill_id: u32) {
-        // If already have it, level up
-        if let Some(slot) = self.skills.iter_mut().find(|s| s.skill_id == skill_id) {
-            slot.level = (slot.level + 1).min(5);
-        } else if self.skills.len() < MAX_SKILL_SLOTS {
-            let mut slot = SkillSlot::new(skill_id);
-            slot.cooldown = skill_base_cooldown(skill_id);
-            self.skills.push(slot);
+    // === Element System (no cap) ===
+    pub fn add_element(&mut self, element: u8) {
+        match element {
+            1 => self.fire_level += 1,
+            2 => self.ice_level += 1,
+            3 => self.thunder_level += 1,
+            4 => self.poison_level += 1,
+            _ => {}
         }
     }
 
-    pub fn has_skill(&self, skill_id: u32) -> bool {
-        self.skills.iter().any(|s| s.skill_id == skill_id)
+    pub fn total_elements(&self) -> u8 {
+        self.fire_level + self.ice_level + self.thunder_level + self.poison_level
+    }
+
+    pub fn dominant_element(&self) -> u8 {
+        let levels = [(self.fire_level, 1u8), (self.ice_level, 2), (self.thunder_level, 3), (self.poison_level, 4)];
+        levels.iter().max_by_key(|(lv, _)| lv).map(|(_, e)| *e).unwrap_or(0)
+    }
+
+    // === Class Promotion ===
+    pub fn promote_to(&mut self, class_id: u8) {
+        if let Some(class) = class_by_id(class_id) {
+            self.class_id = class_id;
+            self.class_tier = class.tier;
+            self.promoted = true;
+            self.promoted_element = self.dominant_element() as u32;
+
+            // Learn all 3 skills of the class at level 1
+            let skills = skills_for_class(class_id);
+            for skill in skills {
+                if !self.learned_skills.iter().any(|s| s.skill_id == skill.id) {
+                    self.learned_skills.push(LearnedSkill {
+                        skill_id: skill.id,
+                        class_id,
+                        level: 1,
+                        last_used: -999.0,
+                    });
+                }
+            }
+
+            // Stat boost on promotion
+            match class.tier {
+                1 => {
+                    self.attack_damage += 15.0;
+                    self.max_hp += 50.0;
+                    self.hp += 50.0;
+                    self.speed += 0.5;
+                }
+                2 => {
+                    self.attack_damage += 25.0;
+                    self.max_hp += 80.0;
+                    self.hp += 80.0;
+                    self.speed += 0.3;
+                    self.crit_chance += 0.1;
+                }
+                3 => {
+                    self.attack_damage += 40.0;
+                    self.max_hp += 120.0;
+                    self.hp += 120.0;
+                    self.crit_chance += 0.15;
+                    self.aoe_radius += 2.0;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Upgrade a specific skill (increase level)
+    pub fn upgrade_skill(&mut self, skill_id: u16) {
+        if let Some(skill) = self.learned_skills.iter_mut().find(|s| s.skill_id == skill_id) {
+            skill.level = (skill.level + 1).min(5);
+        }
+    }
+
+    /// Check if player has a specific skill
+    pub fn has_skill_id(&self, skill_id: u16) -> bool {
+        self.learned_skills.iter().any(|s| s.skill_id == skill_id)
+    }
+
+    /// Get skill level
+    pub fn get_skill_level(&self, skill_id: u16) -> u8 {
+        self.learned_skills.iter().find(|s| s.skill_id == skill_id).map(|s| s.level).unwrap_or(0)
+    }
+
+    // === Legacy compat for old skill system ===
+    pub fn skills(&self) -> Vec<SkillSlot> {
+        // Convert element levels to old-style SkillSlots for renderer compat
+        let mut slots = Vec::new();
+        if self.fire_level > 0 {
+            slots.push(SkillSlot { skill_id: 0, level: self.fire_level as u32, cooldown: 0.0, last_used: 0.0 });
+        }
+        if self.ice_level > 0 {
+            slots.push(SkillSlot { skill_id: 4, level: self.ice_level as u32, cooldown: 0.0, last_used: 0.0 });
+        }
+        if self.thunder_level > 0 {
+            slots.push(SkillSlot { skill_id: 2, level: self.thunder_level as u32, cooldown: 0.0, last_used: 0.0 });
+        }
+        if self.poison_level > 0 {
+            slots.push(SkillSlot { skill_id: 7, level: self.poison_level as u32, cooldown: 0.0, last_used: 0.0 });
+        }
+        slots
     }
 
     pub fn skill_level(&self, skill_id: u32) -> u32 {
-        self.skills.iter().find(|s| s.skill_id == skill_id).map(|s| s.level).unwrap_or(0)
+        match skill_id {
+            0 => self.fire_level as u32,
+            4 => self.ice_level as u32,
+            2 => self.thunder_level as u32,
+            7 => self.poison_level as u32,
+            _ => 0,
+        }
     }
 
-    fn has_skill_active(&self, _skill_id: u32) -> bool {
-        // For Holy Shield — checked via invuln timer externally
-        false
+    pub fn learn_skill(&mut self, skill_id: u32) {
+        // Legacy: map old skill_id to element
+        match skill_id {
+            0 => self.fire_level += 1,
+            4 => self.ice_level += 1,
+            2 => self.thunder_level += 1,
+            7 => self.poison_level += 1,
+            _ => {}
+        }
     }
 }

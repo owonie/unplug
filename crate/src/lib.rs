@@ -123,44 +123,57 @@ impl GameEngine {
     // === Log ===
     pub fn pop_log(&mut self) -> Option<String> { self.world.log_queue.pop_front() }
 
-    // === Learned skills ===
-    pub fn skill_slot_count(&self) -> u32 { self.world.player.skills.len() as u32 }
-    pub fn skill_slot_id(&self, i: u32) -> u32 { self.world.player.skills.get(i as usize).map(|s| s.skill_id).unwrap_or(99) }
-    pub fn skill_slot_level(&self, i: u32) -> u32 { self.world.player.skills.get(i as usize).map(|s| s.level).unwrap_or(0) }
+    // === Learned skills (legacy compat — returns element levels as skill slots) ===
+    pub fn skill_slot_count(&self) -> u32 {
+        let skills = self.world.player.skills();
+        skills.len() as u32
+    }
+    pub fn skill_slot_id(&self, i: u32) -> u32 {
+        let skills = self.world.player.skills();
+        skills.get(i as usize).map(|s| s.skill_id).unwrap_or(99)
+    }
+    pub fn skill_slot_level(&self, i: u32) -> u32 {
+        let skills = self.world.player.skills();
+        skills.get(i as usize).map(|s| s.level).unwrap_or(0)
+    }
 
     // === Active element (highest level element for effects) ===
     pub fn active_element(&self) -> u32 {
-        let mut best_id = 0u32;
-        let mut best_level = 0u32;
-        for skill in &self.world.player.skills {
-            let element = match skill.skill_id {
-                0 => 1, 4 => 2, 2 => 3, 7 => 4, _ => 0,
-            };
-            if element > 0 && skill.level > best_level {
-                best_level = skill.level;
-                best_id = element;
-            }
-        }
-        best_id
+        self.world.player.dominant_element() as u32
     }
 
     pub fn active_element_level(&self) -> u32 {
-        let mut best_level = 0u32;
-        for skill in &self.world.player.skills {
-            let element = match skill.skill_id {
-                0 => 1, 4 => 2, 2 => 3, 7 => 4, _ => 0,
-            };
-            if element > 0 && skill.level > best_level {
-                best_level = skill.level;
-            }
-        }
-        best_level
+        let p = &self.world.player;
+        *[p.fire_level, p.ice_level, p.thunder_level, p.poison_level].iter().max().unwrap_or(&0) as u32
     }
 
-    pub fn fire_level(&self) -> u32 { self.world.player.skill_level(0) }
-    pub fn ice_level(&self) -> u32 { self.world.player.skill_level(4) }
-    pub fn thunder_level(&self) -> u32 { self.world.player.skill_level(2) }
-    pub fn poison_level(&self) -> u32 { self.world.player.skill_level(7) }
+    pub fn fire_level(&self) -> u32 { self.world.player.fire_level as u32 }
+    pub fn ice_level(&self) -> u32 { self.world.player.ice_level as u32 }
+    pub fn thunder_level(&self) -> u32 { self.world.player.thunder_level as u32 }
+    pub fn poison_level(&self) -> u32 { self.world.player.poison_level as u32 }
+
+    // New class system getters
+    pub fn player_class_id(&self) -> u32 { self.world.player.class_id as u32 }
+    pub fn player_class_tier(&self) -> u32 { self.world.player.class_tier as u32 }
+    pub fn player_class_name(&self) -> String {
+        if self.world.player.class_id == 0 { return "None".into(); }
+        game::class_data::class_by_id(self.world.player.class_id)
+            .map(|c| c.name.to_string())
+            .unwrap_or_else(|| "Unknown".into())
+    }
+    pub fn learned_skill_count(&self) -> u32 { self.world.player.learned_skills.len() as u32 }
+    pub fn learned_skill_id(&self, i: u32) -> u32 {
+        self.world.player.learned_skills.get(i as usize).map(|s| s.skill_id as u32).unwrap_or(0)
+    }
+    pub fn learned_skill_level(&self, i: u32) -> u32 {
+        self.world.player.learned_skills.get(i as usize).map(|s| s.level as u32).unwrap_or(0)
+    }
+    pub fn learned_skill_name(&self, i: u32) -> String {
+        if let Some(ls) = self.world.player.learned_skills.get(i as usize) {
+            let skills = game::skill_data::skills_for_class(ls.class_id);
+            skills.iter().find(|s| s.id == ls.skill_id).map(|s| s.name.to_string()).unwrap_or_else(|| "?".into())
+        } else { "?".into() }
+    }
 }
 
 mod console_error_panic_hook {

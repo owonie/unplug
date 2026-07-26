@@ -464,69 +464,109 @@ impl World {
 
     fn generate_choices(&mut self) {
         let seed = (self.time * 1000.0) as u32;
+        let level = self.player.level;
+        let class_tier = self.player.class_tier;
 
-        // 전직 완료 시: 해당 원소 전용 스킬셋만
-        if self.player.promoted {
-            let elem = self.player.promoted_element;
-            let elem_upgrade = match elem { 1=>12, 2=>13, 3=>14, 4=>15, _=>0 };
-            // 전직 전용 스킬 (17~20)
-            let class_skill = match elem { 1=>17, 2=>18, 3=>19, 4=>20, _=>0 };
-            // 선택지: 원소 강화 + 전용 스킬 + 스탯
-            let stat_pool = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11];
-            self.level_up_choices = [
-                if seed % 2 == 0 { elem_upgrade } else { class_skill },
-                if seed % 2 == 0 { class_skill } else { elem_upgrade },
-                stat_pool[(seed as usize / 3) % stat_pool.len()] as u32,
-            ];
-            if self.level_up_choices[2] == self.level_up_choices[0] {
-                self.level_up_choices[2] = stat_pool[(seed as usize / 7) % stat_pool.len()] as u32;
+        // Check if promotion is available
+        let promotions = super::class_data::available_promotions(
+            self.player.fire_level,
+            self.player.ice_level,
+            self.player.thunder_level,
+            self.player.poison_level,
+            self.player.class_id,
+            level,
+        );
+
+        // If promotions available, offer one as first choice
+        if !promotions.is_empty() && (level == 10 || level == 25 || level == 45) {
+            // Promotion choice (encoded as 100 + class_id)
+            let promo_id = promotions[(seed as usize) % promotions.len()];
+            self.level_up_choices[0] = 100 + promo_id as u32;
+            // Also offer second promo if available
+            if promotions.len() > 1 {
+                let promo2 = promotions[(seed as usize + 1) % promotions.len()];
+                self.level_up_choices[1] = 100 + promo2 as u32;
+            } else {
+                self.level_up_choices[1] = self.random_element_choice(seed / 3);
             }
+            self.level_up_choices[2] = self.random_element_choice(seed / 7);
             return;
         }
 
-        // 원소 편향: 가장 높은 레벨 원소를 우선 제시
-        let dominant_element = self.get_dominant_element();
-        let dominant_upgrade = match dominant_element {
-            1 => 12, 2 => 13, 3 => 14, 4 => 15, _ => 99,
-        };
-
-        // 전직 가능 여부 (원소 Lv2+ & 아직 미전직)
-        let can_promote = !self.player.promoted && self.player.skills.iter().any(|s| s.level >= 2);
-
-        let mut choices = [0u32; 3];
-
-        if can_promote && self.player.level >= 5 && self.player.level % 5 == 0 {
-            choices[0] = 16;
-            choices[1] = if dominant_upgrade < 16 { dominant_upgrade } else { seed % 12 };
-            choices[2] = (seed / 7) % 12;
-        } else {
-            if dominant_upgrade < 16 && seed % 3 == 0 {
-                choices[0] = dominant_upgrade;
-            } else {
-                choices[0] = seed % 16;
+        match class_tier {
+            0 => {
+                // Pre-promotion: 2 element orbs + 1 stat
+                self.level_up_choices[0] = self.random_element_choice(seed);
+                self.level_up_choices[1] = self.random_element_choice(seed / 5);
+                // Ensure different elements
+                if self.level_up_choices[1] == self.level_up_choices[0] {
+                    self.level_up_choices[1] = self.random_element_choice(seed / 11);
+                }
+                self.level_up_choices[2] = self.random_stat_choice(seed / 7);
             }
-            choices[1] = (seed / 16) % 16;
-            choices[2] = (seed / 256) % 12;
+            1 => {
+                // Post-1st: 1 class skill + 1 element + 1 stat
+                self.level_up_choices[0] = self.random_class_skill_choice(seed);
+                self.level_up_choices[1] = self.random_element_choice(seed / 3);
+                self.level_up_choices[2] = self.random_stat_choice(seed / 7);
+            }
+            2 => {
+                // Post-2nd: 2 class skills + 1 element
+                self.level_up_choices[0] = self.random_class_skill_choice(seed);
+                self.level_up_choices[1] = self.random_class_skill_choice(seed / 5);
+                if self.level_up_choices[1] == self.level_up_choices[0] {
+                    self.level_up_choices[1] = self.random_element_choice(seed / 11);
+                }
+                self.level_up_choices[2] = self.random_element_choice(seed / 7);
+            }
+            3 => {
+                // Post-3rd: 2 ultimate upgrades only
+                self.level_up_choices[0] = self.random_class_skill_choice(seed);
+                self.level_up_choices[1] = self.random_class_skill_choice(seed / 3);
+                if self.level_up_choices[1] == self.level_up_choices[0] {
+                    self.level_up_choices[1] = self.random_stat_choice(seed / 11);
+                }
+                self.level_up_choices[2] = self.random_stat_choice(seed / 7);
+            }
+            _ => {
+                self.level_up_choices = [50, 51, 52]; // fallback: elements
+            }
         }
+    }
 
-        if choices[1] == choices[0] { choices[1] = (choices[1] + 1) % 16; }
-        if choices[2] == choices[0] || choices[2] == choices[1] { choices[2] = (choices[2] + 2) % 12; }
+    /// Element choice: 50=fire, 51=ice, 52=thunder, 53=poison
+    fn random_element_choice(&self, seed: u32) -> u32 {
+        50 + (seed % 4)
+    }
 
-        self.level_up_choices = choices;
+    /// Stat choice: 60~69
+    fn random_stat_choice(&self, seed: u32) -> u32 {
+        let stats = [60, 61, 62, 63, 64, 65, 66, 67, 68]; // dmg, spd, aspd, range, cleave, hp, crit, steal, magnet
+        stats[(seed as usize) % stats.len()] as u32
+    }
+
+    /// Class skill choice: 200 + skill_id (from current class skills)
+    fn random_class_skill_choice(&self, seed: u32) -> u32 {
+        let skills = super::skill_data::skills_for_class(self.player.class_id);
+        if skills.is_empty() {
+            return self.random_stat_choice(seed);
+        }
+        let skill = &skills[(seed as usize) % skills.len()];
+        200 + skill.id as u32
     }
 
     fn update_passive_skills(&mut self, dt: f32) {
-        if !self.player.promoted { return; }
+        if self.player.class_tier == 0 { return; }
 
         let px = self.player.x;
         let pz = self.player.z;
-        let elem = self.player.promoted_element;
-        let fire_level = self.player.skill_level(0);
-        let ice_level = self.player.skill_level(4);
-        let thunder_level = self.player.skill_level(2);
-        let poison_level = self.player.skill_level(7);
+        let dominant = self.player.dominant_element();
+        let fire_level = self.player.fire_level as u32;
+        let ice_level = self.player.ice_level as u32;
+        let thunder_level = self.player.thunder_level as u32;
+        let poison_level = self.player.poison_level as u32;
 
-        match elem {
+        match dominant {
             1 => {
                 // 🔥 Fire: 주위 회전 오브 (매 0.5초마다 근처 적에게 데미지)
                 if fire_level >= 2 {
@@ -555,24 +595,19 @@ impl World {
                         if !enemy.alive { continue; }
                         let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
                         if dist < radius {
-                            // 슬로우: 속도를 프레임마다 줄임 (적이 update에서 복원하니까 매 프레임)
                             enemy.speed = enemy.speed.min(1.5);
                         }
                     }
                 }
             }
             3 => {
-                // ⚡ Thunder: 공격 시 체인 라이트닝 (resolve_attack에서 처리)
-                // 여기선 이동속도→공속 보너스
+                // ⚡ Thunder: 이동 중 공속 보너스
                 if thunder_level >= 2 && self.player.moving {
-                    // 이동 중이면 공격 쿨다운 더 빨리 회복
                     self.player.last_attack -= dt * 0.3;
                 }
             }
             4 => {
-                // ☠️ Poison: 체력 낮을수록 공격력 보너스 (계산은 resolve에서)
-                // 여기선 처치 시 독구름 (finalize_deaths에서 처리할 수도 있지만 간단히)
-                // 매 1초마다 주변 적에게 미약 DOT
+                // ☠️ Poison: 매 1초마다 주변 DOT
                 if poison_level >= 2 {
                     let tick = (self.time * 2.0) as u32;
                     let prev_tick = ((self.time - dt) * 2.0) as u32;
@@ -593,126 +628,89 @@ impl World {
         }
     }
 
-    fn get_dominant_element(&self) -> u32 {
-        let mut best_element = 0u32;
-        let mut best_level = 0u32;
-        for skill in &self.player.skills {
-            let element = match skill.skill_id {
-                0 => 1, 4 => 2, 2 => 3, 7 => 4, _ => 0,
-            };
-            if element > 0 && skill.level > best_level {
-                best_level = skill.level;
-                best_element = element;
-            }
-        }
-        best_element
-    }
+
 
     pub fn choose_upgrade(&mut self, choice: u32) {
         if !self.level_up_pending { return; }
 
         let upgrade_id = self.level_up_choices[choice as usize % 3];
+
         match upgrade_id {
-            0 => { self.player.attack_damage += 10.0; self.log("⚔️ +DMG!".into()); }
-            1 => { self.player.speed += 0.6; self.log("👟 +SPD!".into()); }
-            2 => { self.player.attack_cooldown = (self.player.attack_cooldown - 0.08).max(0.12); self.log("⚡ +ATK SPD!".into()); }
-            3 => { self.player.attack_range += 0.8; self.log("🎯 +RANGE!".into()); }
-            4 => { self.player.attack_count += 1; self.log("🔫 +CLEAVE!".into()); }
-            5 => { self.player.max_hp += 30.0; self.player.hp += 30.0; self.log("❤️ +HP!".into()); }
-            6 => { self.player.heal(self.player.max_hp * 0.5); self.log("💚 HEALED!".into()); }
-            7 => { self.player.pierce += 1; self.log("🗡️ +PIERCE!".into()); }
-            8 => { self.player.crit_chance = (self.player.crit_chance + 0.15).min(0.75); self.log("💥 +CRIT!".into()); }
-            9 => { self.player.lifesteal += 0.05; self.log("🧛 +STEAL!".into()); }
-            10 => { self.player.aoe_radius += 1.5; self.log("💫 +AOE!".into()); }
-            11 => { self.player.magnet_range += 2.0; self.log("🧲 +MAGNET!".into()); }
-            12 => {
-                if self.player.skill_level(0) >= 5 { self.player.attack_damage += 10.0; self.log("⚔️ Fire maxed! +DMG instead".into()); } else {
-                self.player.attack_damage += 5.0;
-                self.player.aoe_radius += 0.8;
-                self.player.learn_skill(0);
-                let lv = self.player.skill_level(0);
-                if lv >= 5 { self.log("🔥🔥🔥 FIRE MAX! Inferno unleashed!".into()); }
-                else { self.log(format!("🔥 Fire Blade Lv.{}!", lv)); }
+            // === Element orbs: 50~53 ===
+            50 => { self.player.add_element(1); self.log(format!("🔥 Fire Orb! (Lv.{})", self.player.fire_level)); }
+            51 => { self.player.add_element(2); self.log(format!("❄️ Ice Orb! (Lv.{})", self.player.ice_level)); }
+            52 => { self.player.add_element(3); self.log(format!("⚡ Thunder Orb! (Lv.{})", self.player.thunder_level)); }
+            53 => { self.player.add_element(4); self.log(format!("☠️ Poison Orb! (Lv.{})", self.player.poison_level)); }
+
+            // === Stats: 60~68 ===
+            60 => { self.player.attack_damage += 10.0; self.log("⚔️ +DMG!".into()); }
+            61 => { self.player.speed += 0.6; self.log("👟 +SPD!".into()); }
+            62 => { self.player.attack_cooldown = (self.player.attack_cooldown - 0.08).max(0.12); self.log("⚡ +ATK SPD!".into()); }
+            63 => { self.player.attack_range += 0.8; self.log("🎯 +RANGE!".into()); }
+            64 => { self.player.attack_count += 1; self.log("🔫 +CLEAVE!".into()); }
+            65 => { self.player.max_hp += 30.0; self.player.hp += 30.0; self.log("❤️ +HP!".into()); }
+            66 => { self.player.crit_chance = (self.player.crit_chance + 0.15).min(0.75); self.log("💥 +CRIT!".into()); }
+            67 => { self.player.lifesteal += 0.05; self.log("🧛 +STEAL!".into()); }
+            68 => { self.player.magnet_range += 2.0; self.log("🧲 +MAGNET!".into()); }
+
+            // === Class promotion: 100 + class_id ===
+            100..=145 => {
+                let class_id = (upgrade_id - 100) as u8;
+                self.player.promote_to(class_id);
+                if let Some(class) = super::class_data::class_by_id(class_id) {
+                    let tier_emoji = match class.tier { 1 => "⭐", 2 => "🌟", 3 => "👑", _ => "✨" };
+                    self.log(format!("{} PROMOTED to {}!", tier_emoji, class.name));
                 }
             }
-            13 => {
-                if self.player.skill_level(4) >= 5 { self.player.attack_damage += 10.0; self.log("⚔️ Ice maxed! +DMG instead".into()); } else {
-                self.player.attack_damage += 5.0;
-                self.player.attack_range += 0.5;
-                self.player.learn_skill(4);
-                let lv = self.player.skill_level(4);
-                if lv >= 5 { self.log("❄️❄️❄️ ICE MAX! Absolute Zero!".into()); }
-                else { self.log(format!("❄️ Frost Blade Lv.{}!", lv)); }
+
+            // === Class skill upgrade: 200 + skill_id ===
+            200..=399 => {
+                let skill_id = (upgrade_id - 200) as u16;
+                // If already learned, upgrade; otherwise learn
+                if self.player.has_skill_id(skill_id) {
+                    self.player.upgrade_skill(skill_id);
+                    let lv = self.player.get_skill_level(skill_id);
+                    // Find skill name
+                    let skills = super::skill_data::skills_for_class(self.player.class_id);
+                    let name = skills.iter().find(|s| s.id == skill_id).map(|s| s.name).unwrap_or("Skill");
+                    self.log(format!("📈 {} Lv.{}!", name, lv));
+                } else {
+                    // Shouldn't happen (skills auto-learned on promotion) but handle gracefully
+                    self.player.upgrade_skill(skill_id);
+                    self.log("📈 Skill upgraded!".into());
                 }
+
+                // Apply skill effects as stat bonuses (simplified for now)
+                self.apply_skill_bonus(skill_id);
             }
-            14 => {
-                if self.player.skill_level(2) >= 5 { self.player.attack_damage += 10.0; self.log("⚔️ Thunder maxed! +DMG instead".into()); } else {
-                self.player.attack_damage += 5.0;
-                self.player.attack_cooldown = (self.player.attack_cooldown - 0.05).max(0.12);
-                self.player.learn_skill(2);
-                let lv = self.player.skill_level(2);
-                if lv >= 5 { self.log("⚡⚡⚡ THUNDER MAX! Storm Lord!".into()); }
-                else { self.log(format!("⚡ Thunder Blade Lv.{}!", lv)); }
-                }
-            }
-            15 => {
-                if self.player.skill_level(7) >= 5 { self.player.attack_damage += 10.0; self.log("⚔️ Poison maxed! +DMG instead".into()); } else {
-                self.player.attack_damage += 5.0;
-                self.player.lifesteal += 0.03;
-                self.player.learn_skill(7);
-                let lv = self.player.skill_level(7);
-                if lv >= 5 { self.log("☠️☠️☠️ POISON MAX! Plague Bearer!".into()); }
-                else { self.log(format!("☠️ Poison Blade Lv.{}!", lv)); }
-                }
-            }
-            16 => {
-                // 전직!
-                let element = self.get_dominant_element();
-                self.player.promoted = true;
-                self.player.promoted_element = element;
-                let class_name = match element {
-                    1 => "🔥 Flame Knight",
-                    2 => "❄️ Frost Paladin",
-                    3 => "⚡ Storm Warrior",
-                    4 => "☠️ Death Knight",
-                    _ => "⭐ Champion",
-                };
-                self.player.attack_damage += 15.0;
-                self.player.max_hp += 50.0;
-                self.player.hp += 50.0;
-                self.player.speed += 0.5;
-                self.log(format!("👑 PROMOTED to {}!", class_name));
-            }
-            // 전직 전용 스킬
-            17 => {
-                // 🔥 Flame Aura: 화염 오브 강화
-                self.player.aoe_radius += 1.0;
-                self.player.attack_damage += 8.0;
-                self.log("🔥 Flame Aura enhanced! Fire orbits stronger".into());
-            }
-            18 => {
-                // ❄️ Frost Armor: 피격 시 주변 빙결
-                self.player.max_hp += 20.0;
-                self.player.hp += 20.0;
-                self.player.attack_range += 0.5;
-                self.log("❄️ Frost Armor! Freeze on hit, wider reach".into());
-            }
-            19 => {
-                // ⚡ Chain Lightning: 공격 체인 수 증가
-                self.player.attack_count += 1;
-                self.player.attack_cooldown = (self.player.attack_cooldown - 0.04).max(0.1);
-                self.log("⚡ Chain Lightning! Attacks bounce more".into());
-            }
-            20 => {
-                // ☠️ Plague: 독 범위 + 흡혈 강화
-                self.player.lifesteal += 0.04;
-                self.player.aoe_radius += 0.8;
-                self.log("☠️ Plague spreads! More drain, wider poison".into());
-            }
+
             _ => {}
         }
 
         self.level_up_pending = false;
+    }
+
+    /// Apply immediate stat bonuses when upgrading skills
+    fn apply_skill_bonus(&mut self, skill_id: u16) {
+        let skills = super::skill_data::skills_for_class(self.player.class_id);
+        if let Some(skill) = skills.iter().find(|s| s.id == skill_id) {
+            match skill.skill_type {
+                super::skill_data::SkillType::Active => {
+                    // Active skills: small damage boost per level
+                    self.player.attack_damage += 5.0;
+                }
+                super::skill_data::SkillType::Passive => {
+                    // Passives: varied stat boosts
+                    self.player.attack_damage += 3.0;
+                    self.player.speed += 0.2;
+                }
+                super::skill_data::SkillType::Ultimate => {
+                    // Ultimates: big power boost
+                    self.player.attack_damage += 10.0;
+                    self.player.crit_chance += 0.05;
+                }
+            }
+        }
     }
 
     fn log(&mut self, msg: String) {

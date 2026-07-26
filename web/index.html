@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UNPLUG — Zombie Survivors</title>
+  <title>UNPLUG: Elemental Survivor</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
@@ -42,7 +42,7 @@
   <!-- Start Screen -->
   <div id="start-screen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000">
     <h1 style="color:#ff8844;font-size:48px;margin-bottom:8px;text-shadow:0 0 20px #ff4400">UNPLUG</h1>
-    <p style="color:#888;font-size:14px;margin-bottom:24px">Fantasy Hack &amp; Slash Survivor</p>
+    <p style="color:#888;font-size:14px;margin-bottom:24px">Elemental Survivor</p>
     <button id="start-btn" style="padding:12px 32px;font-size:16px;background:#222;color:#fff;border:2px solid #ff8844;border-radius:8px;cursor:pointer;font-family:inherit">⚔️ START GAME</button>
     <p style="color:#555;font-size:11px;margin-top:16px">[WASD] Move | Auto-attack | Level up to survive</p>
   </div>
@@ -98,38 +98,31 @@
 
     const sound = new SoundManager();
 
-    const UPGRADE_NAMES = [
-      '⚔️ Damage +10', '👟 Speed +0.6', '⚡ Attack Speed', '🎯 Range +',
-      '🔫 Cleave +', '❤️ Max HP +30', '💚 Heal 50%',
-      '🗡️ Pierce +1', '💥 Crit +15%', '🧛 Lifesteal +5%',
-      '💫 AOE on Kill', '🧲 Magnet +2',
-      '🔥 Fire Blade', '❄️ Frost Blade', '⚡ Thunder Blade', '☠️ Poison Blade',
-      '👑 PROMOTE!',
-      '🔥 Flame Aura', '❄️ Frost Armor', '⚡ Chain Lightning', '☠️ Plague',
-    ];
-    const UPGRADE_DESC = [
-      '공격력 +10. 모든 공격 데미지 증가.',
-      '이동속도 +0.6. 더 빠르게 움직임.',
-      '공격속도 증가. 쿨다운 -0.08s.',
-      '공격 범위 +0.8. 더 멀리 타격.',
-      '클리브 범위 +0.3. 더 많은 적 동시 타격.',
-      'MAX HP +30. 더 오래 버팀.',
-      '즉시 체력 50% 회복.',
-      '관통 +1. 공격이 추가 적을 관통.',
-      '치명타 확률 +15%. 2.5배 데미지.',
-      '흡혈 +5%. 데미지의 5%만큼 회복.',
-      '킬 시 주변 폭발. 범위 데미지.',
-      'XP 흡수 범위 +2. 더 넓게 경험치 수집.',
-      '🔥 화염 검기. ATK+5, AOE+0.8. Lv2: 주변 화염 오브.',
-      '❄️ 빙결 검기. ATK+5, RNG+0.5. Lv2: 적 슬로우.',
-      '⚡ 번개 검기. ATK+5, 공속↑. Lv2: 이동 시 공속 보너스.',
-      '☠️ 맹독 검기. ATK+5, 흡혈+3%. Lv2: 주변 DOT.',
-      '👑 전직! ATK+15, HP+50, SPD+0.5. 전용 스킬 해금.',
-      '🔥 화염 오라 강화. ATK+8, AOE+1.',
-      '❄️ 빙결 갑옷. HP+20, RNG+0.5. 피격 시 빙결.',
-      '⚡ 체인 라이트닝. 멀티+1, 공속↑. 공격 연쇄.',
-      '☠️ 역병 확산. 흡혈+4%, AOE+0.8.',
-    ];
+    // New upgrade ID scheme:
+    // 50~53: element orbs (fire/ice/thunder/poison)
+    // 60~68: stats (dmg/spd/aspd/range/cleave/hp/crit/steal/magnet)
+    // 100+class_id: promotion
+    // 200+skill_id: class skill upgrade
+    function getUpgradeName(id) {
+      if (id >= 50 && id <= 53) return ['🔥 Fire Orb', '❄️ Ice Orb', '⚡ Thunder Orb', '☠️ Poison Orb'][id - 50];
+      if (id >= 60 && id <= 68) return ['⚔️ DMG +10', '👟 SPD +', '⚡ ATK SPD', '🎯 RANGE +', '🔫 CLEAVE +', '❤️ HP +30', '💥 CRIT +15%', '🧛 STEAL +5%', '🧲 MAGNET +'][id - 60];
+      if (id >= 100 && id <= 145) return `👑 ${engine.player_class_name ? 'PROMOTE!' : 'CLASS UP!'}`;
+      if (id >= 200) return `📈 Skill Up`;
+      return '?';
+    }
+    function getUpgradeDesc(id) {
+      if (id >= 50 && id <= 53) {
+        const descs = ['화염 오브 +1. 화염 스킬 해금 조건.', '빙결 오브 +1. 빙결 스킬 해금 조건.', '번개 오브 +1. 번개 스킬 해금 조건.', '맹독 오브 +1. 독 스킬 해금 조건.'];
+        return descs[id - 50];
+      }
+      if (id >= 60 && id <= 68) {
+        const descs = ['공격력 +10', '이동속도 +0.6', '공격속도 +', '범위 +0.8', '클리브 +1', 'MAX HP +30', '크리티컬 +15%', '흡혈 +5%', 'XP 범위 +2'];
+        return descs[id - 60];
+      }
+      if (id >= 100 && id <= 145) return '🌟 전직! 전용 스킬 3개 해금 + 스탯 대폭 증가.';
+      if (id >= 200) return '전직 스킬 강화. 레벨당 효과 증가.';
+      return '';
+    }
 
     async function main() {
       await init();
@@ -193,31 +186,47 @@
       });
 
       function updatePauseSkills() {
-        const SKILL_TREE = { 0:'🔥 Fire', 4:'❄️ Ice', 2:'⚡ Thunder', 7:'☠️ Poison' };
-        const SKILL_LV_DESC = {
-          0: ['화염 검기', '화염 오브 DOT', '오브 강화', '인페르노 범위↑', 'MAX: 화염 폭풍'],
-          4: ['빙결 검기', '적 슬로우', '빙결 갑옷', '절대영도 범위', 'MAX: 영구 빙결'],
-          2: ['번개 검기', '이동→공속', '체인 라이트닝', '연쇄 범위↑', 'MAX: 번개 폭풍'],
-          7: ['맹독 검기', '주변 DOT', '독 확산', '역병 범위↑', 'MAX: 전체 독'],
-        };
-        let html = '<b>📜 Skill Tree</b><br>';
-        const count = engine.skill_slot_count();
-        for (let i = 0; i < count; i++) {
-          const id = engine.skill_slot_id(i);
-          const lv = engine.skill_slot_level(i);
-          const name = SKILL_TREE[id] || 'Unknown';
-          const descs = SKILL_LV_DESC[id] || [];
-          html += `<br><b>${name} Lv.${lv}/5</b><br>`;
-          for (let j = 0; j < 5; j++) {
-            const unlocked = j < lv;
-            html += `  ${unlocked ? '✅' : '🔒'} Lv.${j+1}: ${descs[j] || '???'}<br>`;
+        let html = '<b>📜 Status</b><br><br>';
+
+        // Element Orbs
+        const f = engine.fire_level(), ic = engine.ice_level(), t = engine.thunder_level(), p = engine.poison_level();
+        html += '<b>⚗️ Element Orbs</b><br>';
+        if (f > 0) html += `  🔥 Fire: ${f}<br>`;
+        if (ic > 0) html += `  ❄️ Ice: ${ic}<br>`;
+        if (t > 0) html += `  ⚡ Thunder: ${t}<br>`;
+        if (p > 0) html += `  ☠️ Poison: ${p}<br>`;
+        if (f + ic + t + p === 0) html += '  <span style="color:#666">없음</span><br>';
+
+        // Current Class
+        const tier = engine.player_class_tier();
+        if (tier > 0) {
+          const tierEmoji = {1:'⭐',2:'🌟',3:'👑'};
+          html += `<br><b>${tierEmoji[tier] || ''} ${engine.player_class_name()}</b> (Tier ${tier})<br>`;
+
+          // Learned Skills
+          const skillCount = engine.learned_skill_count();
+          if (skillCount > 0) {
+            html += '<br><b>🗡️ Class Skills</b><br>';
+            for (let i = 0; i < skillCount; i++) {
+              const name = engine.learned_skill_name(i);
+              const lv = engine.learned_skill_level(i);
+              html += `  📈 ${name} <span style="color:#ffcc00">Lv.${lv}</span><br>`;
+            }
+          }
+        } else {
+          html += '<br><span style="color:#666">Lv.10에서 첫 전직 가능</span><br>';
+          html += '<span style="color:#555;font-size:10px">원소를 모아 조합 조건을 맞추세요!</span>';
+        }
+
+        // Next promotion hint
+        if (tier === 0 || tier === 1 || tier === 2) {
+          const nextLevel = tier === 0 ? 10 : tier === 1 ? 25 : 45;
+          const currentLevel = engine.player_level();
+          if (currentLevel < nextLevel) {
+            html += `<br><br><span style="color:#888;font-size:10px">다음 전직: Lv.${nextLevel}</span>`;
           }
         }
-        if (count === 0) html += '<span style="color:#666">아직 배운 원소 없음</span>';
-        if (engine.player_promoted()) {
-          const elemNames = {1:'🔥Flame Knight',2:'❄️Frost Paladin',3:'⚡Storm Warrior',4:'☠️Death Knight'};
-          html += `<br><b>👑 ${elemNames[engine.player_promoted_element()] || 'Champion'}</b>`;
-        }
+
         document.getElementById('pause-skills').innerHTML = html;
       }
 
@@ -235,8 +244,8 @@
         el.classList.add('shown');
         for (let i = 0; i < 3; i++) {
           const id = engine.level_up_choice(i);
-          const name = UPGRADE_NAMES[id] || 'Unknown';
-          const desc = UPGRADE_DESC[id] || '';
+          const name = getUpgradeName(id);
+          const desc = getUpgradeDesc(id);
           document.getElementById(`choice-${i}`).innerHTML = `<span>[${i+1}]</span> ${name}<br><small style="color:#999;font-size:11px">${desc}</small>`;
         }
       }
@@ -254,9 +263,11 @@
       let levelUpShown = false;
       function updateHUD() {
         const promoted = engine.player_promoted();
-        const elemNames = { 1:'🔥Flame Knight', 2:'❄️Frost Paladin', 3:'⚡Storm Warrior', 4:'☠️Death Knight' };
-        const className = promoted ? elemNames[engine.player_promoted_element()] || '⭐Champion' : '';
-        document.getElementById('level').textContent = engine.player_level() + (className ? ' ' + className : '');
+        const className = promoted ? engine.player_class_name() : '';
+        const tierEmoji = { 1:'⭐', 2:'🌟', 3:'👑' };
+        const tier = engine.player_class_tier();
+        const tierStr = tierEmoji[tier] || '';
+        document.getElementById('level').textContent = engine.player_level() + (className ? ` ${tierStr}${className}` : '');
 
         // Portrait: 원소에 따라 변경
         const elem = engine.active_element();
