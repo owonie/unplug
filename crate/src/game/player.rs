@@ -271,6 +271,7 @@ impl Player {
         if self.shield_hp > 0.0 {
             if self.shield_hp >= amount {
                 self.shield_hp -= amount;
+                self.invuln_timer = 0.3; // brief invuln even when shield absorbs
                 return;
             } else {
                 let remaining = amount - self.shield_hp;
