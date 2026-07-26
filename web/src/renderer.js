@@ -138,24 +138,38 @@ export class ThreeRenderer {
     for (let i = 0; i < d.length; i += 4) {
       if (d[i + 3] < 10) continue;
       const r = d[i], g = d[i+1], b = d[i+2];
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const lum = (r + g + b) / 3;
 
-      // Skin tones → lighter, slightly warm
-      if (r > 120 && g > 70 && g < 160 && b < 120 && r > g) {
-        d[i] = Math.min(255, r + 40);
-        d[i+1] = Math.min(255, g + 35);
-        d[i+2] = Math.min(255, b + 40);
+      // Bright/mid skin & warm tones (anything reddish/yellowish/brownish) → light skin
+      if (r > g && r > b && lum > 80 && lum < 220 && (r - b) > 20) {
+        // Warm tone → convert to fair skin (peach)
+        d[i] = Math.min(255, lum * 0.6 + 130);   // R high
+        d[i+1] = Math.min(255, lum * 0.5 + 100); // G medium
+        d[i+2] = Math.min(255, lum * 0.45 + 90); // B slightly less
       }
-      // Dark clothing/hair → dark purple/indigo (subtle)
-      else if (r < 150 && g < 100 && b < 100) {
-        d[i] = Math.min(180, r * 0.5 + 30);
+      // Very dark (outlines, hair, dark clothing) → dark indigo
+      else if (lum < 60) {
+        d[i] = Math.min(80, r * 0.4 + 25);
+        d[i+1] = Math.max(0, g * 0.2 + 10);
+        d[i+2] = Math.min(100, b * 0.3 + 45);
+      }
+      // Dark-mid tones (clothing) → muted dark purple
+      else if (lum < 120 && (r - b) < 30) {
+        d[i] = Math.min(140, r * 0.5 + 25);
         d[i+1] = Math.max(0, g * 0.3 + 10);
-        d[i+2] = Math.min(200, b * 0.4 + 60);
+        d[i+2] = Math.min(160, b * 0.4 + 50);
       }
-      // Mid tones → muted dark violet
-      else if (r < 200 && g < 150) {
-        d[i] = Math.min(200, r * 0.75 + 15);
-        d[i+1] = Math.max(0, g * 0.6 + 5);
-        d[i+2] = Math.min(220, b * 0.6 + 35);
+      // Everything else (highlights, white, bright) → keep mostly as-is with tiny tint
+      else if (lum > 200) {
+        // near white — keep
+      }
+      // Remaining mid tones → slight cool tint but keep readable
+      else {
+        d[i] = Math.min(255, r * 0.9 + 10);
+        d[i+1] = Math.min(255, g * 0.85 + 5);
+        d[i+2] = Math.min(255, b * 0.85 + 20);
       }
     }
 
