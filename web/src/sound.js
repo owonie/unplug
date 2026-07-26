@@ -27,6 +27,10 @@ export class SoundManager {
       whooshIce: 'sfx/whoosh-ice.mp3',
       whooshPoison: 'sfx/whoosh-poison.mp3',
       dash: 'sfx/dash.mp3',
+      electricShort: 'sfx/electric-short.mp3',
+      liquidWhoosh: 'sfx/liquid-whoosh.mp3',
+      gasLeak: 'sfx/gas-leak.mp3',
+      liquidSplash: 'sfx/liquid-splash.mp3',
     };
     for (const [key, src] of Object.entries(sfxFiles)) {
       this._sfxPool[key] = [];
@@ -65,8 +69,8 @@ export class SoundManager {
   // === ELEMENT DIRECTIONAL (left-click) — element sound + whoosh layer ===
   playElementFire() { this._play('whooshFire', 0.45); this._play('explosion', 0.2); }
   playElementIce() { this._play('whooshIce', 0.45); this._play('ice', 0.25); }
-  playElementThunder() { this._play('electric', 0.4); }
-  playElementPoison() { this._play('whooshPoison', 0.4); this._play('groundImpact', 0.2); }
+  playElementThunder() { this._play('electricShort', 0.45); }
+  playElementPoison() { this._play('liquidWhoosh', 0.45); }
 
   // === DASH ===
   playDash() { this._play('dash', 0.35); }
@@ -77,7 +81,7 @@ export class SoundManager {
       case 1: this._play('explosion', 0.35); break;       // Fire: explosion
       case 2: this._play('iceCrack', 0.4); break;         // Ice: crack
       case 3: this._play('electroImpact', 0.4); break;    // Thunder: electro impact
-      case 4: this._play('slashHeavy', 0.4); break;       // Poison: heavy slash
+      case 4: this._play('gasLeak', 0.45); break;         // Poison: gas leak
       default: this._play('slashHeavy', 0.35);
     }
   }
@@ -91,7 +95,7 @@ export class SoundManager {
       case 1: this._play('explosion', 0.4); break;
       case 2: this._play('ice', 0.35); break;
       case 3: this._play('thunder', 0.45); break;
-      case 4: this._play('groundImpact', 0.35); break;
+      case 4: this._play('liquidSplash', 0.4); break;
     }
   }
 
