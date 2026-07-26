@@ -113,7 +113,10 @@
     function getUpgradeName(id) {
       if (id >= 50 && id <= 53) return ['🔥 Fire Orb', '❄️ Ice Orb', '⚡ Thunder Orb', '☠️ Poison Orb'][id - 50];
       if (id >= 60 && id <= 68) return ['⚔️ DMG +10', '👟 SPD +', '⚡ ATK SPD', '🎯 RANGE +', '🔫 CLEAVE +', '❤️ HP +30', '💥 CRIT +15%', '🧛 STEAL +5%', '🧲 MAGNET +'][id - 60];
-      if (id >= 100 && id <= 145) return `👑 ${engine.player_class_name ? 'PROMOTE!' : 'CLASS UP!'}`;
+      if (id >= 100 && id <= 199) {
+        const name = engine.class_name_for_choice(id);
+        return `👑 ${name || 'PROMOTE!'}`;
+      }
       if (id >= 200) return `📈 Skill Up`;
       return '?';
     }

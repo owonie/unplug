@@ -490,18 +490,30 @@ impl World {
             level,
         );
 
-        // If promotions available, offer as choices
+        // If promotions available, offer as choices (every level-up once eligible)
         let all_promos: Vec<u8> = promotions.iter().chain(hidden_promos.iter()).copied().collect();
-        if !all_promos.is_empty() && (level == 10 || level == 25 || level == 45) {
-            // Promotion choice (encoded as 100 + class_id)
+        if !all_promos.is_empty() && self.player.class_tier == 0 && level >= 10 {
+            // 1st promotion
             let promo_id = all_promos[(seed as usize) % all_promos.len()];
             self.level_up_choices[0] = 100 + promo_id as u32;
-            // Also offer second promo if available
             if all_promos.len() > 1 {
                 let promo2 = all_promos[(seed as usize + 1) % all_promos.len()];
                 self.level_up_choices[1] = 100 + promo2 as u32;
             } else {
                 self.level_up_choices[1] = self.random_element_choice(seed / 3);
+            }
+            self.level_up_choices[2] = self.random_stat_choice(seed / 7);
+            return;
+        }
+        // 2nd/3rd promotion check (every level once eligible)
+        if !all_promos.is_empty() && self.player.class_tier >= 1 && level >= 25 && self.player.class_tier < 3 {
+            let promo_id = all_promos[(seed as usize) % all_promos.len()];
+            self.level_up_choices[0] = 100 + promo_id as u32;
+            if all_promos.len() > 1 {
+                let promo2 = all_promos[(seed as usize + 1) % all_promos.len()];
+                self.level_up_choices[1] = 100 + promo2 as u32;
+            } else {
+                self.level_up_choices[1] = self.random_class_skill_choice(seed / 3);
             }
             self.level_up_choices[2] = self.random_element_choice(seed / 7);
             return;

@@ -26,9 +26,9 @@ pub fn can_promote_to(class: &ClassDef, fire: u8, ice: u8, thunder: u8, poison: 
     // Prerequisite class check
     if class.from_class > 0 && current_class != class.from_class { return false; }
 
-    // Total orbs minimum: tier 1 = 4, tier 2 = 8, tier 3 = 12
+    // Total orbs minimum: tier 1 = 2, tier 2 = 6, tier 3 = 10
     let total = fire + ice + thunder + poison;
-    let min_total = match class.tier { 1 => 4, 2 => 8, 3 => 12, _ => 4 };
+    let min_total = match class.tier { 1 => 2, 2 => 6, 3 => 10, _ => 2 };
     if total < min_total { return false; }
 
     // Individual element requirements
@@ -63,22 +63,22 @@ pub fn all_classes() -> &'static [ClassDef] {
 pub static ALL_CLASSES: [ClassDef; 45] = [
     // === 1st Class (C01~C15) ===
     // Pure single element (4)
-    ClassDef { id: 1,  name: "Flame Knight",      tier: 1, from_class: 0, req_fire: 3, req_ice: 0, req_thunder: 0, req_poison: 0 },
-    ClassDef { id: 2,  name: "Frost Mage",        tier: 1, from_class: 0, req_fire: 0, req_ice: 3, req_thunder: 0, req_poison: 0 },
-    ClassDef { id: 3,  name: "Storm Warrior",     tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 3, req_poison: 0 },
-    ClassDef { id: 4,  name: "Plague Bearer",     tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 0, req_poison: 3 },
+    ClassDef { id: 1,  name: "Flame Knight",      tier: 1, from_class: 0, req_fire: 2, req_ice: 0, req_thunder: 0, req_poison: 0 },
+    ClassDef { id: 2,  name: "Frost Mage",        tier: 1, from_class: 0, req_fire: 0, req_ice: 2, req_thunder: 0, req_poison: 0 },
+    ClassDef { id: 3,  name: "Storm Warrior",     tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 2, req_poison: 0 },
+    ClassDef { id: 4,  name: "Plague Bearer",     tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 0, req_poison: 2 },
     // Hybrid 2-element (6)
-    ClassDef { id: 5,  name: "Steam Engineer",    tier: 1, from_class: 0, req_fire: 2, req_ice: 2, req_thunder: 0, req_poison: 0 },
-    ClassDef { id: 6,  name: "Plasma Mage",       tier: 1, from_class: 0, req_fire: 2, req_ice: 0, req_thunder: 2, req_poison: 0 },
-    ClassDef { id: 7,  name: "Hellfire Witch",    tier: 1, from_class: 0, req_fire: 2, req_ice: 0, req_thunder: 0, req_poison: 2 },
-    ClassDef { id: 8,  name: "Aurora Knight",     tier: 1, from_class: 0, req_fire: 0, req_ice: 2, req_thunder: 2, req_poison: 0 },
-    ClassDef { id: 9,  name: "Cryo Alchemist",    tier: 1, from_class: 0, req_fire: 0, req_ice: 2, req_thunder: 0, req_poison: 2 },
-    ClassDef { id: 10, name: "Volt Chemist",      tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 2, req_poison: 2 },
-    // Tri-element (4)
-    ClassDef { id: 11, name: "Elemental Blade",   tier: 1, from_class: 0, req_fire: 2, req_ice: 1, req_thunder: 1, req_poison: 0 },
-    ClassDef { id: 12, name: "Frost Plague",      tier: 1, from_class: 0, req_fire: 1, req_ice: 2, req_thunder: 0, req_poison: 1 },
-    ClassDef { id: 13, name: "Thunder Toxin",     tier: 1, from_class: 0, req_fire: 1, req_ice: 0, req_thunder: 2, req_poison: 1 },
-    ClassDef { id: 14, name: "Vile Storm",        tier: 1, from_class: 0, req_fire: 0, req_ice: 1, req_thunder: 1, req_poison: 2 },
+    ClassDef { id: 5,  name: "Steam Engineer",    tier: 1, from_class: 0, req_fire: 1, req_ice: 1, req_thunder: 0, req_poison: 0 },
+    ClassDef { id: 6,  name: "Plasma Mage",       tier: 1, from_class: 0, req_fire: 1, req_ice: 0, req_thunder: 1, req_poison: 0 },
+    ClassDef { id: 7,  name: "Hellfire Witch",    tier: 1, from_class: 0, req_fire: 1, req_ice: 0, req_thunder: 0, req_poison: 1 },
+    ClassDef { id: 8,  name: "Aurora Knight",     tier: 1, from_class: 0, req_fire: 0, req_ice: 1, req_thunder: 1, req_poison: 0 },
+    ClassDef { id: 9,  name: "Cryo Alchemist",    tier: 1, from_class: 0, req_fire: 0, req_ice: 1, req_thunder: 0, req_poison: 1 },
+    ClassDef { id: 10, name: "Volt Chemist",      tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 1, req_poison: 1 },
+    // Tri-element (4) — each 1+
+    ClassDef { id: 11, name: "Elemental Blade",   tier: 1, from_class: 0, req_fire: 1, req_ice: 1, req_thunder: 1, req_poison: 0 },
+    ClassDef { id: 12, name: "Frost Plague",      tier: 1, from_class: 0, req_fire: 0, req_ice: 1, req_thunder: 0, req_poison: 1 },
+    ClassDef { id: 13, name: "Thunder Toxin",     tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 1, req_poison: 1 },
+    ClassDef { id: 14, name: "Vile Storm",        tier: 1, from_class: 0, req_fire: 0, req_ice: 1, req_thunder: 1, req_poison: 1 },
     // Quad-element (1)
     ClassDef { id: 15, name: "Primordial Novice", tier: 1, from_class: 0, req_fire: 1, req_ice: 1, req_thunder: 1, req_poison: 1 },
 

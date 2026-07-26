@@ -182,6 +182,19 @@ impl GameEngine {
             skills.iter().find(|s| s.id == ls.skill_id).map(|s| s.name.to_string()).unwrap_or_else(|| "?".into())
         } else { "?".into() }
     }
+
+    /// Get class name by upgrade ID (100 + class_id)
+    pub fn class_name_for_choice(&self, upgrade_id: u32) -> String {
+        if upgrade_id < 100 || upgrade_id > 199 { return "".into(); }
+        let class_id = (upgrade_id - 100) as u8;
+        if let Some(c) = game::class_data::class_by_id(class_id) {
+            return c.name.to_string();
+        }
+        if let Some(h) = game::class_data::hidden_class_by_id(class_id) {
+            return h.name.to_string();
+        }
+        "Unknown".into()
+    }
 }
 
 mod console_error_panic_hook {

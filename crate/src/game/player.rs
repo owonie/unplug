@@ -186,7 +186,7 @@ impl Player {
         if self.xp >= self.xp_to_next {
             self.xp -= self.xp_to_next;
             self.level += 1;
-            self.xp_to_next = 10 + self.level * 5;
+            self.xp_to_next = 8 + self.level * 3; // faster leveling
             return true;
         }
         false
