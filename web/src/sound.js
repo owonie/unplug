@@ -198,6 +198,13 @@ export class SoundManager {
     if (!this.ctx) return;
     this.bgmPlaying = true;
     this.bgmSet = setIdx % 3;
+    // Master gain for BGM (allows instant mute on stop)
+    if (!this._bgmGain) {
+      this._bgmGain = this.ctx.createGain();
+      this._bgmGain.connect(this.dest);
+    }
+    this._bgmGain.gain.value = 1.0;
+    const dest = this._bgmGain; // route all BGM through this
     const ctx = this.ctx;
     const sets = [
       { bpm: 80, pad: [130.81,164.81,196],
@@ -231,7 +238,7 @@ export class SoundManager {
         const vol = section===2 ? 0.045 : section===3 ? 0.025 : 0.03;
         mg.gain.setValueAtTime(vol, t);
         mg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 2.0);
-        m.connect(mg).connect(ctx.destination);
+        m.connect(mg).connect(dest);
         m.start(t); m.stop(t + beatTime * 2.2);
         // Octave below at climax
         if (section >= 2) {
@@ -239,7 +246,7 @@ export class SoundManager {
           const mg2 = ctx.createGain();
           mg2.gain.setValueAtTime(0.018, t);
           mg2.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 2.2);
-          m2.connect(mg2).connect(ctx.destination);
+          m2.connect(mg2).connect(dest);
           m2.start(t); m2.stop(t + beatTime * 2.5);
         }
       }
@@ -253,7 +260,7 @@ export class SoundManager {
           pg.gain.linearRampToValueAtTime(pv, t+1.5);
           pg.gain.setValueAtTime(pv, t+beatTime*13);
           pg.gain.exponentialRampToValueAtTime(0.001, t+beatTime*15.5);
-          p.connect(pg).connect(ctx.destination);
+          p.connect(pg).connect(dest);
           p.start(t); p.stop(t+beatTime*16);
         });
       }
@@ -265,7 +272,7 @@ export class SoundManager {
         const hg = ctx.createGain();
         hg.gain.setValueAtTime(section===2?0.04:0.025, t);
         hg.gain.exponentialRampToValueAtTime(0.001,t+0.18);
-        hb.connect(hg).connect(ctx.destination);
+        hb.connect(hg).connect(dest);
         hb.start(t); hb.stop(t+0.18);
       }
       beat++;
@@ -280,6 +287,7 @@ export class SoundManager {
 
   stopBGM() {
     if (this._bgmInterval) { clearInterval(this._bgmInterval); this._bgmInterval = null; }
+    if (this._bgmGain) { this._bgmGain.gain.value = 0; } // instant mute
     this.bgmPlaying = false;
   }
 }
