@@ -506,7 +506,7 @@ impl World {
             return;
         }
         // 2nd/3rd promotion check (every level once eligible)
-        if !all_promos.is_empty() && self.player.class_tier >= 1 && level >= 25 && self.player.class_tier < 3 {
+        if !all_promos.is_empty() && self.player.class_tier >= 1 && level >= 15 && self.player.class_tier < 3 {
             let promo_id = all_promos[(seed as usize) % all_promos.len()];
             self.level_up_choices[0] = 100 + promo_id as u32;
             if all_promos.len() > 1 {

@@ -128,7 +128,16 @@
         const name = engine.class_name_for_choice(id);
         return `👑 ${name || 'PROMOTE!'}`;
       }
-      if (id >= 200) return `📈 Skill Up`;
+      if (id >= 200) {
+        // Get skill name from engine
+        const skillIdx = engine.learned_skill_count();
+        for (let i = 0; i < skillIdx; i++) {
+          if (engine.learned_skill_id(i) === (id - 200)) {
+            return `📈 ${engine.learned_skill_name(i)}`;
+          }
+        }
+        return `📈 Skill Up`;
+      }
       return '?';
     }
     function getUpgradeDesc(id) {
@@ -279,13 +288,23 @@
       });
 
       // Mouse click → active skill
-      document.getElementById('game-canvas').addEventListener('mousedown', e => {
+      const gameCanvas = document.getElementById('game-canvas');
+      // Prevent browser context menu on right-click
+      gameCanvas.addEventListener('contextmenu', e => e.preventDefault());
+      document.addEventListener('contextmenu', e => { if (gameStarted) e.preventDefault(); });
+
+      // Left click = active skill
+      gameCanvas.addEventListener('mousedown', e => {
         if (!gameStarted || !engine) return;
-        if (engine.player_class_tier() > 0) {
+        e.preventDefault();
+        if (e.button === 0 && engine.player_class_tier() > 0) {
           engine.use_active_skill();
-          renderer.shake(0.3, 0.1); // skill feedback
+          renderer.shake(0.3, 0.1);
         }
       });
+
+      // Prevent text selection during gameplay
+      gameCanvas.addEventListener('selectstart', e => e.preventDefault());
 
       document.getElementById('resume-btn').addEventListener('click', () => {
         engine.toggle_pause();
