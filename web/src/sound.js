@@ -251,6 +251,7 @@ export class SoundManager {
   // 3 sets with 기승전결 (intro-build-climax-resolve)
   startBGM(setIdx = 0) {
     this.stopBGM();
+    if (!this.ctx) { this.init(); }
     if (!this.ctx) return;
     this.bgmPlaying = true;
     this.bgmSet = setIdx % 3;
