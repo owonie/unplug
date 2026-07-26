@@ -190,9 +190,10 @@ export class ThreeRenderer {
       shakeZ = (Math.random() - 0.5) * intensity;
     }
 
-    // Camera follows player smoothly
+    // Camera follows player smoothly (slower after blink)
+    const camSpeed = state.playerDashing && state.dashType === 1 ? 0.03 : 0.12;
     const targetCamPos = new THREE.Vector3(playerX + shakeX, 12, playerZ + 10 + shakeZ);
-    this.camera.position.lerp(targetCamPos, 0.15);
+    this.camera.position.lerp(targetCamPos, camSpeed);
     this.camera.lookAt(playerX + shakeX * 0.5, 0, playerZ + shakeZ * 0.5);
 
     this.playerLight.position.set(playerX, 3, playerZ);
@@ -783,6 +784,62 @@ export class ThreeRenderer {
       x: (vec.x * 0.5 + 0.5) * w,
       y: (-vec.y * 0.5 + 0.5) * h,
     };
+  }
+
+  // === Shield bubble around player ===
+  spawnShieldEffect(x, z) {
+    const geo = new THREE.SphereGeometry(1.2, 16, 12);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x44ffaa, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+    const shield = new THREE.Mesh(geo, mat);
+    shield.position.set(x, 0.8, z);
+    this.scene.add(shield);
+    this.deathParticles.push({ mesh: shield, vx: 0, vy: 0, vz: 0, life: 2.0, isRing: true, scale: 1 });
+    // Inner glow
+    const inner = new THREE.Mesh(
+      new THREE.SphereGeometry(1.0, 12, 8),
+      new THREE.MeshBasicMaterial({ color: 0x88ffcc, transparent: true, opacity: 0.1, side: THREE.DoubleSide })
+    );
+    inner.position.set(x, 0.8, z);
+    this.scene.add(inner);
+    this.deathParticles.push({ mesh: inner, vx: 0, vy: 0, vz: 0, life: 2.0, isRing: true, scale: 1 });
+  }
+
+  // === Ultimate: big magic circle on ground + screen flash ===
+  spawnUltimateEffect(x, z, element, range) {
+    // Giant ground circle
+    const circGeo = new THREE.RingGeometry(range * 0.3, range * 0.8, 32);
+    const colors = { 1: 0xff4400, 2: 0x44ccff, 3: 0xffcc00, 4: 0x9933ff, 0: 0xffffff };
+    const color = colors[element] || 0xffffff;
+    const circMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+    const circ = new THREE.Mesh(circGeo, circMat);
+    circ.position.set(x, 0.08, z);
+    circ.rotation.x = -Math.PI / 2;
+    this.scene.add(circ);
+    this.deathParticles.push({ mesh: circ, vx: 0, vy: 0, vz: 0, life: 1.2, isRing: true, scale: 0.5 });
+
+    // Inner spinning circle
+    const innerGeo = new THREE.RingGeometry(range * 0.1, range * 0.25, 16);
+    const innerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+    const inner = new THREE.Mesh(innerGeo, innerMat);
+    inner.position.set(x, 0.1, z);
+    inner.rotation.x = -Math.PI / 2;
+    this.scene.add(inner);
+    this.deathParticles.push({ mesh: inner, vx: 0, vy: 0, vz: 0, life: 1.0, isRing: true, scale: 0.3 });
+
+    // Rising pillar particles
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const r = range * 0.5;
+      const geo = new THREE.SphereGeometry(0.08, 4, 4);
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x + Math.cos(angle) * r, 0.2, z + Math.sin(angle) * r);
+      this.scene.add(mesh);
+      this.deathParticles.push({ mesh, vx: 0, vy: 4 + Math.random() * 2, vz: 0, life: 0.8 });
+    }
+
+    // Screen flash (brief white overlay via hit stop)
+    this.hitStop(0.08);
   }
 
   // === Element Skill Visual Effects ===

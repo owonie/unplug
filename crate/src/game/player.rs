@@ -207,8 +207,8 @@ impl Player {
 
         match elem {
             1 => {
-                // 🔥 Blink: instant teleport 5 units forward
-                let blink_dist = 5.0;
+                // 🔥 Blink: instant teleport 3 units forward
+                let blink_dist = 3.0;
                 self.x += self.dash_dir_x * blink_dist;
                 self.z += self.dash_dir_z * blink_dist;
                 self.dash_timer = 0.05; // brief flash
