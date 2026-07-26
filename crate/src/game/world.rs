@@ -845,7 +845,7 @@ impl World {
         if self.player.class_tier == 0 { return; }
         if self.player.active_skill_cd > 0.0 { return; }
         let cost = 30.0;
-        if self.player.stamina < cost { return; }
+        if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
 
         self.player.stamina -= cost;
         self.player.active_skill_cd = 2.0;
@@ -881,7 +881,7 @@ impl World {
         if self.player.class_tier == 0 { return; }
         if self.player.active_skill_cd > 0.0 { return; }
         let cost = 20.0;
-        if self.player.stamina < cost { return; }
+        if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
 
         self.player.stamina -= cost;
         self.player.active_skill_cd = 1.2;
@@ -920,7 +920,7 @@ impl World {
     pub fn use_shield_skill(&mut self) {
         if self.player.class_tier == 0 { return; }
         let cost = 35.0;
-        if self.player.stamina < cost { return; }
+        if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
         if self.player.shield_hp > 0.0 { return; } // already shielded
 
         self.player.stamina -= cost;
@@ -933,7 +933,7 @@ impl World {
     pub fn use_ultimate_skill(&mut self) {
         if self.player.class_tier == 0 { return; }
         let cost = 50.0;
-        if self.player.stamina < cost { return; }
+        if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
         if self.player.active_skill_cd > 3.0 { return; } // still on ult CD
 
         self.player.stamina -= cost;

@@ -477,6 +477,7 @@
             const angle = Math.atan2(-dy, dx);
 
             if (gesture === 'outward') {
+              if (!checkMana(20)) { dragStart=null;isDragging=false;dragPoints=[];return; }
               engine.use_directional_skill(angle);
               renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, engine.player_class_element() || engine.active_element(), 5);
               renderer.shake(0.35, 0.1);
@@ -487,6 +488,7 @@
               renderer.shake(0.15, 0.05);
               showSkillName('inward');
             } else if (gesture === 'circle') {
+              if (!checkMana(50)) { dragStart=null;isDragging=false;dragPoints=[];return; }
               engine.use_ultimate_skill();
               renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), engine.player_class_element() || engine.active_element(), 8);
               renderer.shake(0.6, 0.2);
@@ -508,11 +510,13 @@
             const angle = Math.atan2(-dy, dx);
 
             if (gesture === 'outward') {
+              if (!checkMana(20)) { dragStart=null;isDragging=false;dragPoints=[];return; }
               engine.use_directional_skill(angle);
               renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, engine.player_class_element() || engine.active_element(), 7);
               renderer.shake(0.4, 0.12);
               showSkillName('outward');
             } else if (gesture === 'circle') {
+              if (!checkMana(50)) { dragStart=null;isDragging=false;dragPoints=[];return; }
               engine.use_ultimate_skill();
               renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), engine.player_class_element() || engine.active_element(), 10);
               renderer.shake(0.7, 0.25);
@@ -574,6 +578,27 @@
         // Fallback: if dragging away from start = outward
         if (dist > 40) return 'outward';
         return 'unknown';
+      }
+
+      // Mana warning flash
+      function flashManaWarning() {
+        const bar = document.getElementById('stamina-bar-bg');
+        if (!bar) return;
+        bar.style.border = '2px solid #ff4444';
+        const warn = document.createElement('div');
+        warn.textContent = '⚠️ Mana 부족!';
+        warn.style.cssText = 'position:fixed;top:45%;left:50%;transform:translateX(-50%);color:#ff4444;font-size:16px;font-weight:bold;pointer-events:none;z-index:960;text-shadow:0 0 8px rgba(255,0,0,0.5);animation:skill-name-fade 1s ease-out forwards';
+        document.body.appendChild(warn);
+        setTimeout(() => { warn.remove(); bar.style.border = '1px solid #2a4a2a'; }, 1000);
+      }
+
+      // Check stamina before skill (returns false if not enough)
+      function checkMana(cost) {
+        if (engine.player_stamina() < cost) {
+          flashManaWarning();
+          return false;
+        }
+        return true;
       }
 
       // Spell Guide (shows when holding click)
