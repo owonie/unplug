@@ -188,19 +188,22 @@ export class SoundManager {
     osc.start(this.ctx.currentTime); osc.stop(this.ctx.currentTime + 0.2);
   }
 
-  // === BGM: 160bpm stylish beat + violin melody ===
+  // === BGM: Medieval fantasy — mystical and adventurous ===
   startBGM() {
     if (!this.ctx || this.bgmPlaying) return;
     this.bgmPlaying = true;
     this._bgmNodes = [];
 
     const ctx = this.ctx;
-    const bpm = 160;
+    const bpm = 150;
     const beatTime = 60 / bpm;
 
-    // Melody sets (Em key)
-    const melodyA = [659.25, 587.33, 493.88, 587.33, 659.25, 783.99, 659.25, 587.33]; // E5,D5,B4,D5,E5,G5,E5,D5
-    const melodyB = [493.88, 440.00, 392.00, 440.00, 493.88, 587.33, 493.88, 392.00]; // B4,A4,G4,A4,B4,D5,B4,G4
+    // Dm scale melodies (medieval/fantasy feel)
+    // Set A: adventurous ascending
+    const melodyA = [293.66, 349.23, 392.00, 440.00, 349.23, 329.63, 293.66, 261.63]; // D4,F4,G4,A4,F4,E4,D4,C4
+    // Set B: mystical descending
+    const melodyB = [440.00, 392.00, 349.23, 329.63, 293.66, 261.63, 293.66, 349.23]; // A4,G4,F4,E4,D4,C4,D4,F4
+
     let beat = 0;
     let currentSet = 0;
 
@@ -208,80 +211,95 @@ export class SoundManager {
       if (!this.bgmPlaying) return;
       const t = ctx.currentTime;
 
-      // Kick on 1,3
+      // Soft kick (timpani-like) on 1,3
       if (beat % 4 === 0 || beat % 4 === 2) {
         const kick = ctx.createOscillator();
         kick.type = 'sine';
-        kick.frequency.setValueAtTime(160, t);
-        kick.frequency.exponentialRampToValueAtTime(35, t + 0.07);
+        kick.frequency.setValueAtTime(100, t);
+        kick.frequency.exponentialRampToValueAtTime(50, t + 0.1);
         const kg = ctx.createGain();
-        kg.gain.setValueAtTime(0.12, t);
-        kg.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        kg.gain.setValueAtTime(0.08, t);
+        kg.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
         kick.connect(kg).connect(ctx.destination);
-        kick.start(t); kick.stop(t + 0.1);
+        kick.start(t); kick.stop(t + 0.15);
       }
 
-      // Hihat
-      const noise = ctx.createBufferSource();
-      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.02, ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.3;
-      noise.buffer = buf;
-      const hg = ctx.createGain();
-      hg.gain.setValueAtTime(beat % 2 === 0 ? 0.04 : 0.02, t);
-      hg.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
-      const hf = ctx.createBiquadFilter();
-      hf.type = 'highpass'; hf.frequency.value = 9000;
-      noise.connect(hf).connect(hg).connect(ctx.destination);
-      noise.start(t);
+      // Shaker (soft) on off-beats
+      if (beat % 2 === 1) {
+        const noise = ctx.createBufferSource();
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.015, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.15;
+        noise.buffer = buf;
+        const sg = ctx.createGain();
+        sg.gain.setValueAtTime(0.03, t);
+        sg.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+        const sf = ctx.createBiquadFilter();
+        sf.type = 'bandpass'; sf.frequency.value = 5000; sf.Q.value = 2;
+        noise.connect(sf).connect(sg).connect(ctx.destination);
+        noise.start(t);
+      }
 
-      // Bass (every 2 beats)
-      if (beat % 2 === 0) {
-        const bassNotes = [82.41, 98.0, 110.0, 123.47, 146.83];
-        const note = bassNotes[Math.floor(beat / 2) % bassNotes.length];
+      // Harp/lute bass (triangle wave — warm, medieval)
+      if (beat % 4 === 0) {
+        const bassNotes = [146.83, 130.81, 146.83, 174.61]; // D3,C3,D3,F3
+        const note = bassNotes[Math.floor(beat / 4) % bassNotes.length];
         const bass = ctx.createOscillator();
-        bass.type = 'square';
+        bass.type = 'triangle';
         bass.frequency.value = note;
         const bg = ctx.createGain();
-        bg.gain.setValueAtTime(0.05, t);
-        bg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 0.7);
-        const bf = ctx.createBiquadFilter();
-        bf.type = 'lowpass'; bf.frequency.value = 350;
-        bass.connect(bf).connect(bg).connect(ctx.destination);
-        bass.start(t); bass.stop(t + beatTime * 0.8);
+        bg.gain.setValueAtTime(0.06, t);
+        bg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 2.5);
+        bass.connect(bg).connect(ctx.destination);
+        bass.start(t); bass.stop(t + beatTime * 2.8);
       }
 
-      // Violin melody (sawtooth + vibrato, every beat)
+      // Fiddle/flute melody (sine + slight vibrato = ethereal)
       const melody = currentSet === 0 ? melodyA : melodyB;
       const noteIdx = beat % melody.length;
-      if (beat % 1 === 0) { // every beat
-        const vio = ctx.createOscillator();
-        vio.type = 'sawtooth';
-        vio.frequency.value = melody[noteIdx];
-        // Vibrato
-        const vibrato = ctx.createOscillator();
-        vibrato.type = 'sine';
-        vibrato.frequency.value = 5.5; // vibrato speed
-        const vibGain = ctx.createGain();
-        vibGain.gain.value = 3; // vibrato depth in Hz
-        vibrato.connect(vibGain).connect(vio.frequency);
-        vibrato.start(t);
-        // Tone shaping (violin-like)
-        const vg = ctx.createGain();
-        vg.gain.setValueAtTime(0.0, t);
-        vg.gain.linearRampToValueAtTime(0.04, t + 0.03); // attack
-        vg.gain.setValueAtTime(0.04, t + beatTime * 0.6);
-        vg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 0.9);
-        const vf = ctx.createBiquadFilter();
-        vf.type = 'lowpass'; vf.frequency.value = 3000;
-        vio.connect(vf).connect(vg).connect(ctx.destination);
-        vio.start(t); vio.stop(t + beatTime * 0.95);
-        vibrato.stop(t + beatTime * 0.95);
+      const freq = melody[noteIdx];
+
+      // Play melody note
+      const mel = ctx.createOscillator();
+      mel.type = 'sine';
+      mel.frequency.value = freq;
+      // Gentle vibrato
+      const vib = ctx.createOscillator();
+      vib.type = 'sine';
+      vib.frequency.value = 4.5;
+      const vibG = ctx.createGain();
+      vibG.gain.value = 2;
+      vib.connect(vibG).connect(mel.frequency);
+      vib.start(t);
+      // Envelope (soft attack, gentle decay)
+      const mg = ctx.createGain();
+      mg.gain.setValueAtTime(0.0, t);
+      mg.gain.linearRampToValueAtTime(0.035, t + 0.04);
+      mg.gain.setValueAtTime(0.035, t + beatTime * 0.5);
+      mg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 0.85);
+      mel.connect(mg).connect(ctx.destination);
+      mel.start(t); mel.stop(t + beatTime * 0.9);
+      vib.stop(t + beatTime * 0.9);
+
+      // Pad (every 8 beats — sustained mystical chord)
+      if (beat % 8 === 0) {
+        const padNotes = [293.66, 349.23, 440.00]; // Dm chord: D4,F4,A4
+        padNotes.forEach(pf => {
+          const pad = ctx.createOscillator();
+          pad.type = 'sine';
+          pad.frequency.value = pf * 0.5; // octave lower
+          const pg = ctx.createGain();
+          pg.gain.setValueAtTime(0.0, t);
+          pg.gain.linearRampToValueAtTime(0.02, t + 0.3);
+          pg.gain.setValueAtTime(0.02, t + beatTime * 6);
+          pg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 7.5);
+          pad.connect(pg).connect(ctx.destination);
+          pad.start(t); pad.stop(t + beatTime * 8);
+        });
       }
 
       beat++;
-      // Switch melody set every 8 beats
-      if (beat % 8 === 0) currentSet = (currentSet + 1) % 2;
+      if (beat % 16 === 0) currentSet = (currentSet + 1) % 2;
     }, beatTime * 1000);
   }
 
