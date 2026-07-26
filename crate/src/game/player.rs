@@ -45,6 +45,10 @@ pub struct Player {
     pub dash_cooldown: f32,   // time until next dash
     pub dash_dir_x: f32,
     pub dash_dir_z: f32,
+    // Stamina (for active skill)
+    pub stamina: f32,
+    pub max_stamina: f32,
+    pub active_skill_cd: f32,  // remaining cooldown
     // Skill cooldown tracking
     pub skill_timers: Vec<f32>, // last-used time per learned skill index
 }
@@ -109,6 +113,10 @@ impl Player {
             dash_cooldown: 0.0,
             dash_dir_x: 0.0,
             dash_dir_z: 0.0,
+            // Stamina
+            stamina: 100.0,
+            max_stamina: 100.0,
+            active_skill_cd: 0.0,
             skill_timers: Vec::new(),
         }
     }
@@ -116,6 +124,11 @@ impl Player {
     pub fn update(&mut self, dt: f32) {
         if self.invuln_timer > 0.0 { self.invuln_timer -= dt; }
         if self.dash_cooldown > 0.0 { self.dash_cooldown -= dt; }
+        if self.active_skill_cd > 0.0 { self.active_skill_cd -= dt; }
+
+        // Stamina regen (3/s base, 5/s if promoted)
+        let regen = if self.class_tier > 0 { 5.0 } else { 3.0 };
+        self.stamina = (self.stamina + regen * dt).min(self.max_stamina);
 
         // Dashing: fast movement + invulnerable
         if self.dash_timer > 0.0 {

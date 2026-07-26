@@ -280,35 +280,34 @@ export class ThreeRenderer {
 
     // No mixer needed for sprites
 
-    // === Element Orbs — 전직 후에는 체내 흡수 (오브 안 보임, 글로우만) ===
-    const isPromoted = state.promoted || false;
-    const orbKey = isPromoted ? 'absorbed' : `${state.fireLv||0}_${state.iceLv||0}_${state.thunderLv||0}_${state.poisonLv||0}`;
+    // === Element Orbs — 항상 표시 (전직 후에도 계속 모음) ===
+    const orbKey = `${state.fireLv||0}_${state.iceLv||0}_${state.thunderLv||0}_${state.poisonLv||0}_${state.promoted?1:0}`;
     if (orbKey !== this._orbKey) {
       this.elementOrbs.forEach(o => this.scene.remove(o));
       this.elementOrbs = [];
       this._orbKey = orbKey;
 
-      if (!isPromoted) {
-        const elemData = [
-          { level: state.fireLv || 0, color: 0xff4400 },
-          { level: state.iceLv || 0, color: 0x44ccff },
-          { level: state.thunderLv || 0, color: 0xffcc00 },
-          { level: state.poisonLv || 0, color: 0x44ff44 },
-        ];
-        for (const ed of elemData) {
-          for (let i = 0; i < ed.level; i++) {
-            const size = 0.1 + ed.level * 0.015;
-            const geo = new THREE.SphereGeometry(size, 8, 6);
-            const mat = new THREE.MeshBasicMaterial({ color: ed.color, transparent: true, opacity: 0.75 });
-            const orb = new THREE.Mesh(geo, mat);
-            const light = new THREE.PointLight(ed.color, 0.3, 2);
-            orb.add(light);
-            this.scene.add(orb);
-            this.elementOrbs.push(orb);
-          }
+      const elemData = [
+        { level: state.fireLv || 0, color: 0xff4400 },
+        { level: state.iceLv || 0, color: 0x44ccff },
+        { level: state.thunderLv || 0, color: 0xffcc00 },
+        { level: state.poisonLv || 0, color: 0x44ff44 },
+      ];
+      for (const ed of elemData) {
+        for (let i = 0; i < ed.level; i++) {
+          const size = 0.1 + ed.level * 0.012;
+          const geo = new THREE.SphereGeometry(size, 8, 6);
+          const mat = new THREE.MeshBasicMaterial({ color: ed.color, transparent: true, opacity: 0.8 });
+          const orb = new THREE.Mesh(geo, mat);
+          const light = new THREE.PointLight(ed.color, 0.2, 1.5);
+          orb.add(light);
+          this.scene.add(orb);
+          this.elementOrbs.push(orb);
         }
-      } else {
-        // 전직 후: 캐릭터 빛 색상 변경
+      }
+
+      // 전직 후: 플레이어 글로우 강화
+      if (state.promoted && this.playerLight) {
         const elemColors = { 1: 0xff4400, 2: 0x44ccff, 3: 0xffcc00, 4: 0x44ff44 };
         if (this.playerLight) {
           this.playerLight.color.set(elemColors[state.element] || 0xffffcc);

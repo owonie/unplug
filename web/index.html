@@ -31,9 +31,9 @@
     .choice-btn:hover{background:#2a2a4a;border-color:#ffcc00}
     .choice-btn span{color:#ffcc00;font-weight:bold}
     #controls-hint{position:fixed;bottom:16px;left:16px;color:#555;font-size:10px}
-    .dmg-popup{position:fixed;color:#fff;font-size:16px;font-weight:bold;pointer-events:none;animation:dmg-float 0.8s ease-out forwards;text-shadow:0 0 4px #000,0 0 2px #000;z-index:999}
-    .dmg-popup.crit{color:#ff4400;font-size:24px;text-shadow:0 0 8px #ff0000}
-    @keyframes dmg-float{0%{opacity:1;transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.2)}100%{opacity:0;transform:translateY(-60px) scale(0.8)}}
+    .dmg-popup{position:fixed;color:#fff;font-weight:bold;pointer-events:none;animation:dmg-float 0.9s ease-out forwards;text-shadow:0 0 4px #000,0 0 2px #000,1px 1px 0 #000;z-index:999;transform:translateX(-50%)}
+    .dmg-popup.crit{color:#ff4400;text-shadow:0 0 10px #ff0000,0 0 20px #ff4400}
+    @keyframes dmg-float{0%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.2)}30%{transform:translateX(-50%) translateY(-25px) scale(1.3)}100%{opacity:0;transform:translateX(-50%) translateY(-70px) scale(0.6)}}
     @keyframes lvlflash{0%{opacity:1}100%{opacity:0}}
   </style>
 </head>
@@ -82,6 +82,7 @@
           <div>LV.<span id="level">1</span></div>
           <div id="hp-bar-bg"><div id="hp-bar-fill" style="width:100%"></div></div>
           <div id="xp-bar-bg"><div id="xp-bar-fill" style="width:0%"></div></div>
+          <div id="stamina-bar-bg" style="width:200px;height:6px;background:#1a1a1a;border-radius:3px;margin:2px 0;border:1px solid #2a4a2a;display:none"><div id="stamina-bar-fill" style="width:100%;height:100%;background:linear-gradient(90deg,#22aa44,#44ff66);border-radius:2px;transition:width 0.1s"></div></div>
         </div>
       </div>
       <div id="stat-panel"></div>
@@ -275,6 +276,15 @@
       document.addEventListener('keyup', e => {
         const k = keyMap[e.code] || e.key.toLowerCase();
         engine.on_key_up(k);
+      });
+
+      // Mouse click → active skill
+      document.getElementById('game-canvas').addEventListener('mousedown', e => {
+        if (!gameStarted || !engine) return;
+        if (engine.player_class_tier() > 0) {
+          engine.use_active_skill();
+          renderer.shake(0.3, 0.1); // skill feedback
+        }
       });
 
       document.getElementById('resume-btn').addEventListener('click', () => {
@@ -472,6 +482,14 @@
           dashBar.style.background = '#44ccff';
           dashText.textContent = 'READY';
         }
+
+        // Stamina bar (visible after promotion)
+        const staminaBarBg = document.getElementById('stamina-bar-bg');
+        if (engine.player_class_tier() > 0) {
+          staminaBarBg.style.display = 'block';
+          const stPct = engine.player_stamina() / engine.player_max_stamina() * 100;
+          document.getElementById('stamina-bar-fill').style.width = stPct + '%';
+        }
       }
 
       // Damage popup system
@@ -479,12 +497,28 @@
         const el = document.createElement('div');
         el.className = 'dmg-popup' + (isCrit ? ' crit' : '');
         el.textContent = Math.round(amount);
-        // Random offset
-        const ox = (Math.random() - 0.5) * 40;
-        el.style.left = (window.innerWidth / 2 + ox) + 'px';
-        el.style.top = (window.innerHeight / 2 - 50 + Math.random() * 20) + 'px';
+
+        // Size proportional to damage (bigger = bigger text)
+        const baseSize = isCrit ? 18 : 13;
+        const bonusSize = Math.min(12, Math.floor(amount / 30));
+        el.style.fontSize = (baseSize + bonusSize) + 'px';
+
+        // Convert world pos to screen pos (using renderer camera)
+        const canvas = document.getElementById('game-canvas');
+        if (renderer && renderer.camera) {
+          const vec = new THREE.Vector3(wx, 1.8, wz); // head height
+          vec.project(renderer.camera);
+          const x = (vec.x * 0.5 + 0.5) * canvas.clientWidth;
+          const y = (-vec.y * 0.5 + 0.5) * canvas.clientHeight;
+          el.style.left = x + 'px';
+          el.style.top = (y - 20) + 'px'; // slightly above head
+        } else {
+          el.style.left = (window.innerWidth / 2) + 'px';
+          el.style.top = (window.innerHeight / 2 - 50) + 'px';
+        }
+
         document.body.appendChild(el);
-        setTimeout(() => el.remove(), 800);
+        setTimeout(() => el.remove(), 900);
       }
 
 

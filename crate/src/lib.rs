@@ -62,6 +62,10 @@ impl GameEngine {
     pub fn player_attacking(&self) -> bool { self.world.attacking }
     pub fn player_dashing(&self) -> bool { self.world.player.is_dashing() }
     pub fn player_dash_cooldown(&self) -> f32 { self.world.player.dash_cooldown }
+    pub fn player_stamina(&self) -> f32 { self.world.player.stamina }
+    pub fn player_max_stamina(&self) -> f32 { self.world.player.max_stamina }
+    pub fn player_skill_cd(&self) -> f32 { self.world.player.active_skill_cd }
+    pub fn use_active_skill(&mut self) { self.world.use_active_skill(); }
     pub fn nearest_enemy_dir_x(&self) -> f32 {
         let px = self.world.player.x;
         let pz = self.world.player.z;
