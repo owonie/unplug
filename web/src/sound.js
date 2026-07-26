@@ -39,11 +39,11 @@ export class SoundManager {
     const gain = this.ctx.createGain();
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(400, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
     osc.start(this.ctx.currentTime);
     osc.stop(this.ctx.currentTime + 0.15);
   }
@@ -188,19 +188,22 @@ export class SoundManager {
     osc.start(this.ctx.currentTime); osc.stop(this.ctx.currentTime + 0.2);
   }
 
-  // === BGM: Stylish fast-paced beat ===
+  // === BGM: 160bpm stylish beat + violin melody ===
   startBGM() {
     if (!this.ctx || this.bgmPlaying) return;
     this.bgmPlaying = true;
     this._bgmNodes = [];
-    this._bgmInterval = null;
 
     const ctx = this.ctx;
-    const bpm = 140;
+    const bpm = 160;
     const beatTime = 60 / bpm;
 
-    // Kick + hihat pattern loop
+    // Melody sets (Em key)
+    const melodyA = [659.25, 587.33, 493.88, 587.33, 659.25, 783.99, 659.25, 587.33]; // E5,D5,B4,D5,E5,G5,E5,D5
+    const melodyB = [493.88, 440.00, 392.00, 440.00, 493.88, 587.33, 493.88, 392.00]; // B4,A4,G4,A4,B4,D5,B4,G4
     let beat = 0;
+    let currentSet = 0;
+
     this._bgmInterval = setInterval(() => {
       if (!this.bgmPlaying) return;
       const t = ctx.currentTime;
@@ -209,46 +212,76 @@ export class SoundManager {
       if (beat % 4 === 0 || beat % 4 === 2) {
         const kick = ctx.createOscillator();
         kick.type = 'sine';
-        kick.frequency.setValueAtTime(150, t);
-        kick.frequency.exponentialRampToValueAtTime(40, t + 0.08);
+        kick.frequency.setValueAtTime(160, t);
+        kick.frequency.exponentialRampToValueAtTime(35, t + 0.07);
         const kg = ctx.createGain();
-        kg.gain.setValueAtTime(0.15, t);
-        kg.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        kg.gain.setValueAtTime(0.12, t);
+        kg.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
         kick.connect(kg).connect(ctx.destination);
-        kick.start(t); kick.stop(t + 0.12);
+        kick.start(t); kick.stop(t + 0.1);
       }
 
-      // Hihat on every beat
+      // Hihat
       const noise = ctx.createBufferSource();
-      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.03, ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() - 0.5) * 0.5;
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.02, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.3;
       noise.buffer = buf;
       const hg = ctx.createGain();
-      hg.gain.setValueAtTime(beat % 2 === 0 ? 0.06 : 0.03, t);
-      hg.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+      hg.gain.setValueAtTime(beat % 2 === 0 ? 0.04 : 0.02, t);
+      hg.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
       const hf = ctx.createBiquadFilter();
-      hf.type = 'highpass'; hf.frequency.value = 8000;
+      hf.type = 'highpass'; hf.frequency.value = 9000;
       noise.connect(hf).connect(hg).connect(ctx.destination);
       noise.start(t);
 
-      // Bass line (Em pentatonic)
+      // Bass (every 2 beats)
       if (beat % 2 === 0) {
-        const bassNotes = [82.41, 98.0, 110.0, 123.47, 146.83]; // E2,G2,A2,B2,D3
+        const bassNotes = [82.41, 98.0, 110.0, 123.47, 146.83];
         const note = bassNotes[Math.floor(beat / 2) % bassNotes.length];
         const bass = ctx.createOscillator();
         bass.type = 'square';
         bass.frequency.value = note;
         const bg = ctx.createGain();
-        bg.gain.setValueAtTime(0.06, t);
-        bg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 0.8);
+        bg.gain.setValueAtTime(0.05, t);
+        bg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 0.7);
         const bf = ctx.createBiquadFilter();
-        bf.type = 'lowpass'; bf.frequency.value = 400;
+        bf.type = 'lowpass'; bf.frequency.value = 350;
         bass.connect(bf).connect(bg).connect(ctx.destination);
-        bass.start(t); bass.stop(t + beatTime * 0.9);
+        bass.start(t); bass.stop(t + beatTime * 0.8);
+      }
+
+      // Violin melody (sawtooth + vibrato, every beat)
+      const melody = currentSet === 0 ? melodyA : melodyB;
+      const noteIdx = beat % melody.length;
+      if (beat % 1 === 0) { // every beat
+        const vio = ctx.createOscillator();
+        vio.type = 'sawtooth';
+        vio.frequency.value = melody[noteIdx];
+        // Vibrato
+        const vibrato = ctx.createOscillator();
+        vibrato.type = 'sine';
+        vibrato.frequency.value = 5.5; // vibrato speed
+        const vibGain = ctx.createGain();
+        vibGain.gain.value = 3; // vibrato depth in Hz
+        vibrato.connect(vibGain).connect(vio.frequency);
+        vibrato.start(t);
+        // Tone shaping (violin-like)
+        const vg = ctx.createGain();
+        vg.gain.setValueAtTime(0.0, t);
+        vg.gain.linearRampToValueAtTime(0.04, t + 0.03); // attack
+        vg.gain.setValueAtTime(0.04, t + beatTime * 0.6);
+        vg.gain.exponentialRampToValueAtTime(0.001, t + beatTime * 0.9);
+        const vf = ctx.createBiquadFilter();
+        vf.type = 'lowpass'; vf.frequency.value = 3000;
+        vio.connect(vf).connect(vg).connect(ctx.destination);
+        vio.start(t); vio.stop(t + beatTime * 0.95);
+        vibrato.stop(t + beatTime * 0.95);
       }
 
       beat++;
+      // Switch melody set every 8 beats
+      if (beat % 8 === 0) currentSet = (currentSet + 1) % 2;
     }, beatTime * 1000);
   }
 
