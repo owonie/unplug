@@ -475,7 +475,7 @@ impl World {
             3 => 1.5,
             _ => 1.2,
         };
-        let interval = (base_interval / self.difficulty).max(0.3);
+        let interval = (base_interval / self.difficulty).max(0.8);
         if !is_boss_wave && self.spawn_timer >= interval {
             self.spawn_timer = 0.0;
             self.spawn_wave_enemies();
@@ -489,20 +489,25 @@ impl World {
 
         // 웨이브별 스폰 구성 (근거리4:원거리1 비율 wave2+)
         let (types, count): (Vec<u32>, u32) = match wave {
-            1 => (vec![0, 0, 0, 0, 0], 3),                           // 스켈레톤만, 소수
-            2 => (vec![0, 0, 4, 4, 5], 8),                           // +스웜+궁수 (4:1)
-            3 => (vec![0, 2, 4, 4, 5], 10),                          // +임프 (4:1)
-            4 => (vec![0, 2, 3, 4, 5], 12),                          // +레이스 (4:1)
-            5 => (vec![0, 1, 2, 4, 5], 10),                          // 혼합 (4:1)
-            6 => (vec![0, 4, 4, 6, 5], 15),                          // 스웜+돌격+궁수
-            7 => (vec![4, 4, 4, 6, 5], 18),                          // 스웜 물량+궁수
-            8 => (vec![0, 4, 4, 6, 5, 4, 4, 6, 5, 5], 20),          // 원거리 약간 증가
-            9 => (vec![4, 4, 4, 6, 5, 4, 4, 6, 5, 5], 25),          // 러시
+            1 => (vec![0, 0, 0, 0, 0], 2),                           // 스켈레톤만
+            2 => (vec![0, 0, 4, 4, 5], 4),                           // +스웜+궁수
+            3 => (vec![0, 2, 4, 4, 5], 5),                           // +임프
+            4 => (vec![0, 2, 3, 4, 5], 6),                           // +레이스
+            5 => (vec![0, 1, 2, 4, 5], 6),                           // 혼합
+            6 => (vec![0, 4, 4, 6, 5], 7),                           // 스웜+돌격+궁수
+            7 => (vec![4, 4, 4, 6, 5], 8),                           // 스웜 물량+궁수
+            8 => (vec![0, 4, 4, 6, 5, 4, 4, 6, 5, 5], 8),           // 혼합
+            9 => (vec![4, 4, 4, 6, 5, 4, 4, 6, 5, 5], 10),          // 러시
             _ => {
-                let c = (15 + wave * 3).min(40);
-                (vec![0, 4, 4, 6, 5, 1, 4, 4, 6, 5], c)             // 4:1 유지
+                let c = (8 + wave).min(15);
+                (vec![0, 4, 4, 6, 5, 1, 4, 4, 6, 5], c)
             }
         };
+
+        // 최대 적 수 제한 (성능 보호)
+        let max_enemies = 60;
+        if self.enemies.len() >= max_enemies { return; }
+        let count = count.min((max_enemies - self.enemies.len()) as u32);
 
         for i in 0..count {
             let angle = (self.time * 7.7 + i as f32 * 2.3 + self.enemies.len() as f32 * 0.7) % (std::f32::consts::PI * 2.0);
