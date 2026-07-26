@@ -187,6 +187,32 @@ impl GameEngine {
             skills.iter().find(|s| s.id == ls.skill_id).map(|s| s.name.to_string()).unwrap_or_else(|| "?".into())
         } else { "?".into() }
     }
+    pub fn learned_skill_cd(&self, i: u32) -> f32 {
+        self.world.player.learned_skills.get(i as usize).map(|s| s.cooldown_remaining.max(0.0)).unwrap_or(0.0)
+    }
+    pub fn learned_skill_max_cd(&self, i: u32) -> f32 {
+        if let Some(ls) = self.world.player.learned_skills.get(i as usize) {
+            let skills = game::skill_data::skills_for_class(ls.class_id);
+            skills.iter().find(|s| s.id == ls.skill_id).map(|s| s.cooldown).unwrap_or(5.0)
+        } else { 5.0 }
+    }
+    pub fn learned_skill_type(&self, i: u32) -> u32 {
+        // 0=Active, 1=Passive, 2=Ultimate
+        if let Some(ls) = self.world.player.learned_skills.get(i as usize) {
+            let skills = game::skill_data::skills_for_class(ls.class_id);
+            skills.iter().find(|s| s.id == ls.skill_id).map(|s| match s.skill_type {
+                game::skill_data::SkillType::Active => 0,
+                game::skill_data::SkillType::Passive => 1,
+                game::skill_data::SkillType::Ultimate => 2,
+            }).unwrap_or(0)
+        } else { 0 }
+    }
+    pub fn learned_skill_desc(&self, i: u32) -> String {
+        if let Some(ls) = self.world.player.learned_skills.get(i as usize) {
+            let skills = game::skill_data::skills_for_class(ls.class_id);
+            skills.iter().find(|s| s.id == ls.skill_id).map(|s| s.description.to_string()).unwrap_or_else(|| "".into())
+        } else { "".into() }
+    }
 
     /// Get class name by upgrade ID (100 + class_id)
     pub fn class_name_for_choice(&self, upgrade_id: u32) -> String {

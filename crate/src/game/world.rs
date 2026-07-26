@@ -597,71 +597,52 @@ impl World {
 
         let px = self.player.x;
         let pz = self.player.z;
-        let dominant = self.player.dominant_element();
-        let fire_level = self.player.fire_level as u32;
-        let ice_level = self.player.ice_level as u32;
-        let thunder_level = self.player.thunder_level as u32;
-        let poison_level = self.player.poison_level as u32;
+        let atk = self.player.attack_damage;
 
-        match dominant {
-            1 => {
-                // 🔥 Fire: 주위 회전 오브 (매 0.5초마다 근처 적에게 데미지)
-                if fire_level >= 2 {
-                    let interval = 0.5 - fire_level as f32 * 0.03;
-                    let tick = (self.time / interval) as u32;
-                    let prev_tick = ((self.time - dt) / interval) as u32;
-                    if tick != prev_tick {
-                        let radius = 2.0 + fire_level as f32 * 0.3;
-                        let dmg = 5.0 + fire_level as f32 * 3.0;
-                        for enemy in &mut self.enemies {
-                            if !enemy.alive { continue; }
-                            let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
-                            if dist < radius {
-                                enemy.take_damage(dmg);
-                                self.damage_events.push((enemy.x, enemy.z, dmg, false));
-                            }
-                        }
-                    }
+        // Tick down all skill cooldowns
+        for skill in &mut self.player.learned_skills {
+            if skill.cooldown_remaining > 0.0 {
+                skill.cooldown_remaining -= dt;
+            }
+        }
+
+        // Auto-fire Active skills when off cooldown
+        let skill_count = self.player.learned_skills.len();
+        for idx in 0..skill_count {
+            let ls = &self.player.learned_skills[idx];
+            if ls.cooldown_remaining > 0.0 { continue; }
+
+            let skill_def = super::skill_data::skills_for_class(ls.class_id)
+                .iter().find(|s| s.id == ls.skill_id);
+            let skill_def = match skill_def {
+                Some(s) => *s,
+                None => continue,
+            };
+
+            // Only auto-fire Active skills (not passive, not ultimate)
+            if skill_def.skill_type != super::skill_data::SkillType::Active { continue; }
+
+            // Fire the skill! AoE damage in range
+            let range = skill_def.range;
+            let damage = atk * skill_def.damage_mult * (0.8 + self.player.learned_skills[idx].level as f32 * 0.2);
+            let mut hit_any = false;
+
+            for enemy in &mut self.enemies {
+                if !enemy.alive { continue; }
+                let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
+                if dist < range {
+                    enemy.take_damage(damage);
+                    enemy.apply_knockback(px, pz, 4.0);
+                    self.damage_events.push((enemy.x, enemy.z, damage, false));
+                    hit_any = true;
                 }
             }
-            2 => {
-                // ❄️ Ice: 적 슬로우 (범위 내 속도 감소)
-                if ice_level >= 2 {
-                    let radius = 3.0 + ice_level as f32 * 0.5;
-                    for enemy in &mut self.enemies {
-                        if !enemy.alive { continue; }
-                        let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
-                        if dist < radius {
-                            enemy.speed = enemy.speed.min(1.5);
-                        }
-                    }
-                }
+
+            // Set cooldown (only if there were targets)
+            if hit_any {
+                let cd = skill_def.cooldown * (1.0 - self.player.learned_skills[idx].level as f32 * 0.05);
+                self.player.learned_skills[idx].cooldown_remaining = cd.max(0.5);
             }
-            3 => {
-                // ⚡ Thunder: 이동 중 공속 보너스
-                if thunder_level >= 2 && self.player.moving {
-                    self.player.last_attack -= dt * 0.3;
-                }
-            }
-            4 => {
-                // ☠️ Poison: 매 1초마다 주변 DOT
-                if poison_level >= 2 {
-                    let tick = (self.time * 2.0) as u32;
-                    let prev_tick = ((self.time - dt) * 2.0) as u32;
-                    if tick != prev_tick {
-                        let radius = 2.5 + poison_level as f32 * 0.3;
-                        let dmg = 3.0 + poison_level as f32 * 2.0;
-                        for enemy in &mut self.enemies {
-                            if !enemy.alive { continue; }
-                            let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
-                            if dist < radius {
-                                enemy.take_damage(dmg);
-                            }
-                        }
-                    }
-                }
-            }
-            _ => {}
         }
     }
 
@@ -713,6 +694,7 @@ impl World {
                                 class_id,
                                 level: 1,
                                 last_used: -999.0,
+                                cooldown_remaining: 0.0,
                             });
                         }
                     }

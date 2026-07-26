@@ -59,6 +59,7 @@ pub struct LearnedSkill {
     pub class_id: u8,
     pub level: u8,    // 1~5 (upgradeable)
     pub last_used: f32,
+    pub cooldown_remaining: f32, // current CD left
 }
 
 // Legacy compat
@@ -257,6 +258,7 @@ impl Player {
                         class_id,
                         level: 1,
                         last_used: -999.0,
+                        cooldown_remaining: 0.0,
                     });
                 }
             }

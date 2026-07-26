@@ -14,6 +14,7 @@
     #skill-slots{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;pointer-events:all}
     .skill-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid #555;position:relative;cursor:pointer;overflow:visible}
     .skill-icon .sk-lvl{position:absolute;bottom:-2px;right:0;font-size:8px;color:#ffcc00;font-weight:bold}
+    .skill-icon .sk-cd-overlay{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:4px;pointer-events:none;display:none;overflow:hidden}
     .skill-icon:hover .sk-tooltip{display:block}
     .sk-tooltip{display:none;position:absolute;bottom:34px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.95);border:1px solid #555;border-radius:6px;padding:8px 10px;font-size:10px;color:#ccc;white-space:nowrap;z-index:3000;min-width:160px;text-align:left;line-height:1.5;pointer-events:none}
     .skill-icon.active-tip .sk-tooltip{display:block}
@@ -431,23 +432,44 @@
           7:'☠️ 맹독 검기. ATK+5, 흡혈+3%\nLv2: 주변 DOT\nLv5: MAX - 역병',
         };
         const slotCount = engine.skill_slot_count();
+        const classSkillCount = engine.learned_skill_count();
         let newSkillKey = '';
         for (let i = 0; i < slotCount; i++) { newSkillKey += engine.skill_slot_id(i) + ':' + engine.skill_slot_level(i) + ','; }
+        newSkillKey += '|' + classSkillCount;
+        for (let i = 0; i < classSkillCount; i++) { newSkillKey += engine.learned_skill_id(i) + ':' + engine.learned_skill_level(i) + ','; }
+
         if (newSkillKey !== lastSkillKey) {
           lastSkillKey = newSkillKey;
           let slotsHtml = '';
+          // Element orb icons
           for (let i = 0; i < slotCount; i++) {
             const id = engine.skill_slot_id(i);
             const lv = engine.skill_slot_level(i);
             const icon = SKILL_ICONS[id] || '⭐';
             const color = SKILL_COLORS[id] || '#888';
             const name = SKILL_NAMES[id] || 'Skill';
-            const desc = (SKILL_DESC[id] || '').replace(/\n/g, '<br>');
-            const maxed = lv >= 5 ? ' <span style="color:#ff4">MAX</span>' : '';
             slotsHtml += `<div class="skill-icon" style="background:${color}22;border-color:${color}">
-              ${icon}<span class="sk-lvl">${lv}${maxed}</span>
-              <div class="sk-tooltip"><b style="color:${color}">${name} Lv.${lv}/5</b><br>${desc}</div>
+              ${icon}<span class="sk-lvl">${lv}</span>
+              <div class="sk-tooltip"><b style="color:${color}">${name} Lv.${lv}</b></div>
             </div>`;
+          }
+          // Class skill icons (after promotion)
+          if (classSkillCount > 0) {
+            slotsHtml += '<div style="width:2px;height:28px;background:#333;margin:0 4px"></div>'; // separator
+            for (let i = 0; i < classSkillCount; i++) {
+              const name = engine.learned_skill_name(i);
+              const lv = engine.learned_skill_level(i);
+              const desc = engine.learned_skill_desc(i);
+              const sType = engine.learned_skill_type(i); // 0=active, 1=passive, 2=ultimate
+              const typeIcon = sType === 0 ? '⚔️' : sType === 1 ? '🛡️' : '💫';
+              const typeLabel = sType === 0 ? 'AUTO' : sType === 1 ? 'PASSIVE' : 'ULT';
+              const typeColor = sType === 0 ? '#44ccff' : sType === 1 ? '#44ff44' : '#ffcc00';
+              slotsHtml += `<div class="skill-icon class-skill" data-skill-idx="${i}" style="background:${typeColor}15;border-color:${typeColor}">
+                ${typeIcon}<span class="sk-lvl" style="color:${typeColor}">${lv}</span>
+                <div class="sk-cd-overlay"></div>
+                <div class="sk-tooltip"><b style="color:${typeColor}">${name} Lv.${lv}</b><br><span style="color:#888">[${typeLabel}]</span> ${desc}</div>
+              </div>`;
+            }
           }
           document.getElementById('skill-slots').innerHTML = slotsHtml;
           document.querySelectorAll('.skill-icon').forEach(el => {
@@ -459,6 +481,24 @@
             });
           });
         }
+
+        // Update class skill cooldown overlays (clock animation)
+        document.querySelectorAll('.class-skill').forEach(el => {
+          const idx = parseInt(el.dataset.skillIdx);
+          if (isNaN(idx)) return;
+          const cd = engine.learned_skill_cd(idx);
+          const maxCd = engine.learned_skill_max_cd(idx);
+          const overlay = el.querySelector('.sk-cd-overlay');
+          if (overlay) {
+            if (cd > 0) {
+              const pct = cd / maxCd;
+              overlay.style.background = `conic-gradient(rgba(0,0,0,0.7) ${pct*360}deg, transparent ${pct*360}deg)`;
+              overlay.style.display = 'block';
+            } else {
+              overlay.style.display = 'none';
+            }
+          }
+        });
 
         const t = Math.floor(engine.game_time());
         const min = Math.floor(t / 60);
