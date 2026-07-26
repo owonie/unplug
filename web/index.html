@@ -334,11 +334,13 @@
           dragStart = { x: e.clientX, y: e.clientY, button: 0 };
           dragPoints = [{ x: e.clientX, y: e.clientY }];
           isDragging = false;
+          showSpellGuide();
         } else if (e.button === 2 && engine.player_class_tier() >= 2) {
           // Right click: 2nd class skill
           dragStart = { x: e.clientX, y: e.clientY, button: 2 };
           dragPoints = [{ x: e.clientX, y: e.clientY }];
           isDragging = false;
+          showSpellGuide();
         }
       });
 
@@ -466,6 +468,7 @@
         if (magicCircle) { magicCircle.remove(); magicCircle = null; }
         if (arrowEl) { arrowEl.remove(); arrowEl = null; }
         if (trailCanvas) { trailCanvas.remove(); trailCanvas = null; }
+        hideSpellGuide();
 
         if (btn === 0 && engine.player_class_tier() > 0) {
           // LEFT CLICK: 1st class element skills
@@ -570,6 +573,25 @@
         // Fallback: if dragging away from start = outward
         if (dist > 40) return 'outward';
         return 'unknown';
+      }
+
+      // Spell Guide (shows when holding click)
+      let spellGuideEl = null;
+      function showSpellGuide() {
+        if (spellGuideEl) return;
+        spellGuideEl = document.createElement('div');
+        spellGuideEl.style.cssText = 'position:fixed;top:80px;right:16px;background:rgba(0,0,0,0.85);border:1px solid #444;border-radius:8px;padding:10px 14px;pointer-events:none;z-index:950;font-size:11px;color:#ccc;line-height:2;min-width:140px';
+        spellGuideEl.innerHTML = `
+          <div style="color:#ff8844;font-weight:bold;margin-bottom:4px">🖱️ Spell Guide</div>
+          <div>→ 바깥 드래그 = <span style="color:#ff8844">⚔️ ATK</span></div>
+          <div>← 안쪽 드래그 = <span style="color:#44ff88">🛡️ DEF</span></div>
+          <div>○ 한바퀴 = <span style="color:#ffcc00">💫 ULT</span></div>
+          <div style="color:#555;font-size:9px;margin-top:4px">놓으면 시전!</div>
+        `;
+        document.body.appendChild(spellGuideEl);
+      }
+      function hideSpellGuide() {
+        if (spellGuideEl) { spellGuideEl.remove(); spellGuideEl = null; }
       }
 
       function showSkillName(gesture) {
