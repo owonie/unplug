@@ -93,7 +93,8 @@
   <div id="timer">0:00</div>
   <div id="kills">0 kills</div>
   <div id="log"></div>
-  <div id="controls-hint">[WASD] Move | [SPACE] Dash | Auto-attack | Survive!</div>
+  <div id="controls-hint">[WASD] Move | [SPACE] Dash | [Click/Drag] Skill | Survive!</div>
+  <div id="tutorial" style="position:fixed;top:30%;left:50%;transform:translateX(-50%);color:#fff;font-size:16px;text-align:center;pointer-events:none;z-index:800;text-shadow:0 0 8px #000,0 2px 4px rgba(0,0,0,0.8);opacity:0;transition:opacity 0.5s;line-height:2"></div>
   <div id="dash-ui" style="position:fixed;bottom:50px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:none">
     <span style="color:#88ccff;font-size:12px">💨 DASH</span>
     <div style="width:60px;height:6px;background:#333;border-radius:3px;overflow:hidden">
@@ -168,7 +169,26 @@
         document.getElementById('start-screen').style.display = 'none';
         gameStarted = true;
         sound.init();
+        startTutorial();
       });
+
+      // === Tutorial ===
+      function startTutorial() {
+        const steps = [
+          { time: 500, text: '🗡️ WASD로 이동 — 적에게 가까이 가면 자동 공격!', duration: 4000 },
+          { time: 5000, text: '💨 SPACE = 대쉬 (무적 회피!)', duration: 3000 },
+          { time: 12000, text: '⬆️ 레벨업하면 원소 오브를 모으세요\n조합에 따라 전직이 결정됩니다', duration: 5000 },
+          { time: 25000, text: '🖱️ 전직 후: 마우스 클릭/드래그로 스킬 사용!', duration: 4000 },
+        ];
+        const el = document.getElementById('tutorial');
+        steps.forEach(step => {
+          setTimeout(() => {
+            el.innerHTML = step.text.replace(/\n/g, '<br>');
+            el.style.opacity = '1';
+            setTimeout(() => { el.style.opacity = '0'; }, step.duration);
+          }, step.time);
+        });
+      }
 
       // === Class Tree Viewer ===
       document.getElementById('tree-btn').addEventListener('click', () => {

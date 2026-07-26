@@ -385,7 +385,7 @@ impl World {
         }
 
         // 일반 적 스폰
-        let interval = (self.spawn_interval / self.difficulty).max(0.4);
+        let interval = (self.spawn_interval / self.difficulty).max(0.3); // min 0.3s (was 0.4)
         if self.spawn_timer >= interval {
             self.spawn_timer = 0.0;
 
@@ -397,7 +397,7 @@ impl World {
                 _ => 3,      // 전부
             };
 
-            let count = (self.difficulty as u32).min(6);
+            let count = ((self.difficulty as u32) + 1).min(15); // max 15 per batch (was 6)
             let px = self.player.x;
             let pz = self.player.z;
 
@@ -411,7 +411,14 @@ impl World {
                 let z = ((z % size) + size) % size;
 
                 let enemy_type = ((self.enemies.len() as u32) % (max_type + 1)).min(3);
-                self.enemies.push(Enemy::new(x, z, enemy_type));
+                let mut enemy = Enemy::new(x, z, enemy_type);
+                // Scale HP and DMG with wave
+                let scale = 1.0 + (self.wave_number as f32 - 1.0) * 0.3;
+                enemy.hp *= scale;
+                enemy.max_hp *= scale;
+                enemy.damage *= 1.0 + (self.wave_number as f32 - 1.0) * 0.15;
+                enemy.speed *= 1.0 + (self.wave_number as f32 - 1.0) * 0.05;
+                self.enemies.push(enemy);
             }
         }
 
@@ -425,7 +432,7 @@ impl World {
         let px = self.player.x;
         let pz = self.player.z;
         self.boss_active = true;
-        self.boss_max_hp = 200.0 + self.wave_number as f32 * 50.0;
+        self.boss_max_hp = 300.0 + self.wave_number as f32 * 100.0;
         self.boss_hp = self.boss_max_hp;
         self.boss_x = px + 10.0;
         self.boss_z = pz;
