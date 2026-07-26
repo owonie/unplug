@@ -595,13 +595,20 @@ impl World {
 
         match class_tier {
             0 => {
-                // Pre-promotion: 1 element orb + 2 different stats
-                self.level_up_choices[0] = self.random_element_choice(seed);
-                self.level_up_choices[1] = self.random_stat_choice(seed / 3);
-                self.level_up_choices[2] = self.random_stat_choice(seed / 7);
-                // Ensure different stats
-                if self.level_up_choices[2] == self.level_up_choices[1] {
-                    self.level_up_choices[2] = self.random_stat_choice(seed / 13);
+                // Pre-promotion: alternate between element-heavy and stat-heavy
+                if self.player.level % 2 == 0 {
+                    // Even levels: 2 elements + 1 stat (orb collection)
+                    self.level_up_choices[0] = self.random_element_choice(seed);
+                    self.level_up_choices[1] = self.random_element_choice_exclude(seed / 5, self.level_up_choices[0]);
+                    self.level_up_choices[2] = self.random_stat_choice(seed / 7);
+                } else {
+                    // Odd levels: 1 element + 2 stats (power up)
+                    self.level_up_choices[0] = self.random_element_choice(seed);
+                    self.level_up_choices[1] = self.random_stat_choice(seed / 3);
+                    self.level_up_choices[2] = self.random_stat_choice(seed / 7);
+                    if self.level_up_choices[2] == self.level_up_choices[1] {
+                        self.level_up_choices[2] = self.random_stat_choice(seed / 13);
+                    }
                 }
             }
             1 => {
