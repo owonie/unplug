@@ -721,9 +721,11 @@
         else portrait.style.boxShadow = 'none';
         const hpPct = Math.max(0, engine.player_hp() / engine.player_max_hp() * 100);
         document.getElementById('hp-bar-fill').style.width = hpPct + '%';
-        // Shield overlay on HP bar
+        // Shield: fills from where HP ends (right side of HP bar)
         const shieldPct = Math.max(0, engine.player_shield() / engine.player_max_hp() * 100);
-        document.getElementById('shield-bar-fill').style.width = shieldPct + '%';
+        const shieldBar = document.getElementById('shield-bar-fill');
+        shieldBar.style.width = shieldPct + '%';
+        shieldBar.style.left = hpPct + '%';
         const xpPct = engine.player_xp() / engine.player_xp_max() * 100;
         document.getElementById('xp-bar-fill').style.width = xpPct + '%';
 
