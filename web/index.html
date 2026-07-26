@@ -6,7 +6,7 @@
   <title>UNPLUG: Elemental Survivor</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
+    body{background:#000;overflow:hidden;font-family:'Courier New',monospace;-webkit-user-select:none;user-select:none}
     #game-canvas{width:100vw;height:100vh;display:block}
     #hud{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;padding:16px}
     #stats{color:#fff;font-size:13px;text-shadow:0 0 4px #000;pointer-events:all}
@@ -1023,7 +1023,6 @@
         document.getElementById('achievements').innerHTML =
           titles.length > 0 ? titles.map(t => '🏆 ' + t).join('<br>') : '';
 
-        updateUnlockedList();
         document.getElementById('gameover-screen').style.display = 'flex';
       }
 

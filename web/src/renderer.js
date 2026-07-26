@@ -504,8 +504,10 @@ export class ThreeRenderer {
       const p = this.deathParticles[i];
       if (p.isRing) {
         // Expanding + moving (cloud breath)
-        p.scale += dt * 6;
-        p.mesh.scale.setScalar(p.scale);
+        if (!p.noScale) {
+          p.scale += dt * 6;
+          p.mesh.scale.setScalar(p.scale);
+        }
         p.mesh.material.opacity = Math.min(p.life * 1.5, 0.4);
         p.mesh.position.x += (p.vx || 0) * dt;
         p.mesh.position.y += (p.vy || 0) * dt;
@@ -973,7 +975,7 @@ export class ThreeRenderer {
     const tubeMat = new THREE.MeshBasicMaterial({ color: 0xffff66, transparent: true, opacity: 0.8 });
     const tube = new THREE.Mesh(tubeGeo, tubeMat);
     this.scene.add(tube);
-    this.deathParticles.push({ mesh: tube, vx: 0, vy: 0, vz: 0, life: 0.18, isRing: true, scale: 1 });
+    this.deathParticles.push({ mesh: tube, vx: 0, vy: 0, vz: 0, life: 0.18, isRing: true, scale: 1, noScale: true });
 
     // Second thinner branch
     const points2 = [];
@@ -993,7 +995,7 @@ export class ThreeRenderer {
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })
     );
     this.scene.add(tube2);
-    this.deathParticles.push({ mesh: tube2, vx: 0, vy: 0, vz: 0, life: 0.12, isRing: true, scale: 1 });
+    this.deathParticles.push({ mesh: tube2, vx: 0, vy: 0, vz: 0, life: 0.12, isRing: true, scale: 1, noScale: true });
 
     // Impact flash at end
     const endX = x + dirX * range;
@@ -1004,7 +1006,7 @@ export class ThreeRenderer {
     );
     spark.position.set(endX, 0.4, endZ);
     this.scene.add(spark);
-    this.deathParticles.push({ mesh: spark, vx: 0, vy: 0, vz: 0, life: 0.12, isRing: true, scale: 1 });
+    this.deathParticles.push({ mesh: spark, vx: 0, vy: 0, vz: 0, life: 0.12, isRing: true, scale: 1, noScale: true });
   }
 
   _spawnIceWave(x, z, dirX, dirZ, range) {
