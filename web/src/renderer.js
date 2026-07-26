@@ -293,7 +293,6 @@ export class ThreeRenderer {
             const opacity = this._dashTrail[i].life * 1.0;
             this._dashTrail[i].mesh.traverse(c => { if (c.material && c.material.opacity !== undefined) c.material.opacity = Math.min(opacity, 0.5); });
           }
-          }
         }
       }
 
