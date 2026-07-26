@@ -544,8 +544,8 @@
         const dy = last.y - start.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
 
-        // Check for circle: must rotate nearly full 360° (330°+)
-        if (points.length > 20) {
+        // Check for circle: must be deliberate full loop
+        if (points.length > 30) {
           let totalAngle = 0;
           for (let i = 2; i < points.length; i++) {
             const ax = points[i-1].x - points[i-2].x;
@@ -556,8 +556,9 @@
             const dot = ax * bx + ay * by;
             totalAngle += Math.atan2(cross, dot);
           }
-          // Full circle = 330°+ rotation
-          if (Math.abs(totalAngle) > Math.PI * 1.83) return 'circle';
+          // Must rotate 340°+ AND end near start (within 80px)
+          const endDist = Math.sqrt((last.x - start.x)**2 + (last.y - start.y)**2);
+          if (Math.abs(totalAngle) > Math.PI * 1.9 && endDist < 80) return 'circle';
         }
 
         // Check direction relative to player screen position
