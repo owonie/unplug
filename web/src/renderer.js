@@ -503,10 +503,13 @@ export class ThreeRenderer {
     for (let i = this.deathParticles.length - 1; i >= 0; i--) {
       const p = this.deathParticles[i];
       if (p.isRing) {
-        // Expanding shockwave ring
-        p.scale += dt * 12;
+        // Expanding + moving (cloud breath)
+        p.scale += dt * 6;
         p.mesh.scale.setScalar(p.scale);
-        p.mesh.material.opacity = p.life * 2.5;
+        p.mesh.material.opacity = Math.min(p.life * 1.5, 0.4);
+        p.mesh.position.x += (p.vx || 0) * dt;
+        p.mesh.position.y += (p.vy || 0) * dt;
+        p.mesh.position.z += (p.vz || 0) * dt;
         p.life -= dt;
       } else {
         p.mesh.position.x += p.vx * dt;
@@ -932,23 +935,22 @@ export class ThreeRenderer {
   }
 
   _spawnFireBreath(x, z, dirX, dirZ, range) {
-    // Wide fan breath
-    for (let i = 0; i < 15; i++) {
-      const spreadAngle = ((i / 14) - 0.5) * 1.8; // wide ~100° fan
+    // Cloud-style breath: large expanding spheres in fan
+    for (let i = 0; i < 8; i++) {
+      const spreadAngle = ((i / 7) - 0.5) * 1.6; // ~90° fan
       const sdx = dirX * Math.cos(spreadAngle) - dirZ * Math.sin(spreadAngle);
       const sdz = dirX * Math.sin(spreadAngle) + dirZ * Math.cos(spreadAngle);
-      const t = 0.5 + Math.random() * range * 0.8;
-      const size = 0.05 + (t / range) * 0.06;
-      const geo = new THREE.SphereGeometry(size, 4, 4);
-      const colors = [0xffcc44, 0xff8800, 0xff5500, 0xcc2200];
+      const size = 0.15 + Math.random() * 0.15;
+      const geo = new THREE.SphereGeometry(size, 6, 6);
+      const colors = [0xff6600, 0xff4400, 0xcc2200, 0xff8800];
       const mat = new THREE.MeshBasicMaterial({
-        color: colors[Math.floor(Math.random() * 4)],
-        transparent: true, opacity: 0.5
+        color: colors[i % 4], transparent: true, opacity: 0.35
       });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x + sdx * 0.5, 0.3, z + sdz * 0.5);
+      mesh.position.set(x + sdx * 0.8, 0.3, z + sdz * 0.8);
       this.scene.add(mesh);
-      this.deathParticles.push({ mesh, vx: sdx * 6, vy: 0.2, vz: sdz * 6, life: 0.25 + Math.random() * 0.1 });
+      // Expand outward + grow in size
+      this.deathParticles.push({ mesh, vx: sdx * 5, vy: 0.1, vz: sdz * 5, life: 0.5, isRing: true, scale: 1 });
     }
   }
 
@@ -980,32 +982,34 @@ export class ThreeRenderer {
   }
 
   _spawnIceWave(x, z, dirX, dirZ, range) {
-    // Wide frost wave
-    for (let i = 0; i < 8; i++) {
-      const spreadAngle = ((i / 7) - 0.5) * 1.6; // ~90° fan
+    // Cloud frost wave
+    for (let i = 0; i < 7; i++) {
+      const spreadAngle = ((i / 6) - 0.5) * 1.4;
       const sdx = dirX * Math.cos(spreadAngle) - dirZ * Math.sin(spreadAngle);
       const sdz = dirX * Math.sin(spreadAngle) + dirZ * Math.cos(spreadAngle);
-      const geo = new THREE.ConeGeometry(0.04, 0.18, 4);
-      const mat = new THREE.MeshBasicMaterial({ color: 0x6699aa, transparent: true, opacity: 0.45 });
+      const size = 0.12 + Math.random() * 0.1;
+      const geo = new THREE.SphereGeometry(size, 6, 6);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x5588aa, transparent: true, opacity: 0.3 });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x + sdx * 0.5, 0.2, z + sdz * 0.5);
+      mesh.position.set(x + sdx * 0.6, 0.2, z + sdz * 0.6);
       this.scene.add(mesh);
-      this.deathParticles.push({ mesh, vx: sdx * 6, vy: 0.2, vz: sdz * 6, life: 0.35 });
+      this.deathParticles.push({ mesh, vx: sdx * 5, vy: 0.1, vz: sdz * 5, life: 0.45, isRing: true, scale: 1 });
     }
   }
 
   _spawnPoisonMist(x, z, dirX, dirZ, range) {
-    // Low creeping mist in direction
-    for (let i = 0; i < 5; i++) {
-      const t = (i / 5) * range * 0.7;
-      const spread = (Math.random() - 0.5) * 1.0;
-      const perpX = -dirZ, perpZ = dirX;
-      const geo = new THREE.SphereGeometry(0.15, 4, 4);
+    // Dark cloud mist spreading
+    for (let i = 0; i < 6; i++) {
+      const spreadAngle = ((i / 5) - 0.5) * 1.2;
+      const sdx = dirX * Math.cos(spreadAngle) - dirZ * Math.sin(spreadAngle);
+      const sdz = dirX * Math.sin(spreadAngle) + dirZ * Math.cos(spreadAngle);
+      const size = 0.12 + Math.random() * 0.12;
+      const geo = new THREE.SphereGeometry(size, 5, 5);
       const mat = new THREE.MeshBasicMaterial({ color: 0x220033, transparent: true, opacity: 0.2 });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x + dirX * t + perpX * spread, 0.15, z + dirZ * t + perpZ * spread);
+      mesh.position.set(x + sdx * 0.5, 0.15, z + sdz * 0.5);
       this.scene.add(mesh);
-      this.deathParticles.push({ mesh, vx: dirX * 2, vy: 0.1, vz: dirZ * 2, life: 0.8 + Math.random() * 0.4, isRing: true, scale: 1 });
+      this.deathParticles.push({ mesh, vx: sdx * 3, vy: 0.05, vz: sdz * 3, life: 0.7, isRing: true, scale: 1 });
     }
   }
 

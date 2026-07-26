@@ -1091,8 +1091,16 @@
           }
         }
 
-        // Update shield visual (follows player)
-        if (renderer.updateShield) renderer.updateShield(engine.player_x(), engine.player_z(), dt / 1000);
+        // Update shield visual (follows player, remove if broken)
+        if (renderer._shieldRing && engine.player_shield() <= 0) {
+          // Shield broken by damage — remove visual immediately
+          renderer.scene.remove(renderer._shieldRing.mesh);
+          if (renderer._shieldOuter) renderer.scene.remove(renderer._shieldOuter.mesh);
+          renderer._shieldRing = null;
+          renderer._shieldOuter = null;
+        } else if (renderer.updateShield) {
+          renderer.updateShield(engine.player_x(), engine.player_z(), dt / 1000);
+        }
 
         renderer.update({
           playerX: engine.player_x(),
