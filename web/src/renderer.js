@@ -140,11 +140,11 @@ export class ThreeRenderer {
       const r = d[i], g = d[i+1], b = d[i+2];
       const lum = (r + g + b) / 3;
 
-      // Warm bright tones (R>G>B, lum high) = clothing/hat in original → dark purple
+      // Warm bright tones (R>G>B, lum high) = clothing/cape → deep dark purple
       if (r > g && r > b && (r - b) > 30 && lum > 100 && lum < 230) {
-        d[i] = Math.min(160, lum * 0.4 + 30);
-        d[i+1] = Math.max(0, lum * 0.2 + 10);
-        d[i+2] = Math.min(180, lum * 0.45 + 50);
+        d[i] = Math.min(80, lum * 0.25 + 15);
+        d[i+1] = Math.max(0, lum * 0.1 + 5);
+        d[i+2] = Math.min(100, lum * 0.3 + 30);
       }
       // Dark warm tones (skin/brown, lum 50-120, warm) → light peach skin
       else if (lum > 40 && lum < 130 && r > b && (r - b) > 10) {
