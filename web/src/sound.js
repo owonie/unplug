@@ -187,4 +187,69 @@ export class SoundManager {
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
     osc.start(this.ctx.currentTime); osc.stop(this.ctx.currentTime + 0.2);
   }
+
+  // === BGM: Dark fantasy ambient loop ===
+  startBGM() {
+    if (!this.ctx || this.bgmPlaying) return;
+    this.bgmPlaying = true;
+
+    // Low drone
+    const drone = this.ctx.createOscillator();
+    drone.type = 'sawtooth';
+    drone.frequency.value = 55; // low A
+    const droneGain = this.ctx.createGain();
+    droneGain.gain.value = 0.04;
+    const droneFilter = this.ctx.createBiquadFilter();
+    droneFilter.type = 'lowpass';
+    droneFilter.frequency.value = 200;
+    drone.connect(droneFilter).connect(droneGain).connect(this.ctx.destination);
+    drone.start();
+    this._bgmNodes = [drone];
+
+    // Pad chord (minor)
+    const padNotes = [110, 130.81, 164.81]; // A2, C3, E3 (Am)
+    padNotes.forEach(freq => {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.02;
+      // Slow LFO for movement
+      const lfo = this.ctx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = 0.1 + Math.random() * 0.1;
+      const lfoGain = this.ctx.createGain();
+      lfoGain.gain.value = 0.01;
+      lfo.connect(lfoGain).connect(g.gain);
+      lfo.start();
+      osc.connect(g).connect(this.ctx.destination);
+      osc.start();
+      this._bgmNodes.push(osc, lfo);
+    });
+
+    // Subtle high shimmer
+    const shimmer = this.ctx.createOscillator();
+    shimmer.type = 'sine';
+    shimmer.frequency.value = 880;
+    const shimGain = this.ctx.createGain();
+    shimGain.gain.value = 0.008;
+    const shimLfo = this.ctx.createOscillator();
+    shimLfo.type = 'sine';
+    shimLfo.frequency.value = 0.3;
+    const shimLfoGain = this.ctx.createGain();
+    shimLfoGain.gain.value = 0.006;
+    shimLfo.connect(shimLfoGain).connect(shimGain.gain);
+    shimLfo.start();
+    shimmer.connect(shimGain).connect(this.ctx.destination);
+    shimmer.start();
+    this._bgmNodes.push(shimmer, shimLfo);
+  }
+
+  stopBGM() {
+    if (this._bgmNodes) {
+      this._bgmNodes.forEach(n => { try { n.stop(); } catch(e) {} });
+      this._bgmNodes = null;
+    }
+    this.bgmPlaying = false;
+  }
 }
