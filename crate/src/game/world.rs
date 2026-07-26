@@ -540,9 +540,11 @@ impl World {
             level,
         );
 
-        // If promotions available, offer as choices (every level-up once eligible)
+        // If promotions available, offer as choices
         let all_promos: Vec<u8> = promotions.iter().chain(hidden_promos.iter()).copied().collect();
-        if !all_promos.is_empty() && self.player.class_tier == 0 && level >= 10 {
+        let total_orbs = self.player.total_elements();
+        // 1st promotion: 2+ orbs
+        if !all_promos.is_empty() && self.player.class_tier == 0 && total_orbs >= 2 {
             // 1st promotion
             let promo_id = all_promos[(seed as usize) % all_promos.len()];
             self.level_up_choices[0] = 100 + promo_id as u32;
@@ -555,8 +557,9 @@ impl World {
             self.level_up_choices[2] = self.random_stat_choice(seed / 7);
             return;
         }
-        // 2nd/3rd promotion check (every level once eligible)
-        if !all_promos.is_empty() && self.player.class_tier >= 1 && level >= 15 && self.player.class_tier < 3 {
+        // 2nd/3rd promotion: 5+ orbs for 2nd, 8+ for 3rd
+        let orb_req = if self.player.class_tier == 1 { 5 } else { 8 };
+        if !all_promos.is_empty() && self.player.class_tier >= 1 && total_orbs >= orb_req && self.player.class_tier < 3 {
             let promo_id = all_promos[(seed as usize) % all_promos.len()];
             self.level_up_choices[0] = 100 + promo_id as u32;
             if all_promos.len() > 1 {
@@ -571,13 +574,9 @@ impl World {
 
         match class_tier {
             0 => {
-                // Pre-promotion: 2 element orbs + 1 stat
+                // Pre-promotion: 2 different element orbs + 1 stat
                 self.level_up_choices[0] = self.random_element_choice(seed);
-                self.level_up_choices[1] = self.random_element_choice(seed / 5);
-                // Ensure different elements
-                if self.level_up_choices[1] == self.level_up_choices[0] {
-                    self.level_up_choices[1] = self.random_element_choice(seed / 11);
-                }
+                self.level_up_choices[1] = self.random_element_choice_exclude(seed / 5, self.level_up_choices[0]);
                 self.level_up_choices[2] = self.random_stat_choice(seed / 7);
             }
             1 => {
@@ -611,12 +610,24 @@ impl World {
     }
 
     /// Element choice: 50=fire, 51=ice, 52=thunder, 53=poison
-    /// If at cap, returns a stat choice instead
-    fn random_element_choice(&self, seed: u32) -> u32 {
+    /// exclude: element ID to avoid (50~53), 0 = no exclusion
+    fn random_element_choice_exclude(&self, seed: u32, exclude: u32) -> u32 {
         if self.player.total_elements() >= self.player.element_cap() {
             return self.random_stat_choice(seed);
         }
-        50 + (seed % 4)
+        let mut pick = 50 + (seed % 4);
+        // Avoid duplicate
+        if pick == exclude {
+            pick = 50 + ((seed + 1) % 4);
+        }
+        if pick == exclude {
+            pick = 50 + ((seed + 2) % 4);
+        }
+        pick
+    }
+
+    fn random_element_choice(&self, seed: u32) -> u32 {
+        self.random_element_choice_exclude(seed, 0)
     }
 
     /// Stat choice: 60~69

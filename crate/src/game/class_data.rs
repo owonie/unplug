@@ -14,11 +14,11 @@ pub struct ClassDef {
 
 /// Check if player meets element requirements for a class
 pub fn can_promote_to(class: &ClassDef, fire: u8, ice: u8, thunder: u8, poison: u8, current_class: u8, level: u32) -> bool {
-    // Level check (relaxed for faster gameplay)
+    // Level check (minimal — orb count is primary gate)
     let level_req = match class.tier {
-        1 => 10,
-        2 => 15,
-        3 => 25,
+        1 => 5,
+        2 => 10,
+        3 => 15,
         _ => 999,
     };
     if level < level_req { return false; }
@@ -26,9 +26,9 @@ pub fn can_promote_to(class: &ClassDef, fire: u8, ice: u8, thunder: u8, poison: 
     // Prerequisite class check
     if class.from_class > 0 && current_class != class.from_class { return false; }
 
-    // Total orbs minimum: tier 1 = 2, tier 2 = 6, tier 3 = 10
+    // Total orbs minimum: tier 1 = 2, tier 2 = 5, tier 3 = 8
     let total = fire + ice + thunder + poison;
-    let min_total = match class.tier { 1 => 2, 2 => 6, 3 => 10, _ => 2 };
+    let min_total = match class.tier { 1 => 2, 2 => 5, 3 => 8, _ => 2 };
     if total < min_total { return false; }
 
     // Individual element requirements
