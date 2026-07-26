@@ -230,16 +230,18 @@ export class ThreeRenderer {
         if (!this._dashTrail) this._dashTrail = [];
 
         if (dashType === 4) {
-          // ☠️ Smoke: green transparent cloud, player invisible
-          this.playerSpriteMat.opacity = 0.15;
-          const cloud = new THREE.Mesh(
-            new THREE.SphereGeometry(0.5, 6, 6),
-            new THREE.MeshBasicMaterial({ color: 0x44ff44, transparent: true, opacity: 0.4 })
+          // ☠️ Smoke: subtle dark purple wisps, player almost invisible
+          this.playerSpriteMat.opacity = 0.08;
+          const wisp = new THREE.Mesh(
+            new THREE.SphereGeometry(0.2, 4, 4),
+            new THREE.MeshBasicMaterial({ color: 0x220033, transparent: true, opacity: 0.25 })
           );
-          cloud.position.copy(this.playerGroup.position);
-          cloud.position.y = 0.5;
-          this.scene.add(cloud);
-          this._dashTrail.push({ mesh: cloud, life: 0.5 });
+          wisp.position.copy(this.playerGroup.position);
+          wisp.position.y = 0.4;
+          wisp.position.x += (Math.random() - 0.5) * 0.3;
+          wisp.position.z += (Math.random() - 0.5) * 0.3;
+          this.scene.add(wisp);
+          this._dashTrail.push({ mesh: wisp, life: 0.4 });
         } else if (dashType === 3) {
           // ⚡ Triple: yellow electric sparks
           this.playerSpriteMat.opacity = 0.6;
@@ -871,17 +873,18 @@ export class ThreeRenderer {
   }
 
   _spawnPoisonCloud(x, z, range) {
-    // Green cloud spheres
-    for (let i = 0; i < 6; i++) {
-      const ox = (Math.random() - 0.5) * range * 0.8;
-      const oz = (Math.random() - 0.5) * range * 0.8;
-      const size = 0.3 + Math.random() * 0.4;
-      const geo = new THREE.SphereGeometry(size, 8, 6);
-      const mat = new THREE.MeshBasicMaterial({ color: 0x33ff33, transparent: true, opacity: 0.3 + Math.random() * 0.2 });
+    // Dark purple miasma — subtle, low opacity
+    for (let i = 0; i < 4; i++) {
+      const ox = (Math.random() - 0.5) * range * 0.5;
+      const oz = (Math.random() - 0.5) * range * 0.5;
+      const size = 0.15 + Math.random() * 0.2;
+      const geo = new THREE.SphereGeometry(size, 6, 4);
+      const colors = [0x330044, 0x1a0033, 0x440066, 0x220022];
+      const mat = new THREE.MeshBasicMaterial({ color: colors[i % 4], transparent: true, opacity: 0.2 + Math.random() * 0.1 });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x + ox, 0.3 + Math.random() * 0.5, z + oz);
+      mesh.position.set(x + ox, 0.2 + Math.random() * 0.3, z + oz);
       this.scene.add(mesh);
-      this.deathParticles.push({ mesh, vx: (Math.random()-0.5)*0.5, vy: 0.5, vz: (Math.random()-0.5)*0.5, life: 1.0 + Math.random() * 0.5, isRing: true, scale: 1 });
+      this.deathParticles.push({ mesh, vx: (Math.random()-0.5)*0.3, vy: 0.3, vz: (Math.random()-0.5)*0.3, life: 0.8 + Math.random() * 0.4, isRing: true, scale: 1 });
     }
   }
 }
