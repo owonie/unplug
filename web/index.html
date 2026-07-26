@@ -102,6 +102,7 @@
     import init, { GameEngine } from './pkg/unplug_engine.js';
     import { ThreeRenderer } from './src/renderer.js';
     import { SoundManager } from './src/sound.js';
+    let engine;
 
     const sound = new SoundManager();
 
@@ -114,6 +115,7 @@
       if (id >= 50 && id <= 53) return ['🔥 Fire Orb', '❄️ Ice Orb', '⚡ Thunder Orb', '☠️ Poison Orb'][id - 50];
       if (id >= 60 && id <= 68) return ['⚔️ DMG +10', '👟 SPD +', '⚡ ATK SPD', '🎯 RANGE +', '🔫 CLEAVE +', '❤️ HP +30', '💥 CRIT +15%', '🧛 STEAL +5%', '🧲 MAGNET +'][id - 60];
       if (id >= 100 && id <= 199) {
+        if (!engine) return '👑 PROMOTE!';
         const name = engine.class_name_for_choice(id);
         return `👑 ${name || 'PROMOTE!'}`;
       }
@@ -136,7 +138,7 @@
 
     async function main() {
       await init();
-      let engine = new GameEngine();
+      engine = new GameEngine();
 
       const canvas = document.getElementById('game-canvas');
       const renderer = new ThreeRenderer(canvas);

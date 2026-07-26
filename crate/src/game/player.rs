@@ -222,8 +222,9 @@ impl Player {
     }
 
     pub fn dominant_element(&self) -> u8 {
+        if self.total_elements() == 0 { return 0; }
         let levels = [(self.fire_level, 1u8), (self.ice_level, 2), (self.thunder_level, 3), (self.poison_level, 4)];
-        levels.iter().max_by_key(|(lv, _)| lv).map(|(_, e)| *e).unwrap_or(0)
+        levels.iter().filter(|(lv, _)| *lv > 0).max_by_key(|(lv, _)| lv).map(|(_, e)| *e).unwrap_or(0)
     }
 
     // === Class Promotion ===
