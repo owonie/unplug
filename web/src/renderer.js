@@ -136,26 +136,26 @@ export class ThreeRenderer {
     const d = imageData.data;
 
     for (let i = 0; i < d.length; i += 4) {
-      if (d[i + 3] < 10) continue; // skip transparent
+      if (d[i + 3] < 10) continue;
       const r = d[i], g = d[i+1], b = d[i+2];
 
-      // Detect skin tones (brownish/tan) → make lighter/pinkish
+      // Skin tones → lighter, slightly warm
       if (r > 120 && g > 70 && g < 160 && b < 120 && r > g) {
-        d[i] = Math.min(255, r + 60);     // lighter
-        d[i+1] = Math.min(255, g + 50);
-        d[i+2] = Math.min(255, b + 70);   // slight pink
+        d[i] = Math.min(255, r + 40);
+        d[i+1] = Math.min(255, g + 35);
+        d[i+2] = Math.min(255, b + 40);
       }
-      // Detect dark clothing/hair → shift to purple/violet
+      // Dark clothing/hair → dark purple/indigo (subtle)
       else if (r < 150 && g < 100 && b < 100) {
-        d[i] = Math.min(255, r * 0.7 + 60);    // add red
-        d[i+1] = Math.max(0, g * 0.4);          // reduce green
-        d[i+2] = Math.min(255, b * 0.5 + 120);  // boost blue → purple
+        d[i] = Math.min(180, r * 0.5 + 30);
+        d[i+1] = Math.max(0, g * 0.3 + 10);
+        d[i+2] = Math.min(200, b * 0.4 + 60);
       }
-      // Mid tones (clothing details) → subtle purple shift
+      // Mid tones → muted dark violet
       else if (r < 200 && g < 150) {
-        d[i] = Math.min(255, r * 0.85 + 30);
-        d[i+1] = Math.max(0, g * 0.7);
-        d[i+2] = Math.min(255, b * 0.7 + 60);
+        d[i] = Math.min(200, r * 0.75 + 15);
+        d[i+1] = Math.max(0, g * 0.6 + 5);
+        d[i+2] = Math.min(220, b * 0.6 + 35);
       }
     }
 
