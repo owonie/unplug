@@ -23,6 +23,10 @@ export class SoundManager {
       electroImpact: 'sfx/electro-impact.mp3',
       iceCrack: 'sfx/ice-crack.mp3',
       levelup: 'sfx/levelup.mp3',
+      whooshFire: 'sfx/whoosh-fire.mp3',
+      whooshIce: 'sfx/whoosh-ice.mp3',
+      whooshPoison: 'sfx/whoosh-poison.mp3',
+      dash: 'sfx/dash.mp3',
     };
     for (const [key, src] of Object.entries(sfxFiles)) {
       this._sfxPool[key] = [];
@@ -58,11 +62,14 @@ export class SoundManager {
     this._play('levelup', 0.5);
   }
 
-  // === ELEMENT DIRECTIONAL (left-click) — element sound + slash layer ===
-  playElementFire() { this._play('slash', 0.25); this._play('explosion', 0.3); }
-  playElementIce() { this._play('ice', 0.4); }
+  // === ELEMENT DIRECTIONAL (left-click) — element sound + whoosh layer ===
+  playElementFire() { this._play('whooshFire', 0.45); this._play('explosion', 0.2); }
+  playElementIce() { this._play('whooshIce', 0.45); this._play('ice', 0.25); }
   playElementThunder() { this._play('electric', 0.4); }
-  playElementPoison() { this._play('slash', 0.2); this._play('groundImpact', 0.3); }
+  playElementPoison() { this._play('whooshPoison', 0.4); this._play('groundImpact', 0.2); }
+
+  // === DASH ===
+  playDash() { this._play('dash', 0.35); }
 
   // === ADVANCED DIRECTIONAL (right-click — heavier) ===
   playAdvancedSkill(element) {
