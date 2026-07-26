@@ -317,16 +317,25 @@
       document.addEventListener('contextmenu', e => { if (gameStarted) e.preventDefault(); });
       gameCanvas.addEventListener('selectstart', e => e.preventDefault());
 
-      // === Mouse Drag Skill System — Magic Circle ===
+      // === Gesture Skill System ===
       let dragStart = null;
       let isDragging = false;
-      let magicCircle = null; // DOM element for magic circle
+      let magicCircle = null;
+      let dragPoints = []; // for gesture recognition
+      let arrowEl = null;
 
       gameCanvas.addEventListener('mousedown', e => {
         if (!gameStarted || !engine) return;
         e.preventDefault();
         if (e.button === 0 && engine.player_class_tier() > 0) {
-          dragStart = { x: e.clientX, y: e.clientY };
+          // Left click: 1st class skill (element)
+          dragStart = { x: e.clientX, y: e.clientY, button: 0 };
+          dragPoints = [{ x: e.clientX, y: e.clientY }];
+          isDragging = false;
+        } else if (e.button === 2 && engine.player_class_tier() >= 2) {
+          // Right click: 2nd class skill
+          dragStart = { x: e.clientX, y: e.clientY, button: 2 };
+          dragPoints = [{ x: e.clientX, y: e.clientY }];
           isDragging = false;
         }
       });
@@ -336,29 +345,72 @@
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
+        dragPoints.push({ x: e.clientX, y: e.clientY });
+
         if (dist > 20) {
           isDragging = true;
-          // Show magic circle at player position
+
+          // Detect gesture type
+          const gesture = detectGesture(dragPoints, dragStart);
+
+          // Show magic circle at player
           if (!magicCircle) {
             magicCircle = document.createElement('div');
-            magicCircle.style.cssText = 'position:fixed;pointer-events:none;z-index:900;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid;animation:magic-spin 1s linear infinite;box-shadow:0 0 15px;';
-            magicCircle.innerHTML = '<div style="position:absolute;width:70%;height:70%;border-radius:50%;border:1px solid rgba(255,255,255,0.3)"></div><div style="position:absolute;width:40%;height:40%;border-radius:50%;border:1px dashed rgba(255,255,255,0.5)"></div>';
+            magicCircle.style.cssText = 'position:fixed;pointer-events:none;z-index:900;border-radius:50%;border:2px solid;animation:magic-spin 1s linear infinite;box-shadow:0 0 15px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:bold;text-shadow:0 0 5px rgba(0,0,0,0.8)';
             document.body.appendChild(magicCircle);
           }
-          const size = Math.min(40 + dist * 0.6, 120);
+          // Arrow indicator
+          if (!arrowEl) {
+            arrowEl = document.createElement('div');
+            arrowEl.style.cssText = 'position:fixed;pointer-events:none;z-index:901;font-size:28px;text-shadow:0 0 8px rgba(255,255,255,0.5)';
+            document.body.appendChild(arrowEl);
+          }
+
+          const size = Math.min(50 + dist * 0.4, 100);
           const elem = engine.active_element();
-          const colors = { 1:'#ff4400', 2:'#44ccff', 3:'#ffcc00', 4:'#9933ff', 0:'#8888ff' };
-          const color = colors[elem] || '#8888ff';
+          const isRight = dragStart.button === 2;
+          const colors = isRight
+            ? { 1:'#ff88cc', 2:'#88ffcc', 3:'#ccff88', 4:'#cc88ff', 0:'#ccaaff' }
+            : { 1:'#ff4400', 2:'#44ccff', 3:'#ffcc00', 4:'#9933ff', 0:'#8888ff' };
+          const color = colors[elem] || (isRight ? '#ccaaff' : '#8888ff');
           magicCircle.style.width = size + 'px';
           magicCircle.style.height = size + 'px';
           magicCircle.style.borderColor = color;
           magicCircle.style.boxShadow = `0 0 ${size/4}px ${color}, inset 0 0 ${size/6}px ${color}`;
 
-          // Position at player screen pos
+          // Gesture label on circle
+          const labels = { outward: '⚔️ ATK', inward: '🛡️ DEF', circle: '💫 ULT' };
+          magicCircle.textContent = labels[gesture] || '...';
+
+          // Position at player
           if (renderer && renderer.camera) {
             const pos = renderer.projectToScreen(engine.player_x(), 0.5, engine.player_z());
             magicCircle.style.left = (pos.x - size/2) + 'px';
             magicCircle.style.top = (pos.y - size/2) + 'px';
+
+            // Arrow: show direction for outward
+            if (gesture === 'outward') {
+              const angle = Math.atan2(dy, dx);
+              const arrows = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'];
+              const idx = Math.round((angle + Math.PI) / (Math.PI/4)) % 8;
+              arrowEl.textContent = arrows[idx];
+              arrowEl.style.left = (pos.x + dx * 0.4) + 'px';
+              arrowEl.style.top = (pos.y + dy * 0.4 - 14) + 'px';
+              arrowEl.style.opacity = '1';
+            } else if (gesture === 'inward') {
+              arrowEl.textContent = '🛡️';
+              arrowEl.style.left = (pos.x - 14) + 'px';
+              arrowEl.style.top = (pos.y - 14) + 'px';
+              arrowEl.style.opacity = '1';
+            } else if (gesture === 'circle') {
+              arrowEl.textContent = '🌀';
+              arrowEl.style.left = (pos.x - 14) + 'px';
+              arrowEl.style.top = (pos.y - 40) + 'px';
+              arrowEl.style.opacity = '1';
+            } else {
+              arrowEl.style.opacity = '0.3';
+              arrowEl.textContent = '?';
+            }
           }
         }
       });
@@ -368,44 +420,132 @@
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
+        const btn = dragStart.button;
 
         if (magicCircle) { magicCircle.remove(); magicCircle = null; }
+        if (arrowEl) { arrowEl.remove(); arrowEl = null; }
 
-        if (engine.player_class_tier() > 0) {
-          if (isDragging && dist > 40) {
-            // Cast skill!
-            engine.use_active_skill();
-            const power = dist > 100 ? 'big' : 'normal';
-            const range = power === 'big' ? 6 : 4;
-            renderer.spawnSkillEffect(engine.player_x(), engine.player_z(), engine.active_element(), range);
-            renderer.shake(power === 'big' ? 0.5 : 0.3, 0.12);
+        if (btn === 0 && engine.player_class_tier() > 0) {
+          // LEFT CLICK: 1st class element skills
+          if (isDragging && dist > 30) {
+            const gesture = detectGesture(dragPoints, dragStart);
+            const angle = Math.atan2(-dy, dx);
 
-            // Show skill name popup
-            showSkillName(power);
+            if (gesture === 'outward') {
+              engine.use_directional_skill(angle);
+              renderer.spawnSkillEffect(engine.player_x(), engine.player_z(), engine.active_element(), 5);
+              renderer.shake(0.35, 0.1);
+              showSkillName('outward');
+            } else if (gesture === 'inward') {
+              engine.use_shield_skill();
+              renderer.shake(0.15, 0.05);
+              showSkillName('inward');
+            } else if (gesture === 'circle') {
+              engine.use_ultimate_skill();
+              renderer.spawnSkillEffect(engine.player_x(), engine.player_z(), engine.active_element(), 8);
+              renderer.shake(0.6, 0.2);
+              showSkillName('circle');
+            }
           } else if (!isDragging) {
-            // Simple click = quick skill
             engine.use_active_skill();
             renderer.shake(0.2, 0.08);
+          }
+        } else if (btn === 2 && engine.player_class_tier() >= 2) {
+          // RIGHT CLICK: 2nd class skills
+          if (isDragging && dist > 30) {
+            const gesture = detectGesture(dragPoints, dragStart);
+            const angle = Math.atan2(-dy, dx);
+
+            if (gesture === 'outward') {
+              engine.use_directional_skill(angle);
+              renderer.spawnSkillEffect(engine.player_x(), engine.player_z(), engine.active_element(), 7);
+              renderer.shake(0.4, 0.12);
+              showSkillName('outward');
+            } else if (gesture === 'circle') {
+              engine.use_ultimate_skill();
+              renderer.spawnSkillEffect(engine.player_x(), engine.player_z(), engine.active_element(), 10);
+              renderer.shake(0.7, 0.25);
+              showSkillName('circle');
+            } else {
+              engine.use_active_skill();
+              renderer.shake(0.3, 0.1);
+              showSkillName('outward');
+            }
+          } else if (!isDragging) {
+            // Right click tap = 2nd class quick skill
+            engine.use_active_skill();
+            renderer.spawnSkillEffect(engine.player_x(), engine.player_z(), engine.active_element(), 4);
+            renderer.shake(0.25, 0.08);
           }
         }
 
         dragStart = null;
         isDragging = false;
+        dragPoints = [];
       });
 
-      function showSkillName(power) {
+      // Gesture detection: outward / inward / circle
+      function detectGesture(points, start) {
+        if (points.length < 5) return 'unknown';
+
+        const last = points[points.length - 1];
+        const dx = last.x - start.x;
+        const dy = last.y - start.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+
+        // Check for circle: did the path curve significantly?
+        if (points.length > 15) {
+          let totalAngle = 0;
+          for (let i = 2; i < points.length; i++) {
+            const ax = points[i-1].x - points[i-2].x;
+            const ay = points[i-1].y - points[i-2].y;
+            const bx = points[i].x - points[i-1].x;
+            const by = points[i].y - points[i-1].y;
+            const cross = ax * by - ay * bx;
+            const dot = ax * bx + ay * by;
+            totalAngle += Math.atan2(cross, dot);
+          }
+          // If total rotation > 270 degrees, it's a circle
+          if (Math.abs(totalAngle) > Math.PI * 1.5) return 'circle';
+        }
+
+        // Check direction relative to player screen position
+        if (renderer && renderer.camera) {
+          const playerScreen = renderer.projectToScreen(engine.player_x(), 0.5, engine.player_z());
+          const startToPlayer = Math.sqrt((start.x - playerScreen.x)**2 + (start.y - playerScreen.y)**2);
+          const endToPlayer = Math.sqrt((last.x - playerScreen.x)**2 + (last.y - playerScreen.y)**2);
+
+          if (endToPlayer < startToPlayer - 20) return 'inward'; // moved toward player
+          if (endToPlayer > startToPlayer + 20) return 'outward'; // moved away from player
+        }
+
+        // Fallback: if dragging away from start = outward
+        if (dist > 40) return 'outward';
+        return 'unknown';
+      }
+
+      function showSkillName(gesture) {
         const count = engine.learned_skill_count();
         if (count === 0) return;
-        // Get first active skill name
         let name = '';
-        for (let i = 0; i < count; i++) {
-          if (engine.learned_skill_type(i) === 0) { name = engine.learned_skill_name(i); break; }
+        let color = '#fff';
+        if (gesture === 'outward') {
+          for (let i = 0; i < count; i++) { if (engine.learned_skill_type(i) === 0) { name = engine.learned_skill_name(i); break; } }
+          color = '#ff8844';
+        } else if (gesture === 'inward') {
+          for (let i = 0; i < count; i++) { if (engine.learned_skill_type(i) === 1) { name = engine.learned_skill_name(i); break; } }
+          if (!name) name = 'Shield';
+          color = '#44ff88';
+        } else if (gesture === 'circle') {
+          for (let i = 0; i < count; i++) { if (engine.learned_skill_type(i) === 2) { name = engine.learned_skill_name(i); break; } }
+          if (!name) name = 'Ultimate';
+          color = '#ffcc00';
         }
-        if (!name) name = 'Power Strike';
+        if (!name) name = 'Skill';
 
         const el = document.createElement('div');
-        el.textContent = power === 'big' ? `✨ ${name} ✨` : name;
-        el.style.cssText = `position:fixed;top:40%;left:50%;transform:translateX(-50%);color:${power==='big'?'#ffcc00':'#fff'};font-size:${power==='big'?'24px':'18px'};font-weight:bold;pointer-events:none;z-index:950;text-shadow:0 0 10px rgba(255,200,0,0.8),0 2px 4px rgba(0,0,0,0.8);animation:skill-name-fade 1.2s ease-out forwards`;
+        el.textContent = gesture === 'circle' ? `✨ ${name} ✨` : name;
+        el.style.cssText = `position:fixed;top:38%;left:50%;transform:translateX(-50%);color:${color};font-size:${gesture==='circle'?'28px':'20px'};font-weight:bold;pointer-events:none;z-index:950;text-shadow:0 0 12px ${color},0 2px 4px rgba(0,0,0,0.8);animation:skill-name-fade 1.2s ease-out forwards`;
         document.body.appendChild(el);
         setTimeout(() => el.remove(), 1200);
       }

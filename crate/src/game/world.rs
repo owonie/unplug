@@ -810,26 +810,22 @@ impl World {
 
     /// Active skill triggered by mouse click
     pub fn use_active_skill(&mut self) {
-        // Need a class
         if self.player.class_tier == 0 { return; }
-        // Check cooldown + stamina
         if self.player.active_skill_cd > 0.0 { return; }
         let cost = 30.0;
         if self.player.stamina < cost { return; }
 
         self.player.stamina -= cost;
-        self.player.active_skill_cd = 2.0; // 2s cooldown
+        self.player.active_skill_cd = 2.0;
 
-        // Get first active skill from class
         let skills = super::skill_data::skills_for_class(self.player.class_id);
         let skill = skills.iter().find(|s| s.skill_type == super::skill_data::SkillType::Active);
 
         let (damage_mult, range) = match skill {
             Some(s) => (s.damage_mult, s.range),
-            None => (2.0, 4.0), // fallback
+            None => (2.0, 4.0),
         };
 
-        // Deal AoE damage around player
         let px = self.player.x;
         let pz = self.player.z;
         let damage = self.player.attack_damage * damage_mult;
@@ -838,17 +834,94 @@ impl World {
             if !enemy.alive { continue; }
             let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
             if dist < range {
-                let killed = enemy.take_damage(damage);
-                enemy.apply_knockback(px, pz, 10.0); // strong knockback
-                self.damage_events.push((enemy.x, enemy.z, damage, true)); // always crit visual
-                if killed {
-                    self.death_events.push((enemy.x, enemy.z));
-                }
+                enemy.take_damage(damage);
+                enemy.apply_knockback(px, pz, 10.0);
+                self.damage_events.push((enemy.x, enemy.z, damage, true));
             }
         }
 
         let skill_name = skill.map(|s| s.name).unwrap_or("Power Strike");
         self.log(format!("✨ {}!", skill_name));
+    }
+
+    /// Directional skill (drag outward) — cone attack in direction
+    pub fn use_directional_skill(&mut self, angle: f32) {
+        if self.player.class_tier == 0 { return; }
+        if self.player.active_skill_cd > 0.0 { return; }
+        let cost = 25.0;
+        if self.player.stamina < cost { return; }
+
+        self.player.stamina -= cost;
+        self.player.active_skill_cd = 1.5;
+
+        let px = self.player.x;
+        let pz = self.player.z;
+        let range = 6.0;
+        let cone_half = 0.6; // ~70 degree cone
+        let damage = self.player.attack_damage * 2.0;
+
+        let dir_x = angle.cos();
+        let dir_z = -angle.sin(); // screen Y is inverted
+
+        for enemy in &mut self.enemies {
+            if !enemy.alive { continue; }
+            let ex = enemy.x - px;
+            let ez = enemy.z - pz;
+            let dist = (ex * ex + ez * ez).sqrt();
+            if dist > range || dist < 0.1 { continue; }
+
+            // Check cone
+            let dot = (ex * dir_x + ez * dir_z) / dist;
+            if dot > cone_half {
+                let dmg = damage * (1.0 + (1.0 - dist / range) * 0.5); // closer = more damage
+                enemy.take_damage(dmg);
+                enemy.apply_knockback(px, pz, 8.0);
+                self.damage_events.push((enemy.x, enemy.z, dmg, true));
+            }
+        }
+
+        self.skill_events.push((px + dir_x * 2.0, pz + dir_z * 2.0, self.player.dominant_element(), range));
+        self.log("⚔️ Directional Strike!".into());
+    }
+
+    /// Shield skill (drag inward) — temporary invulnerability + heal
+    pub fn use_shield_skill(&mut self) {
+        if self.player.class_tier == 0 { return; }
+        let cost = 40.0;
+        if self.player.stamina < cost { return; }
+
+        self.player.stamina -= cost;
+        self.player.invuln_timer = 2.0; // 2s invulnerability
+        self.player.heal(self.player.max_hp * 0.15); // heal 15%
+        self.log("🛡️ Shield activated!".into());
+    }
+
+    /// Ultimate skill (circle gesture) — massive AoE
+    pub fn use_ultimate_skill(&mut self) {
+        if self.player.class_tier == 0 { return; }
+        let cost = 80.0;
+        if self.player.stamina < cost { return; }
+
+        self.player.stamina -= cost;
+        self.player.active_skill_cd = 5.0; // long CD
+
+        let px = self.player.x;
+        let pz = self.player.z;
+        let range = 10.0;
+        let damage = self.player.attack_damage * 5.0;
+
+        for enemy in &mut self.enemies {
+            if !enemy.alive { continue; }
+            let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
+            if dist < range {
+                enemy.take_damage(damage);
+                enemy.apply_knockback(px, pz, 15.0);
+                self.damage_events.push((enemy.x, enemy.z, damage, true));
+            }
+        }
+
+        self.skill_events.push((px, pz, self.player.dominant_element(), range));
+        self.log("💫 ULTIMATE!".into());
     }
 
     fn log(&mut self, msg: String) {

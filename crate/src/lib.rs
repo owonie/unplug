@@ -74,6 +74,9 @@ impl GameEngine {
     pub fn player_max_stamina(&self) -> f32 { self.world.player.max_stamina }
     pub fn player_skill_cd(&self) -> f32 { self.world.player.active_skill_cd }
     pub fn use_active_skill(&mut self) { self.world.use_active_skill(); }
+    pub fn use_directional_skill(&mut self, angle: f32) { self.world.use_directional_skill(angle); }
+    pub fn use_shield_skill(&mut self) { self.world.use_shield_skill(); }
+    pub fn use_ultimate_skill(&mut self) { self.world.use_ultimate_skill(); }
     pub fn nearest_enemy_dir_x(&self) -> f32 {
         let px = self.world.player.x;
         let pz = self.world.player.z;
