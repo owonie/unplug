@@ -113,7 +113,9 @@ export class ThreeRenderer {
         tex.magFilter = THREE.NearestFilter;
         tex.minFilter = THREE.NearestFilter;
         tex.colorSpace = THREE.SRGBColorSpace;
-        this.sprites[key] = { texture: tex, frames: data.frames, speed: data.speed };
+        // Recolor: shift brown/dark → purple/violet, skin → light
+        const recolored = this._recolorTexture(tex);
+        this.sprites[key] = { texture: recolored, frames: data.frames, speed: data.speed };
       } catch (e) {
         console.warn(`Failed to load sprite: ${key}`, e);
       }
@@ -121,6 +123,48 @@ export class ThreeRenderer {
 
     this.setupSpritePlayer();
     console.log('✅ Sprite system loaded');
+  }
+
+  _recolorTexture(tex) {
+    const img = tex.image;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imageData.data;
+
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 10) continue; // skip transparent
+      const r = d[i], g = d[i+1], b = d[i+2];
+
+      // Detect skin tones (brownish/tan) → make lighter/pinkish
+      if (r > 120 && g > 70 && g < 160 && b < 120 && r > g) {
+        d[i] = Math.min(255, r + 60);     // lighter
+        d[i+1] = Math.min(255, g + 50);
+        d[i+2] = Math.min(255, b + 70);   // slight pink
+      }
+      // Detect dark clothing/hair → shift to purple/violet
+      else if (r < 150 && g < 100 && b < 100) {
+        d[i] = Math.min(255, r * 0.7 + 60);    // add red
+        d[i+1] = Math.max(0, g * 0.4);          // reduce green
+        d[i+2] = Math.min(255, b * 0.5 + 120);  // boost blue → purple
+      }
+      // Mid tones (clothing details) → subtle purple shift
+      else if (r < 200 && g < 150) {
+        d[i] = Math.min(255, r * 0.85 + 30);
+        d[i+1] = Math.max(0, g * 0.7);
+        d[i+2] = Math.min(255, b * 0.7 + 60);
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    const newTex = new THREE.CanvasTexture(canvas);
+    newTex.magFilter = THREE.NearestFilter;
+    newTex.minFilter = THREE.NearestFilter;
+    newTex.colorSpace = THREE.SRGBColorSpace;
+    return newTex;
   }
 
   setupSpritePlayer() {
