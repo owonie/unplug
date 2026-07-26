@@ -86,6 +86,11 @@ export class ThreeRenderer {
     this.slashEffects = []; // {mesh, life, maxLife}
     this.elementOrbs = [];
     this._orbKey = '';
+    // Hit feedback
+    this._shakeTimer = 0;
+    this._shakeIntensity = 0;
+    this._shakeDuration = 0;
+    this._hitStopTimer = 0;
   }
 
   async loadModels() {
@@ -170,10 +175,25 @@ export class ThreeRenderer {
   update(state, dt) {
     const { playerX, playerZ, playerMoving, playerDirX, playerDirZ, enemies, bullets, orbs } = state;
 
+    // === Hit Stop (freeze frame on big hits) ===
+    if (this._hitStopTimer > 0) {
+      this._hitStopTimer -= dt;
+      return; // freeze everything
+    }
+
+    // === Camera Shake ===
+    let shakeX = 0, shakeZ = 0;
+    if (this._shakeTimer > 0) {
+      this._shakeTimer -= dt;
+      const intensity = this._shakeIntensity * (this._shakeTimer / this._shakeDuration);
+      shakeX = (Math.random() - 0.5) * intensity;
+      shakeZ = (Math.random() - 0.5) * intensity;
+    }
+
     // Camera follows player smoothly
-    const targetCamPos = new THREE.Vector3(playerX, 12, playerZ + 10);
+    const targetCamPos = new THREE.Vector3(playerX + shakeX, 12, playerZ + 10 + shakeZ);
     this.camera.position.lerp(targetCamPos, 0.15);
-    this.camera.lookAt(playerX, 0, playerZ);
+    this.camera.lookAt(playerX + shakeX * 0.5, 0, playerZ + shakeZ * 0.5);
 
     this.playerLight.position.set(playerX, 3, playerZ);
 
@@ -430,38 +450,60 @@ export class ThreeRenderer {
     // Update death particles (spawned from JS via spawnDeathParticles)
     for (let i = this.deathParticles.length - 1; i >= 0; i--) {
       const p = this.deathParticles[i];
-      p.mesh.position.x += p.vx * dt;
-      p.mesh.position.y += p.vy * dt;
-      p.mesh.position.z += p.vz * dt;
-      p.vy -= 8 * dt;
-      p.life -= dt;
-      p.mesh.scale.setScalar(Math.max(0, p.life * 2));
+      if (p.isRing) {
+        // Expanding shockwave ring
+        p.scale += dt * 12;
+        p.mesh.scale.setScalar(p.scale);
+        p.mesh.material.opacity = p.life * 2.5;
+        p.life -= dt;
+      } else {
+        p.mesh.position.x += p.vx * dt;
+        p.mesh.position.y += p.vy * dt;
+        p.mesh.position.z += p.vz * dt;
+        p.vy -= 10 * dt; // stronger gravity
+        p.life -= dt;
+        p.mesh.scale.setScalar(Math.max(0.01, p.life * 2.5));
+        if (p.mesh.material.opacity !== undefined) p.mesh.material.opacity = Math.min(1, p.life * 3);
+      }
       if (p.life <= 0) {
         this.scene.remove(p.mesh);
+        if (p.mesh.geometry) p.mesh.geometry.dispose();
+        if (p.mesh.material) p.mesh.material.dispose();
         this.deathParticles.splice(i, 1);
       }
     }
   }
 
   spawnDeathParticles(x, z) {
-    const colors = [0xff4400, 0xff8800, 0xffcc00, 0xff2200, 0x44ff00];
-    for (let i = 0; i < 8; i++) {
-      const geo = new THREE.SphereGeometry(0.08, 4, 4);
-      const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length] });
+    const colors = [0xff4400, 0xff8800, 0xffcc00, 0xff2200, 0x44ff00, 0xffffff];
+    const count = 12 + Math.floor(Math.random() * 6); // more particles
+    for (let i = 0; i < count; i++) {
+      const size = 0.06 + Math.random() * 0.12; // varied sizes
+      const geo = new THREE.SphereGeometry(size, 4, 4);
+      const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: 1.0 });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x, 0.5, z);
+      mesh.position.set(x, 0.5 + Math.random() * 0.3, z);
       this.scene.add(mesh);
 
       const angle = Math.random() * Math.PI * 2;
-      const speed = 2 + Math.random() * 4;
+      const speed = 3 + Math.random() * 6;
       this.deathParticles.push({
         mesh,
         vx: Math.cos(angle) * speed,
-        vy: 3 + Math.random() * 4,
+        vy: 4 + Math.random() * 5,
         vz: Math.sin(angle) * speed,
-        life: 0.5 + Math.random() * 0.3,
+        life: 0.6 + Math.random() * 0.4,
       });
     }
+
+    // Shockwave ring effect
+    const ringGeo = new THREE.RingGeometry(0.1, 0.3, 16);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xffcc00, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.set(x, 0.1, z);
+    ring.rotation.x = -Math.PI / 2;
+    this.scene.add(ring);
+    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 0.3, isRing: true, scale: 1 });
   }
 
   spawnSlash(fromX, fromZ, toX, toZ, isCrit, atkPower = 25, element = 0) {
@@ -667,5 +709,16 @@ export class ThreeRenderer {
     for (let i = pool.length - 1; i >= 0; i--) {
       if (pool[i] === null) pool.splice(i, 1);
     }
+  }
+
+  // === Hit Feedback ===
+  shake(intensity = 0.3, duration = 0.15) {
+    this._shakeTimer = duration;
+    this._shakeIntensity = intensity;
+    this._shakeDuration = duration;
+  }
+
+  hitStop(duration = 0.04) {
+    this._hitStopTimer = duration;
   }
 }

@@ -44,7 +44,15 @@
     <h1 style="color:#ff8844;font-size:48px;margin-bottom:8px;text-shadow:0 0 20px #ff4400">UNPLUG</h1>
     <p style="color:#888;font-size:14px;margin-bottom:24px">Elemental Survivor</p>
     <button id="start-btn" style="padding:12px 32px;font-size:16px;background:#222;color:#fff;border:2px solid #ff8844;border-radius:8px;cursor:pointer;font-family:inherit">⚔️ START GAME</button>
-    <p style="color:#555;font-size:11px;margin-top:16px">[WASD] Move | Auto-attack | Level up to survive</p>
+    <button id="tree-btn" style="padding:8px 24px;font-size:13px;background:#111;color:#aaa;border:1px solid #555;border-radius:6px;cursor:pointer;font-family:inherit;margin-top:12px">📖 Class Tree</button>
+    <p style="color:#555;font-size:11px;margin-top:16px">[WASD] Move | [SPACE] Dash | Level up to survive</p>
+  </div>
+  <!-- Class Tree Viewer -->
+  <div id="class-tree-screen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);display:none;flex-direction:column;align-items:center;z-index:2001;overflow-y:auto;padding:20px">
+    <h2 style="color:#ff8844;margin-bottom:12px">📖 Class Promotion Tree</h2>
+    <p style="color:#666;font-size:11px;margin-bottom:16px">원소 오브를 모아 전직 조건을 맞추세요. Lv10/25/45에서 전직 가능!</p>
+    <div id="class-tree-content" style="color:#ccc;font-size:12px;line-height:1.8;max-width:700px;width:100%"></div>
+    <button id="tree-close-btn" style="padding:8px 24px;font-size:13px;background:#222;color:#fff;border:1px solid #888;border-radius:6px;cursor:pointer;font-family:inherit;margin-top:20px;margin-bottom:20px">✖ Close</button>
   </div>
   <!-- Pause Menu -->
   <div id="pause-menu" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:1999">
@@ -150,6 +158,82 @@
         gameStarted = true;
         sound.init();
       });
+
+      // === Class Tree Viewer ===
+      document.getElementById('tree-btn').addEventListener('click', () => {
+        document.getElementById('class-tree-screen').style.display = 'flex';
+        buildClassTree();
+      });
+      document.getElementById('tree-close-btn').addEventListener('click', () => {
+        document.getElementById('class-tree-screen').style.display = 'none';
+      });
+
+      function buildClassTree() {
+        const tier1 = [
+          { name: 'Flame Knight', req: '🔥×2', concept: 'Melee burst' },
+          { name: 'Frost Mage', req: '❄️×2', concept: 'AoE slow' },
+          { name: 'Storm Warrior', req: '⚡×2', concept: 'Speed+chain' },
+          { name: 'Plague Bearer', req: '☠️×2', concept: 'DOT stack' },
+          { name: 'Steam Engineer', req: '🔥+❄️', concept: 'Explode+slow' },
+          { name: 'Plasma Mage', req: '🔥+⚡', concept: 'Chain explode' },
+          { name: 'Hellfire Witch', req: '🔥+☠️', concept: 'Burn+poison' },
+          { name: 'Aurora Knight', req: '❄️+⚡', concept: 'Freeze+shock' },
+          { name: 'Cryo Alchemist', req: '❄️+☠️', concept: 'Slow+weaken' },
+          { name: 'Volt Chemist', req: '⚡+☠️', concept: 'Shock+blast' },
+          { name: 'Elemental Blade', req: '🔥+❄️+⚡', concept: 'Balanced' },
+          { name: 'Frost Plague', req: '❄️+☠️', concept: 'Freeze+disease' },
+          { name: 'Thunder Toxin', req: '⚡+☠️', concept: 'Chain+spread' },
+          { name: 'Vile Storm', req: '❄️+⚡+☠️', concept: 'Chaotic AoE' },
+          { name: 'Primordial Novice', req: '🔥+❄️+⚡+☠️', concept: 'Jack of all' },
+        ];
+        const hidden = [
+          { name: 'Weapon Master', req: 'ATK 120+', concept: 'Pure physical god' },
+          { name: 'Vampire Lord', req: 'Lifesteal 25%+', concept: 'Undying drain' },
+          { name: 'Berserker', req: 'AOE 6+', concept: 'Rage AoE' },
+          { name: 'Assassin', req: 'Crit 50%+', concept: 'One-shot stealth' },
+          { name: 'Windwalker', req: 'Speed 9+', concept: 'Movement = attack' },
+        ];
+        const tier2 = [
+          'Inferno Lord', 'Volcanic Thunder', 'Blizzard Warden', 'Permafrost Plague',
+          'Thunder God', 'Plasma Overlord', 'Venom Lord', 'Toxic Glacier',
+          'Reactor Core', 'Nova Cannon', 'Demon Summoner', 'Absolute Zero',
+          'Bio Freeze', 'Acid Storm', 'Prism Knight', 'Pandemic Frost',
+          'Chain Decay', 'Chaos Shaman', 'Primordial Adept', 'Awakened One',
+        ];
+        const tier3 = [
+          'Phoenix', 'Cryomancer', 'Ragnarok', 'Pandemic', 'Antimatter',
+          'Supernova', 'Entropy', 'Archfiend', 'Avatar', 'Primordial God',
+        ];
+
+        let html = '<h3 style="color:#ffcc00;margin:8px 0">⭐ 1차 전직 (Lv 10+ / Orb 2+)</h3>';
+        html += '<table style="width:100%;border-collapse:collapse;margin-bottom:16px">';
+        html += '<tr style="color:#888;border-bottom:1px solid #333"><td>Class</td><td>Requirement</td><td>Style</td></tr>';
+        tier1.forEach(c => {
+          html += `<tr style="border-bottom:1px solid #222"><td style="color:#ff8844;padding:4px 0">${c.name}</td><td>${c.req}</td><td style="color:#666">${c.concept}</td></tr>`;
+        });
+        html += '</table>';
+
+        html += '<h3 style="color:#ff44ff;margin:8px 0">🌈 히든 전직 (스탯 특화)</h3>';
+        html += '<table style="width:100%;border-collapse:collapse;margin-bottom:16px">';
+        html += '<tr style="color:#888;border-bottom:1px solid #333"><td>Class</td><td>Requirement</td><td>Style</td></tr>';
+        hidden.forEach(c => {
+          html += `<tr style="border-bottom:1px solid #222"><td style="color:#ff44ff;padding:4px 0">${c.name}</td><td>${c.req}</td><td style="color:#666">${c.concept}</td></tr>`;
+        });
+        html += '</table>';
+
+        html += '<h3 style="color:#44ccff;margin:8px 0">🌟 2차 전직 (Lv 25+ / Orb 6+)</h3>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">';
+        tier2.forEach(n => { html += `<span style="background:#1a2a3a;padding:3px 8px;border-radius:4px;font-size:11px">${n}</span>`; });
+        html += '</div>';
+
+        html += '<h3 style="color:#ffcc00;margin:8px 0">👑 3차 전직 (Lv 45+ / Orb 10+)</h3>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">';
+        tier3.forEach(n => { html += `<span style="background:#2a1a00;padding:3px 8px;border-radius:4px;font-size:11px;color:#ffcc00">${n}</span>`; });
+        html += '</div>';
+
+        html += '<p style="color:#555;font-size:10px;margin-top:12px">※ 같은 원소를 집중하면 순수 전직, 분산하면 하이브리드 전직이 해금됩니다.</p>';
+        document.getElementById('class-tree-content').innerHTML = html;
+      }
       document.getElementById('retry-btn').addEventListener('click', () => {
         document.getElementById('gameover-screen').style.display = 'none';
         engine = new GameEngine();
@@ -544,10 +628,12 @@
           const px = engine.player_x(), pz = engine.player_z();
           const atkPower = engine.player_damage();
           const element = engine.active_element(); // 0=none, 1=fire, 2=ice, 3=thunder, 4=poison
+          let hasCrit = false;
           for (let i = 0; i < dmgCount; i++) {
             const ex = engine.damage_event_x(i);
             const ez = engine.damage_event_z(i);
             const isCrit = engine.damage_event_crit(i);
+            if (isCrit) hasCrit = true;
             showDamagePopup(ex, ez, engine.damage_event_amount(i), isCrit);
             renderer.spawnSlash(px, pz, ex, ez, isCrit, atkPower, element);
             if (i === 0) {
@@ -559,12 +645,17 @@
               else sound.playHit();
             }
           }
+          // Camera shake on hit
+          if (hasCrit) { renderer.shake(0.4, 0.12); renderer.hitStop(0.04); }
+          else if (dmgCount >= 3) { renderer.shake(0.2, 0.08); }
+
           // Death events → particles + sound
           const deathCount = engine.death_event_count();
           for (let i = 0; i < deathCount; i++) {
             renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i));
             if (i === 0) sound.playDeath();
           }
+          if (deathCount > 0) { renderer.shake(0.25 + deathCount * 0.1, 0.1); }
         }
 
         renderer.update({
