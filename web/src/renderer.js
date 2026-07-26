@@ -873,12 +873,12 @@ export class ThreeRenderer {
   }
 
   _spawnPoisonCloud(x, z, range) {
-    // Dark purple miasma — subtle, low opacity
-    for (let i = 0; i < 4; i++) {
-      const ox = (Math.random() - 0.5) * range * 0.5;
-      const oz = (Math.random() - 0.5) * range * 0.5;
-      const size = 0.15 + Math.random() * 0.2;
-      const geo = new THREE.SphereGeometry(size, 6, 4);
+    // Tiny dark wisps — barely visible
+    for (let i = 0; i < 3; i++) {
+      const ox = (Math.random() - 0.5) * 1.0;
+      const oz = (Math.random() - 0.5) * 1.0;
+      const size = 0.08 + Math.random() * 0.1;
+      const geo = new THREE.SphereGeometry(size, 4, 4);
       const colors = [0x330044, 0x1a0033, 0x440066, 0x220022];
       const mat = new THREE.MeshBasicMaterial({ color: colors[i % 4], transparent: true, opacity: 0.2 + Math.random() * 0.1 });
       const mesh = new THREE.Mesh(geo, mat);
