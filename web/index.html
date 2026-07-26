@@ -1009,7 +1009,7 @@
           // Death events → particles + sound
           const deathCount = engine.death_event_count();
           for (let i = 0; i < deathCount; i++) {
-            renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i));
+            renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i), engine.active_element());
             if (i === 0) sound.playDeath();
           }
           if (deathCount > 0) { renderer.shake(0.25 + deathCount * 0.1, 0.1); }

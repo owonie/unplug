@@ -526,36 +526,60 @@ export class ThreeRenderer {
     }
   }
 
-  spawnDeathParticles(x, z) {
-    const colors = [0xff4400, 0xff8800, 0xffcc00, 0xff2200, 0x44ff00, 0xffffff];
-    const count = 12 + Math.floor(Math.random() * 6); // more particles
+  spawnDeathParticles(x, z, element = 0) {
+    // Element-specific death particles
+    let colors, ringColor;
+    switch (element) {
+      case 1: // 🔥 Fire: warm embers
+        colors = [0xff4400, 0xff6600, 0xcc3300, 0xff8800];
+        ringColor = 0xff4400;
+        break;
+      case 2: // ❄️ Ice: cold shards
+        colors = [0x446677, 0x5588aa, 0x334455, 0x6699aa];
+        ringColor = 0x446677;
+        break;
+      case 3: // ⚡ Thunder: sparks
+        colors = [0xccaa00, 0xffdd44, 0xaa8800, 0xffff88];
+        ringColor = 0xffcc00;
+        break;
+      case 4: // ☠️ Poison: dark wisps
+        colors = [0x220033, 0x330044, 0x1a0022, 0x440066];
+        ringColor = 0x330044;
+        break;
+      default: // Neutral
+        colors = [0x666666, 0x888888, 0x444444, 0xaaaaaa];
+        ringColor = 0x888888;
+        break;
+    }
+
+    const count = 6 + Math.floor(Math.random() * 4);
     for (let i = 0; i < count; i++) {
-      const size = 0.06 + Math.random() * 0.12; // varied sizes
+      const size = 0.04 + Math.random() * 0.08;
       const geo = new THREE.SphereGeometry(size, 4, 4);
-      const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: 1.0 });
+      const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: 0.6 });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x, 0.5 + Math.random() * 0.3, z);
+      mesh.position.set(x, 0.4 + Math.random() * 0.2, z);
       this.scene.add(mesh);
 
       const angle = Math.random() * Math.PI * 2;
-      const speed = 3 + Math.random() * 6;
+      const speed = 2 + Math.random() * 4;
       this.deathParticles.push({
         mesh,
         vx: Math.cos(angle) * speed,
-        vy: 4 + Math.random() * 5,
+        vy: 3 + Math.random() * 3,
         vz: Math.sin(angle) * speed,
-        life: 0.6 + Math.random() * 0.4,
+        life: 0.4 + Math.random() * 0.3,
       });
     }
 
-    // Shockwave ring effect
-    const ringGeo = new THREE.RingGeometry(0.1, 0.3, 16);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0xffcc00, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+    // Small shockwave ring (element color)
+    const ringGeo = new THREE.RingGeometry(0.05, 0.2, 12);
+    const ringMat = new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.set(x, 0.1, z);
+    ring.position.set(x, 0.08, z);
     ring.rotation.x = -Math.PI / 2;
     this.scene.add(ring);
-    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 0.3, isRing: true, scale: 1 });
+    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 0.25, isRing: true, scale: 1 });
   }
 
   spawnSlash(fromX, fromZ, toX, toZ, isCrit, atkPower = 25, element = 0) {
