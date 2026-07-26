@@ -423,116 +423,87 @@ impl World {
         self.spawn_timer += dt;
         self.wave_timer += dt;
 
-        // 30초마다 웨이브 변경
-        if self.wave_timer >= 30.0 {
+        // 25초마다 웨이브 변경
+        if self.wave_timer >= 25.0 {
             self.wave_timer = 0.0;
             self.wave_number += 1;
             self.difficulty = 1.0 + self.wave_number as f32 * 0.3;
 
-            // 매 5웨이브 보스
-            if self.wave_number % 5 == 0 {
-                self.spawn_boss();
-            }
-
             self.log_queue.push_back(format!("⚠️ Wave {}!", self.wave_number));
+
+            // 10웨이브마다 메인보스
+            if self.wave_number % 10 == 0 {
+                self.spawn_main_boss();
+            }
+            // 5웨이브마다 중간보스 (보스 웨이브 제외)
+            else if self.wave_number % 5 == 0 {
+                self.spawn_elite();
+            }
         }
 
-        // 일반 적 스폰
-        let interval = (self.spawn_interval / self.difficulty).max(0.3); // min 0.3s (was 0.4)
+        // 일반 적 스폰 (보스 웨이브에도 잡몹 나옴)
+        let interval = (1.2 / self.difficulty).max(0.2);
         if self.spawn_timer >= interval {
             self.spawn_timer = 0.0;
-
-            // 웨이브별 적 종류 제한
-            let max_type = match self.wave_number {
-                1 => 0,      // 스켈레톤만
-                2..=3 => 1,  // +임프
-                4..=5 => 2,  // +골렘
-                _ => 3,      // 전부
-            };
-
-            let count = ((self.difficulty as u32) + 1).min(15); // max 15 per batch (was 6)
-            let px = self.player.x;
-            let pz = self.player.z;
-
-            for _ in 0..count {
-                let angle = (self.time * 7.7 + self.enemies.len() as f32 * 2.3) % (std::f32::consts::PI * 2.0);
-                let dist = 14.0 + (self.time * 3.3).sin().abs() * 6.0;
-                let x = px + angle.cos() * dist;
-                let z = pz + angle.sin() * dist;
-                let size = self.map_size as f32;
-                let x = ((x % size) + size) % size;
-                let z = ((z % size) + size) % size;
-
-                let enemy_type = ((self.enemies.len() as u32) % (max_type + 1)).min(3);
-                let mut enemy = Enemy::new(x, z, enemy_type);
-                // Scale HP and DMG with wave
-                let scale = 1.0 + (self.wave_number as f32 - 1.0) * 0.3;
-                enemy.hp *= scale;
-                enemy.max_hp *= scale;
-                enemy.damage *= 1.0 + (self.wave_number as f32 - 1.0) * 0.15;
-                enemy.speed *= 1.0 + (self.wave_number as f32 - 1.0) * 0.05;
-                self.enemies.push(enemy);
-            }
-        }
-
-        // 보스 업데이트
-        if self.boss_active {
-            self.update_boss(dt);
+            self.spawn_wave_enemies();
         }
     }
 
-    fn spawn_boss(&mut self) {
+    fn spawn_wave_enemies(&mut self) {
+        let wave = self.wave_number;
         let px = self.player.x;
         let pz = self.player.z;
-        self.boss_active = true;
-        self.boss_max_hp = 300.0 + self.wave_number as f32 * 100.0;
-        self.boss_hp = self.boss_max_hp;
-        self.boss_x = px + 10.0;
-        self.boss_z = pz;
-        self.log_queue.push_back(format!("💀 BOSS WAVE {}! Defeat the boss!", self.wave_number));
+
+        // 웨이브별 스폰 구성
+        let (types, count): (Vec<u32>, u32) = match wave {
+            1 => (vec![0], 5),                        // 스켈레톤만
+            2 => (vec![0, 0, 0, 4, 4], 8),           // +스웜 소수
+            3 => (vec![0, 0, 2, 4, 4, 4], 10),      // +임프, 스웜 증가
+            4 => (vec![0, 2, 3, 4, 4, 4, 4], 12),   // +레이스, 스웜 대량
+            5 => (vec![0, 1, 2, 3, 4, 5], 10),      // 혼합 + 궁수
+            6 => (vec![0, 2, 4, 4, 4, 5, 6], 15),   // 스웜 대량 + 궁수 + 돌격병
+            7 => (vec![0, 4, 4, 4, 4, 5, 6], 18),   // 스웜 물량
+            8 => (vec![1, 2, 4, 4, 4, 4, 5, 6], 20), // 풀 혼합
+            9 => (vec![4, 4, 4, 4, 4, 6, 6], 25),   // 스웜 러시 + 돌격병
+            _ => {
+                // 10+ : 점점 더 많이
+                let c = (15 + wave * 3).min(40);
+                (vec![0, 1, 2, 3, 4, 4, 4, 5, 6], c)
+            }
+        };
+
+        for i in 0..count {
+            let angle = (self.time * 7.7 + i as f32 * 2.3 + self.enemies.len() as f32 * 0.7) % (std::f32::consts::PI * 2.0);
+            let dist = 12.0 + (self.time * 3.3 + i as f32).sin().abs() * 8.0;
+            let x = px + angle.cos() * dist;
+            let z = pz + angle.sin() * dist;
+
+            let enemy_type = types[(i as usize) % types.len()];
+            let enemy = Enemy::new_scaled(x, z, enemy_type, wave);
+            self.enemies.push(enemy);
+        }
     }
 
-    fn update_boss(&mut self, dt: f32) {
-        if !self.boss_active { return; }
+    fn spawn_elite(&mut self) {
+        let px = self.player.x;
+        let pz = self.player.z;
+        let angle = self.time % (std::f32::consts::PI * 2.0);
+        let mut elite = Enemy::new_scaled(px + angle.cos() * 12.0, pz + angle.sin() * 12.0, 7, self.wave_number);
+        elite.hp = 300.0 + self.wave_number as f32 * 50.0;
+        elite.max_hp = elite.hp;
+        self.enemies.push(elite);
+        self.log_queue.push_back("⚠️ ELITE INCOMING!".into());
+    }
 
-        // 보스 이동 (플레이어 추격, 느림)
-        let dx = self.player.x - self.boss_x;
-        let dz = self.player.z - self.boss_z;
-        let dist = (dx * dx + dz * dz).sqrt().max(0.1);
-        let boss_speed = 2.0;
-        self.boss_x += dx / dist * boss_speed * dt;
-        self.boss_z += dz / dist * boss_speed * dt;
-
-        // 보스 플레이어 공격
-        if dist < 1.5 && ((self.time * 2.0) as u32 % 30 == 0) {
-            self.player.take_damage(15.0);
-        }
-
-        // 보스 피격 (클리브가 보스도 때림)
-        // resolve_attack에서 처리하도록 — 보스를 enemies에 큰 적으로 추가
-        // 간단하게: 플레이어 공격 범위 안이면 보스도 맞음
-        let attack_range = self.player.attack_range;
-        if dist < attack_range && self.time - self.player.last_attack < 0.05 {
-            let dmg = self.player.attack_damage;
-            self.boss_hp -= dmg;
-            self.damage_events.push((self.boss_x, self.boss_z, dmg, false));
-        }
-
-        // 보스 사망
-        if self.boss_hp <= 0.0 {
-            self.boss_active = false;
-            self.kills += 5;
-            self.death_events.push((self.boss_x, self.boss_z));
-            // 대량 XP 드롭
-            for i in 0..8 {
-                let angle = i as f32 * std::f32::consts::PI / 4.0;
-                self.xp_orbs.push(ResourcePickup::new(
-                    self.boss_x + angle.cos() * 1.5,
-                    self.boss_z + angle.sin() * 1.5, 3 // boss orb
-                ));
-            }
-            self.log_queue.push_back("👑 BOSS DEFEATED! Massive XP!".into());
-        }
+    fn spawn_main_boss(&mut self) {
+        let px = self.player.x;
+        let pz = self.player.z;
+        let mut boss = Enemy::new_scaled(px + 15.0, pz, 8, self.wave_number);
+        boss.hp = 800.0 + self.wave_number as f32 * 200.0;
+        boss.max_hp = boss.hp;
+        boss.phase = 1;
+        self.enemies.push(boss);
+        self.log_queue.push_back("💀💀💀 BOSS APPEARED! 💀💀💀".into());
     }
 
     fn generate_choices(&mut self) {

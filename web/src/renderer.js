@@ -690,12 +690,17 @@ export class ThreeRenderer {
     const group = new THREE.Group();
     group.userData = { hitTimer: 0 };
 
-    // 판타지 몬스터 4종: 스켈레톤, 골렘, 임프, 위스프
+    // 9 enemy types
     const configs = [
-      { bodyColor: 0x8a7a5a, headColor: 0xccbb99, eyeColor: 0x44ff44, scale: 1.0 },  // 스켈레톤
-      { bodyColor: 0x4a4a5a, headColor: 0x5a5a6a, eyeColor: 0xff4400, scale: 1.5 },  // 골렘
-      { bodyColor: 0x6a2a3a, headColor: 0x8a3a4a, eyeColor: 0xff00ff, scale: 0.7 },  // 임프
-      { bodyColor: 0x2a4a6a, headColor: 0x3a5a7a, eyeColor: 0x00ffff, scale: 1.0 },  // 레이스
+      { bodyColor: 0x8a7a5a, headColor: 0xccbb99, eyeColor: 0x44ff44, scale: 1.0 },  // 0: 스켈레톤
+      { bodyColor: 0x4a4a5a, headColor: 0x5a5a6a, eyeColor: 0xff4400, scale: 1.5 },  // 1: 골렘
+      { bodyColor: 0x6a2a3a, headColor: 0x8a3a4a, eyeColor: 0xff00ff, scale: 0.7 },  // 2: 임프
+      { bodyColor: 0x2a4a6a, headColor: 0x3a5a7a, eyeColor: 0x00ffff, scale: 1.0 },  // 3: 레이스
+      { bodyColor: 0x1a1a1a, headColor: 0x2a2a2a, eyeColor: 0xff0000, scale: 0.4 },  // 4: 스웜 (작고 빠름)
+      { bodyColor: 0x3a5a3a, headColor: 0x6a8a6a, eyeColor: 0xffff00, scale: 0.9 },  // 5: 궁수
+      { bodyColor: 0x5a2a1a, headColor: 0x7a3a2a, eyeColor: 0xff2200, scale: 1.3 },  // 6: 돌격병
+      { bodyColor: 0x6a1a6a, headColor: 0x9a3a9a, eyeColor: 0xff44ff, scale: 1.8 },  // 7: 엘리트
+      { bodyColor: 0x2a0a0a, headColor: 0x4a1a1a, eyeColor: 0xff0000, scale: 2.5 },  // 8: 보스
     ];
     const cfg = configs[type] || configs[0];
 
