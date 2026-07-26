@@ -119,6 +119,13 @@
     import { SoundManager } from './src/sound.js';
     let engine;
 
+    // Helper: 전직 전이면 원소 없음 (무색 공격)
+    function getElement() {
+      if (!engine) return 0;
+      if (engine.player_class_tier() === 0) return 0; // 전직 전 = 무색
+      return getElement() || 0;
+    }
+
     const sound = new SoundManager();
     window._sound = sound;
 
@@ -419,7 +426,7 @@
           const ctx = trailCanvas.getContext('2d');
           ctx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
           if (dragPoints.length > 2) {
-            const elem = engine.player_class_element() || engine.active_element();
+            const elem = getElement();
             const trailColors = { 1:'rgba(255,100,0,0.5)', 2:'rgba(100,150,200,0.4)', 3:'rgba(255,220,50,0.5)', 4:'rgba(120,50,180,0.4)', 0:'rgba(150,150,255,0.4)' };
             ctx.strokeStyle = trailColors[elem] || trailColors[0];
             ctx.lineWidth = 3;
@@ -453,7 +460,7 @@
           }
 
           const size = Math.min(50 + dist * 0.4, 100);
-          const elem = engine.player_class_element() || engine.active_element();
+          const elem = getElement();
           const isRight = dragStart.button === 2;
           const colors = isRight
             ? { 1:'#ff88cc', 2:'#88ffcc', 3:'#ccff88', 4:'#cc88ff', 0:'#ccaaff' }
@@ -529,18 +536,18 @@
             if (gesture === 'outward') {
               if (!checkMana(20)) { dragStart=null;isDragging=false;dragPoints=[];return; }
               engine.use_directional_skill(angle);
-              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, engine.player_class_element() || engine.active_element(), 7);
+              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, getElement(), 7);
               renderer.shake(0.35, 0.1);
               showSkillName('outward');
             } else if (gesture === 'inward') {
               engine.use_shield_skill(); sound.playShield();
-              renderer.spawnShieldEffect(engine.player_x(), engine.player_z(), engine.player_class_element() || engine.active_element());
+              renderer.spawnShieldEffect(engine.player_x(), engine.player_z(), getElement());
               renderer.shake(0.15, 0.05);
               showSkillName('inward');
             } else if (gesture === 'circle') {
               if (!checkMana(50)) { dragStart=null;isDragging=false;dragPoints=[];return; }
-              engine.use_ultimate_skill(); sound.playUltimate(engine.player_class_element() || engine.active_element());
-              renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), engine.player_class_element() || engine.active_element(), 8);
+              engine.use_ultimate_skill(); sound.playUltimate(getElement());
+              renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), getElement(), 8);
               renderer.shake(0.6, 0.2);
               showSkillName('circle');
               // Screen flash
@@ -562,14 +569,14 @@
             if (gesture === 'outward') {
               if (!checkMana(20)) { dragStart=null;isDragging=false;dragPoints=[];return; }
               engine.use_directional_skill(angle);
-              const elem = engine.player_class_element() || engine.active_element();
+              const elem = getElement();
               renderer.spawnAdvancedDirectionalEffect(engine.player_x(), engine.player_z(), angle, elem, 9);
               sound.playAdvancedSkill(elem);
               renderer.shake(0.55, 0.15);
               showSkillName('outward');
             } else if (gesture === 'circle') {
               if (!checkMana(50)) { dragStart=null;isDragging=false;dragPoints=[];return; }
-              const elem = engine.player_class_element() || engine.active_element();
+              const elem = getElement();
               engine.use_ultimate_skill();
               sound.playAdvancedUltimate(elem);
               renderer.spawnAdvancedUltimateEffect(engine.player_x(), engine.player_z(), elem, 12);
@@ -591,7 +598,7 @@
           } else if (!isDragging) {
             // Right click tap = 2nd class quick skill
             engine.use_active_skill();
-            renderer.spawnSkillEffect(engine.player_x(), engine.player_z(), engine.active_element(), 4);
+            renderer.spawnSkillEffect(engine.player_x(), engine.player_z(), getElement(), 4);
             renderer.shake(0.25, 0.08);
           }
         }
@@ -828,7 +835,7 @@
         document.getElementById('level').textContent = engine.player_level() + (className ? ` ${tierStr}${className}` : '');
 
         // Portrait: 원소에 따라 변경
-        const elem = engine.active_element();
+        const elem = getElement();
         const portrait = document.getElementById('portrait');
         const portraitIcons = { 0:'🗡️', 1:'🔥', 2:'❄️', 3:'⚡', 4:'☠️' };
         const portraitBorders = { 0:'#555', 1:'#ff4400', 2:'#44ccff', 3:'#ffcc00', 4:'#44ff44' };
@@ -1138,7 +1145,7 @@
           const dmgCount = engine.damage_event_count();
           const px = engine.player_x(), pz = engine.player_z();
           const atkPower = engine.player_damage();
-          const element = engine.active_element(); // 0=none, 1=fire, 2=ice, 3=thunder, 4=poison
+          const element = getElement(); // 0=none, 1=fire, 2=ice, 3=thunder, 4=poison
           let hasCrit = false;
           for (let i = 0; i < dmgCount; i++) {
             const ex = engine.damage_event_x(i);
@@ -1163,7 +1170,7 @@
           // Death events → particles + sound + hit stop
           const deathCount = engine.death_event_count();
           for (let i = 0; i < deathCount; i++) {
-            renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i), engine.active_element());
+            renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i), getElement());
             if (i === 0) sound.playDeath();
           }
           if (deathCount > 0) {
@@ -1203,7 +1210,7 @@
           playerDashing: engine.player_dashing(),
           dashType: engine.player_dash_type(),
           nearestEnemyDirX: engine.nearest_enemy_dir_x(),
-          element: engine.active_element(),
+          element: getElement(),
           elementLevel: engine.active_element_level(),
           fireLv: engine.fire_level(),
           iceLv: engine.ice_level(),

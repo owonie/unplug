@@ -469,7 +469,13 @@ impl World {
 
         // 일반 적 스폰 (보스 웨이브에는 스폰 안 함)
         let is_boss_wave = self.wave_number % 10 == 0 && self.wave_number > 0;
-        let interval = (1.2 / self.difficulty).max(0.2);
+        let base_interval = match self.wave_number {
+            0 | 1 => 2.5,  // wave1: 느리게
+            2 => 1.8,
+            3 => 1.5,
+            _ => 1.2,
+        };
+        let interval = (base_interval / self.difficulty).max(0.3);
         if !is_boss_wave && self.spawn_timer >= interval {
             self.spawn_timer = 0.0;
             self.spawn_wave_enemies();
@@ -483,7 +489,7 @@ impl World {
 
         // 웨이브별 스폰 구성 (근거리4:원거리1 비율 wave2+)
         let (types, count): (Vec<u32>, u32) = match wave {
-            1 => (vec![0, 0, 0, 0, 0], 5),                           // 스켈레톤만
+            1 => (vec![0, 0, 0, 0, 0], 3),                           // 스켈레톤만, 소수
             2 => (vec![0, 0, 4, 4, 5], 8),                           // +스웜+궁수 (4:1)
             3 => (vec![0, 2, 4, 4, 5], 10),                          // +임프 (4:1)
             4 => (vec![0, 2, 3, 4, 5], 12),                          // +레이스 (4:1)
