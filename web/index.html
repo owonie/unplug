@@ -433,7 +433,7 @@
 
             if (gesture === 'outward') {
               engine.use_directional_skill(angle);
-              renderer.spawnSkillEffect(engine.player_x(), engine.player_z(), engine.active_element(), 5);
+              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, engine.active_element(), 5);
               renderer.shake(0.35, 0.1);
               showSkillName('outward');
             } else if (gesture === 'inward') {
@@ -458,7 +458,7 @@
 
             if (gesture === 'outward') {
               engine.use_directional_skill(angle);
-              renderer.spawnSkillEffect(engine.player_x(), engine.player_z(), engine.active_element(), 7);
+              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, engine.active_element(), 7);
               renderer.shake(0.4, 0.12);
               showSkillName('outward');
             } else if (gesture === 'circle') {
