@@ -87,7 +87,7 @@ impl Player {
             alive: true,
             level: 1,
             xp: 0,
-            xp_to_next: 20,
+            xp_to_next: 12,
             attack_cooldown: 0.6,
             last_attack: 0.0,
             attack_damage: 25.0,
@@ -298,7 +298,7 @@ impl Player {
         if self.xp >= self.xp_to_next {
             self.xp -= self.xp_to_next;
             self.level += 1;
-            self.xp_to_next = 20 + self.level * 6 + (self.level * self.level) / 3; // mild curve
+            self.xp_to_next = 12 + self.level * 5 + (self.level * self.level) / 4; // mild curve
             return true;
         }
         false
