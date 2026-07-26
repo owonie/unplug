@@ -923,9 +923,8 @@ export class ThreeRenderer {
   // Directional skill VFX (from player in direction)
   spawnDirectionalEffect(fromX, fromZ, angle, element, range) {
     // Convert screen angle to world direction
-    // Camera looks down at ~45°, so screen-right=world+X, screen-down=world+Z
     const dirX = Math.cos(angle);
-    const dirZ = Math.sin(angle); // NOT negated — screen down = world +Z
+    const dirZ = -Math.sin(angle); // screen up = world -Z
 
     switch (element) {
       case 1: this._spawnFireBreath(fromX, fromZ, dirX, dirZ, range); break;

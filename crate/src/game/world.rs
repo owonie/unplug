@@ -905,7 +905,7 @@ impl World {
         let damage = self.player.attack_damage * 3.0; // 3x ATK
 
         let dir_x = angle.cos();
-        let dir_z = angle.sin(); // screen down = world +Z
+        let dir_z = -angle.sin(); // screen up = world -Z
 
         for enemy in &mut self.enemies {
             if !enemy.alive { continue; }

@@ -204,6 +204,49 @@ export class SoundManager {
     osc.start(t); osc.stop(t + 0.12);
   }
 
+  playUltimate() {
+    // 💫 Epic rising tone + reverb feel
+    if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    // Rising sweep
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.06, t);
+    g.gain.setValueAtTime(0.06, t + 0.25);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    osc.connect(g).connect(this.ctx.destination);
+    osc.start(t); osc.stop(t + 0.5);
+    // Impact boom
+    const boom = this.ctx.createOscillator();
+    boom.type = 'sine';
+    boom.frequency.setValueAtTime(80, t + 0.3);
+    boom.frequency.exponentialRampToValueAtTime(30, t + 0.6);
+    const bg = this.ctx.createGain();
+    bg.gain.setValueAtTime(0.08, t + 0.3);
+    bg.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    boom.connect(bg).connect(this.ctx.destination);
+    boom.start(t + 0.3); boom.stop(t + 0.6);
+  }
+
+  playShield() {
+    // 🛡️ Gentle chime (protective feel)
+    if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, t);
+    osc.frequency.setValueAtTime(800, t + 0.05);
+    osc.frequency.setValueAtTime(600, t + 0.1);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.04, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    osc.connect(g).connect(this.ctx.destination);
+    osc.start(t); osc.stop(t + 0.15);
+  }
+
   // === BGM: Lonely apocalypse, C418/minecraft style ===
   // 3 sets with 기승전결 (intro-build-climax-resolve)
   startBGM(setIdx = 0) {
