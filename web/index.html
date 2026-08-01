@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UNPLUG — Draw Your Power</title>
+  <!-- Fonts: Inter (UI), JetBrains Mono (numbers/code) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <meta name="description" content="⚔️ Gesture Roguelite — Draw spells, combine elements, survive. 50 classes, 4 elements, endless waves. Built with Rust WASM + Three.js." />
   
   <!-- OG / Social Card -->
@@ -24,7 +28,7 @@
   <meta name="author" content="owon" />
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#000;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;-webkit-user-select:none;user-select:none}
+    body{background:#000;overflow:hidden;font-family:'Inter',system-ui,sans-serif;-webkit-user-select:none;user-select:none}
     #game-canvas{width:100vw;height:100vh;display:block}
     /* === HUD: Dark Fantasy Modern === */
     #hud{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;padding:12px 16px}
@@ -42,8 +46,8 @@
     #hp-bar-fill{height:100%;background:linear-gradient(90deg,#8b0000,#cc2222);border-radius:4px;transition:width 0.2s;box-shadow:0 0 6px rgba(200,0,0,0.4)}
     #xp-bar-bg{width:160px;height:6px;background:rgba(15,12,20,0.9);border-radius:3px;margin:2px 0;border:1px solid rgba(100,150,255,0.2)}
     #xp-bar-fill{height:100%;background:linear-gradient(90deg,#1a3a6a,#3366aa);border-radius:2px;transition:width 0.1s;box-shadow:0 0 4px rgba(50,100,200,0.3)}
-    #timer{position:fixed;top:12px;right:16px;color:rgba(200,190,170,0.6);font-size:12px;font-family:'Courier New',monospace}
-    #kills{position:fixed;top:28px;right:16px;color:rgba(255,100,68,0.7);font-size:11px}
+    #timer{position:fixed;top:12px;right:16px;color:rgba(200,190,170,0.6);font-size:12px;font-family:'JetBrains Mono',monospace}
+    #kills{position:fixed;top:28px;right:16px;color:rgba(200,180,160,0.6);font-size:11px;font-family:'JetBrains Mono',monospace}
     #log{position:fixed;bottom:12px;right:16px;color:rgba(150,170,140,0.7);font-size:10px;text-align:right;max-width:280px}
     /* Level up popup — dark ornate frame */
     #levelup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(5,3,10,0.97);border:1px solid rgba(218,165,32,0.4);border-radius:8px;padding:20px 28px;display:none;pointer-events:all;text-align:center;min-width:360px;max-width:420px;z-index:1000;box-shadow:0 0 40px rgba(218,165,32,0.1),inset 0 0 30px rgba(0,0,0,0.5);backdrop-filter:blur(8px)}
@@ -52,7 +56,7 @@
     .choice-btn:hover{background:rgba(30,25,40,0.95);border-color:rgba(218,165,32,0.5);transform:translateX(2px)}
     .choice-btn span{color:#daa520;font-weight:600}
     #controls-hint{position:fixed;bottom:12px;left:16px;color:rgba(100,95,85,0.5);font-size:9px}
-    .dmg-popup{position:fixed;color:#e8e4dc;font-weight:bold;pointer-events:none;animation:dmg-float 0.9s ease-out forwards;text-shadow:0 0 3px rgba(0,0,0,0.8);z-index:999;transform:translateX(-50%);font-family:'Courier New',monospace}
+    .dmg-popup{position:fixed;color:#e8e4dc;font-weight:bold;pointer-events:none;animation:dmg-float 0.9s ease-out forwards;text-shadow:0 0 3px rgba(0,0,0,0.8);z-index:999;transform:translateX(-50%);font-family:'JetBrains Mono',monospace}
     .dmg-popup.crit{color:#ff3300;text-shadow:0 0 8px #ff0000,0 0 16px rgba(255,0,0,0.5);font-size:1.3em}
     @keyframes dmg-float{0%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.1)}30%{transform:translateX(-50%) translateY(-20px) scale(1.2)}100%{opacity:0;transform:translateX(-50%) translateY(-60px) scale(0.7)}}
     @keyframes promo-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}30%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(0.9) translateY(-20px)}}
@@ -70,19 +74,19 @@
     <div style="position:absolute;bottom:25%;left:18%;width:45px;height:45px;border-radius:50%;background:radial-gradient(circle,rgba(255,204,0,0.25),transparent);filter:blur(16px)"></div>
     <div style="position:absolute;bottom:20%;right:12%;width:55px;height:55px;border-radius:50%;background:radial-gradient(circle,rgba(153,51,255,0.25),transparent);filter:blur(18px)"></div>
     
-    <h1 style="color:#fff;font-size:clamp(48px,10vw,72px);margin-bottom:4px;letter-spacing:4px;text-shadow:0 0 30px rgba(255,136,68,0.4),0 0 60px rgba(255,68,0,0.2);font-family:'Courier New',monospace">UNPLUG</h1>
+    <h1 style="color:#fff;font-size:clamp(48px,10vw,72px);margin-bottom:4px;letter-spacing:4px;text-shadow:0 0 30px rgba(255,136,68,0.4),0 0 60px rgba(255,68,0,0.2);font-family:'JetBrains Mono',monospace">UNPLUG</h1>
     <p style="color:#888;font-size:clamp(12px,2vw,16px);letter-spacing:6px;margin-bottom:32px;text-transform:uppercase">Draw your power. Survive.</p>
     
-    <button id="start-btn" style="padding:14px 40px;font-size:16px;background:transparent;color:#fff;border:2px solid rgba(255,136,68,0.6);border-radius:8px;cursor:pointer;font-family:'Courier New',monospace;letter-spacing:2px;transition:all 0.2s;text-transform:uppercase">▶ START</button>
+    <button id="start-btn" style="padding:14px 40px;font-size:16px;background:transparent;color:#fff;border:2px solid rgba(255,136,68,0.6);border-radius:8px;cursor:pointer;font-family:'JetBrains Mono',monospace;letter-spacing:2px;transition:all 0.2s;text-transform:uppercase">▶ START</button>
     
     <div style="margin-top:32px;display:flex;gap:24px;align-items:center">
-      <span style="font-size:32px;filter:drop-shadow(0 0 6px #ff4400)">🔥</span>
-      <span style="font-size:32px;filter:drop-shadow(0 0 6px #44ccff)">❄️</span>
-      <span style="font-size:32px;filter:drop-shadow(0 0 8px #ffcc00);background:rgba(255,204,0,0.15);border-radius:50%;padding:4px">⚡</span>
-      <span style="font-size:32px;filter:drop-shadow(0 0 6px #9933ff)">☠️</span>
+      <svg width="32" height="32" viewBox="0 0 16 16" style="filter:drop-shadow(0 0 6px #ff4400)"><path d="M8 1C6 4 4 6 4 9c0 2.2 1.8 4 4 4s4-1.8 4-4C12 6 10 4 8 1z" fill="#ff4400"/></svg>
+      <svg width="32" height="32" viewBox="0 0 16 16" style="filter:drop-shadow(0 0 6px #44ccff)"><path d="M8 1L9.5 6H14L10.5 9L12 14L8 11L4 14L5.5 9L2 6H6.5Z" fill="#44ccff"/></svg>
+      <svg width="32" height="32" viewBox="0 0 16 16" style="filter:drop-shadow(0 0 8px #ffcc00)"><path d="M10 1L6 7H9L5 15L12 7H9L10 1Z" fill="#ffcc00"/></svg>
+      <svg width="32" height="32" viewBox="0 0 16 16" style="filter:drop-shadow(0 0 6px #9933ff)"><circle cx="8" cy="8" r="5" fill="none" stroke="#9933ff" stroke-width="1.5"/><circle cx="8" cy="8" r="2" fill="#9933ff"/></svg>
     </div>
     
-    <div style="margin-top:24px;color:#555;font-size:11px;line-height:2;text-align:center;max-width:350px">
+    <div style="margin-top:24px;color:#555;font-size:11px;line-height:2;text-align:center;max-width:350px;font-family:'Inter',sans-serif">
       <p>[WASD] Move • [SPACE] Dash • [Drag] Cast Spells</p>
       <p>Collect orbs → Promote → Unleash elemental power</p>
     </div>
@@ -664,10 +668,10 @@
               setTimeout(() => preFlash.remove(), 150);
               // 2. VFX
               renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, elem, 7);
-              // 3. 히트스톱 50ms + 강한 카메라 임펄스
-              renderer.hitStop(0.05);
-              renderer.shake(0.5, 0.12);
-              renderer.zoomPunch(1.5, 0.15);
+              // 3. 히트스톱 50ms + 카메라 임펄스 (controlled, not overwhelming)
+              renderer.hitStop(0.04);
+              renderer.shake(0.3, 0.1);
+              renderer.zoomPunch(1.0, 0.12);
               // Onboarding: first gesture success!
               if (window._onboardingActive) hideOnboarding();
               // 4. 사운드 (원소별)
@@ -704,6 +708,54 @@
               setTimeout(() => vignette.remove(), 600);
               // Onboarding trigger
               if (window._onboardingActive) hideOnboarding();
+            } else if (gesture === 'zigzag') {
+              // ZIGZAG: Chain attack — multiple directional hits in rapid succession
+              if (engine.player_class_tier() > 0 && !checkMana(35)) { dragStart=null;isDragging=false;dragPoints=[];return; }
+              const elem = getElement();
+              // Fire 3 rapid directional skills in spread
+              for (let i = -1; i <= 1; i++) {
+                const spreadAngle = Math.atan2(-dy, dx) + i * 0.4;
+                setTimeout(() => {
+                  engine.use_directional_skill(spreadAngle);
+                  renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), spreadAngle, elem, 5);
+                }, i * 80 + 80);
+              }
+              renderer.hitStop(0.06);
+              renderer.shake(0.4, 0.15);
+              sound.playElementThunder();
+              showSkillName('zigzag');
+            } else if (gesture === 'vshape') {
+              // V-SHAPE: Parry/Counter — shield + immediate counter-attack
+              if (engine.player_class_tier() > 0 && !checkMana(25)) { dragStart=null;isDragging=false;dragPoints=[];return; }
+              engine.use_shield_skill();
+              const elem = getElement();
+              renderer.spawnShieldEffect(engine.player_x(), engine.player_z(), elem);
+              // Counter-attack after brief delay
+              setTimeout(() => {
+                const counterAngle = Math.atan2(-dy, dx);
+                engine.use_directional_skill(counterAngle);
+                renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), counterAngle, elem, 5);
+                renderer.shake(0.35, 0.1);
+              }, 200);
+              renderer.hitStop(0.04);
+              renderer.shake(0.2, 0.08);
+              sound.playShield();
+              showSkillName('vshape');
+            } else if (gesture === 'upstroke') {
+              // UPSTROKE: Charged piercing attack — longer range, more damage
+              if (engine.player_class_tier() > 0 && !checkMana(30)) { dragStart=null;isDragging=false;dragPoints=[];return; }
+              const angle = Math.atan2(-dy, dx); // mostly upward
+              engine.use_directional_skill(angle);
+              const elem = getElement();
+              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, elem, 10); // extra range
+              renderer.hitStop(0.07);
+              renderer.shake(0.6, 0.15);
+              renderer.zoomPunch(2, 0.18);
+              if (elem === 1) sound.playElementFire();
+              else if (elem === 2) sound.playElementIce();
+              else if (elem === 3) sound.playElementThunder();
+              else sound.playHit();
+              showSkillName('upstroke');
             } else {
               // Gesture recognition FAILED → weakened directional attack (50% range/damage)
               engine.use_directional_skill(Math.atan2(-dy, dx));
@@ -711,7 +763,7 @@
             }
           } else if (!isDragging) {
             engine.use_active_skill();
-            renderer.shake(0.2, 0.08);
+            // No shake for basic auto-attack (per art direction: shake only on strong hits)
           }
         } else if (btn === 2 && engine.player_class_tier() >= 2) {
           // RIGHT CLICK: 2nd class skills
@@ -770,7 +822,7 @@
         const dy = last.y - start.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
 
-        // Check for circle: must be deliberate full loop
+        // === CIRCLE: full loop (30+ points, 340°+ rotation, end near start) ===
         if (points.length > 30) {
           let totalAngle = 0;
           for (let i = 2; i < points.length; i++) {
@@ -782,22 +834,59 @@
             const dot = ax * bx + ay * by;
             totalAngle += Math.atan2(cross, dot);
           }
-          // Must rotate 340°+ AND end reasonably near start (within 120px)
           const endDist = Math.sqrt((last.x - start.x)**2 + (last.y - start.y)**2);
           if (Math.abs(totalAngle) > Math.PI * 1.9 && endDist < 120) return 'circle';
         }
 
-        // Check direction relative to player screen position
+        // === ZIGZAG: 3+ direction changes on X axis (chain lightning) ===
+        if (points.length > 15) {
+          let dirChanges = 0;
+          let prevDx = 0;
+          for (let i = 3; i < points.length; i += 3) {
+            const segDx = points[i].x - points[i-3].x;
+            if (prevDx !== 0 && Math.sign(segDx) !== Math.sign(prevDx) && Math.abs(segDx) > 10) {
+              dirChanges++;
+            }
+            if (Math.abs(segDx) > 10) prevDx = segDx;
+          }
+          if (dirChanges >= 3 && dist < 200) return 'zigzag';
+        }
+
+        // === V-SHAPE: down then up (or up then down), sharp angle ===
+        if (points.length > 10) {
+          // Find lowest (max Y) point
+          let maxYIdx = 0;
+          for (let i = 1; i < points.length; i++) {
+            if (points[i].y > points[maxYIdx].y) maxYIdx = i;
+          }
+          // V shape: vertex near middle, both ends higher
+          const relPos = maxYIdx / points.length;
+          if (relPos > 0.25 && relPos < 0.75) {
+            const startToVertex = points[maxYIdx].y - start.y;
+            const vertexToEnd = points[maxYIdx].y - last.y;
+            // Both arms go down then up (V shape) — minimum 40px depth
+            if (startToVertex > 40 && vertexToEnd > 40 && dist < 150) {
+              return 'vshape';
+            }
+          }
+        }
+
+        // === UPWARD STROKE: straight line going up (charge/pierce) ===
+        if (dist > 60 && dy < -50 && Math.abs(dx) < Math.abs(dy) * 0.5) {
+          return 'upstroke';
+        }
+
+        // === DIRECTIONAL: inward/outward relative to player ===
         if (renderer && renderer.camera) {
           const playerScreen = renderer.projectToScreen(engine.player_x(), 0.5, engine.player_z());
           const startToPlayer = Math.sqrt((start.x - playerScreen.x)**2 + (start.y - playerScreen.y)**2);
           const endToPlayer = Math.sqrt((last.x - playerScreen.x)**2 + (last.y - playerScreen.y)**2);
 
-          if (endToPlayer < startToPlayer - 20) return 'inward'; // moved toward player
-          if (endToPlayer > startToPlayer + 20) return 'outward'; // moved away from player
+          if (endToPlayer < startToPlayer - 20) return 'inward';
+          if (endToPlayer > startToPlayer + 20) return 'outward';
         }
 
-        // Fallback: if dragging away from start = outward
+        // Fallback
         if (dist > 40) return 'outward';
         return 'unknown';
       }
@@ -808,7 +897,7 @@
         if (!bar) return;
         bar.style.border = '2px solid #ff4444';
         const warn = document.createElement('div');
-        warn.textContent = '⚠️ Mana 부족!';
+        warn.textContent = 'Not enough mana';
         warn.style.cssText = 'position:fixed;top:45%;left:50%;transform:translateX(-50%);color:#ff4444;font-size:16px;font-weight:bold;pointer-events:none;z-index:960;text-shadow:0 0 8px rgba(255,0,0,0.5);animation:skill-name-fade 1s ease-out forwards';
         document.body.appendChild(warn);
         setTimeout(() => { warn.remove(); bar.style.border = '1px solid #2a4a2a'; }, 1000);
@@ -849,7 +938,8 @@
         if (last) gestureBrush.addPoint(last.x, last.y);
       }
       function clearGestureTrail() {
-        gestureBrush.release(); // fade out gracefully
+        const gesture = dragPoints.length > 5 ? detectGesture(dragPoints, dragStart || {x:0,y:0}) : 'unknown';
+        gestureBrush.release(gesture); // snap to rune + fade
       }
 
       function showSkillName(gesture) {
@@ -868,6 +958,15 @@
           for (let i = 0; i < count; i++) { if (engine.learned_skill_type(i) === 2) { name = engine.learned_skill_name(i); break; } }
           if (!name) name = 'Ultimate';
           color = '#ffcc00';
+        } else if (gesture === 'zigzag') {
+          name = 'Chain Strike';
+          color = '#ffdd44';
+        } else if (gesture === 'vshape') {
+          name = 'Parry Counter';
+          color = '#88ffaa';
+        } else if (gesture === 'upstroke') {
+          name = 'Pierce';
+          color = '#ff66aa';
         }
         if (!name) name = 'Skill';
 
@@ -995,11 +1094,24 @@
       }
 
       function showSkillAcquired(name) {
+        const elem = getElement();
+        const elemColors = { 1: '#ff4400', 2: '#44ccff', 3: '#ffcc00', 4: '#9933ff' };
+        const color = elemColors[elem] || '#daa520';
+
+        // Toast notification
         const toast = document.createElement('div');
-        toast.style.cssText = 'position:fixed;top:18%;left:50%;transform:translateX(-50%);z-index:9998;pointer-events:none;text-align:center;animation:skill-acquired 1.8s ease-out forwards';
-        toast.innerHTML = `<div style="font-size:16px;color:#fff;text-shadow:0 0 8px rgba(255,200,50,0.8);background:rgba(0,0,0,0.7);padding:8px 20px;border-radius:20px;border:1px solid rgba(255,200,50,0.4)">✨ ${name}</div>`;
+        toast.style.cssText = `position:fixed;top:18%;left:50%;transform:translateX(-50%) scale(0.8);z-index:9998;pointer-events:none;text-align:center;opacity:0;transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)`;
+        toast.innerHTML = `<div style="font-size:14px;color:#fff;text-shadow:0 0 8px ${color};background:rgba(0,0,0,0.8);padding:8px 20px;border-radius:20px;border:1px solid ${color}44;font-family:'Inter',sans-serif">${elemIcon(elem, 14)} ${name}</div>`;
         document.body.appendChild(toast);
+        requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(-50%) scale(1)'; });
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(-50%) scale(0.9) translateY(-10px)'; }, 1400);
         setTimeout(() => toast.remove(), 1800);
+
+        // Brief element color wash
+        const wash = document.createElement('div');
+        wash.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:${color}11;pointer-events:none;z-index:990;animation:flash-fade 0.4s ease-out forwards`;
+        document.body.appendChild(wash);
+        setTimeout(() => wash.remove(), 400);
       }
 
       function showPromotionEffect(tier) {
@@ -1500,7 +1612,7 @@
             const hitStopMs = Math.min(0.03 + deathCount * 0.015, 0.10);
             renderer.hitStop(hitStopMs);
             // Shake scales too
-            renderer.shake(0.25 + deathCount * 0.15, 0.1 + deathCount * 0.02);
+            renderer.shake(Math.min(0.15 + deathCount * 0.08, 0.5), Math.min(0.08 + deathCount * 0.01, 0.15));
             // Combo counter
             comboCount += deathCount;
             comboTimer = 2.0;

@@ -605,15 +605,22 @@ export class ThreeRenderer {
     // No bullets - melee attack (create slash effect instead)
     // Bullets (enemy projectiles)
     this.updatePool(this.bulletMeshes, bullets, () => {
-      const geo = new THREE.SphereGeometry(0.12, 6, 6);
-      const mat = new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff2200, emissiveIntensity: 2 });
+      // Enemy projectiles — DISTINCT from XP orbs (diamond shape, red, pulsing)
+      const geo = new THREE.OctahedronGeometry(0.14, 0);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xff2222, transparent: true, opacity: 0.9 });
       const mesh = new THREE.Mesh(geo, mat);
+      // Add inner glow point light
+      const glow = new THREE.PointLight(0xff0000, 1.5, 2);
+      mesh.add(glow);
       mesh.castShadow = false;
       return mesh;
     });
     this.bulletMeshes.forEach((m, i) => {
       if (m.visible && bullets[i]) {
         m.position.set(bullets[i].x, 0.5, bullets[i].z);
+        // Spin for visibility
+        m.rotation.y += 0.15;
+        m.rotation.x += 0.1;
       }
     });
 
@@ -621,8 +628,8 @@ export class ThreeRenderer {
     this.updatePool(this.orbMeshes, orbs, (data) => {
       const t = data ? (data.type || 0) : 0;
       const sizes = [0.1, 0.15, 0.22, 0.3];
-      const colors = [0xaa88ff, 0x44ddff, 0xffcc00, 0xff4488];
-      const emissives = [0x6644ff, 0x2288ff, 0xff8800, 0xff0044];
+      const colors = [0x66eebb, 0x44ddff, 0xffcc00, 0xff88dd]; // green-cyan base, distinct from red bullets
+      const emissives = [0x22cc88, 0x2288ff, 0xff8800, 0xff0088];
       const size = sizes[t] || 0.1;
       const m = new THREE.Mesh(
         new THREE.OctahedronGeometry(size, 0),
@@ -641,7 +648,7 @@ export class ThreeRenderer {
       }
     });
 
-    // Animate enemies (bob + hit flash)
+    // Animate enemies (bob + hit flash + attack telegraph)
     this.enemyMeshes.forEach((m, i) => {
       if (m.visible && enemies[i]) {
         m.position.y = Math.sin(t * 3 + i * 2) * 0.04;
@@ -651,20 +658,80 @@ export class ThreeRenderer {
         if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
           m.rotation.y = Math.atan2(dx, dz);
         }
+
+        // === ATTACK TELEGRAPH: ranged enemies (type 3=caster, 5=archer) show aim line ===
+        const eType = enemies[i].type;
+        if ((eType === 3 || eType === 5) && !m._telegraphLine) {
+          const lineMat = new THREE.MeshBasicMaterial({ color: 0xff3333, transparent: true, opacity: 0, side: THREE.DoubleSide });
+          const lineGeo = new THREE.PlaneGeometry(0.04, 3);
+          const line = new THREE.Mesh(lineGeo, lineMat);
+          line.rotation.x = -Math.PI / 2;
+          this.scene.add(line);
+          m._telegraphLine = line;
+          m._telegraphTimer = 0;
+        }
+        if (m._telegraphLine) {
+          const distToPlayer = Math.sqrt(dx * dx + dz * dz);
+          // Show telegraph when within attack range (5-8 units)
+          if (distToPlayer < 8 && distToPlayer > 1) {
+            m._telegraphTimer += dt;
+            // Pulse opacity
+            const pulse = Math.abs(Math.sin(m._telegraphTimer * 8)) * 0.4;
+            m._telegraphLine.material.opacity = pulse;
+            // Position: from enemy to halfway to player
+            const midX = m.position.x + dx * 0.4;
+            const midZ = m.position.z + dz * 0.4;
+            m._telegraphLine.position.set(midX, 0.03, midZ);
+            m._telegraphLine.rotation.z = -Math.atan2(dz, dx);
+            m._telegraphLine.scale.y = distToPlayer * 0.5;
+            m._telegraphLine.visible = true;
+          } else {
+            m._telegraphLine.visible = false;
+            m._telegraphTimer = 0;
+          }
+        }
+
+        // === CHARGER TELEGRAPH: type 1,6 show rush direction ===
+        if ((eType === 1 || eType === 6) && !m._rushLine) {
+          const rushMat = new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0, side: THREE.DoubleSide });
+          const rushGeo = new THREE.PlaneGeometry(0.08, 2);
+          const rushLine = new THREE.Mesh(rushGeo, rushMat);
+          rushLine.rotation.x = -Math.PI / 2;
+          this.scene.add(rushLine);
+          m._rushLine = rushLine;
+        }
+        if (m._rushLine) {
+          const distToPlayer = Math.sqrt(dx * dx + dz * dz);
+          if (distToPlayer < 5 && distToPlayer > 1.5) {
+            m._rushLine.material.opacity = 0.3;
+            const fwdX = m.position.x + dx * 0.3;
+            const fwdZ = m.position.z + dz * 0.3;
+            m._rushLine.position.set(fwdX, 0.03, fwdZ);
+            m._rushLine.rotation.z = -Math.atan2(dz, dx);
+            m._rushLine.scale.y = distToPlayer * 0.3;
+            m._rushLine.visible = true;
+          } else {
+            m._rushLine.visible = false;
+          }
+        }
         // Hit flash — turn white briefly
         const isHit = enemies[i].hit;
         m.traverse(child => {
-          if (child.isMesh && child.material) {
+          if (child.isMesh && child.material && child.material.color) {
             if (isHit) {
               if (!child.material._origColor) child.material._origColor = child.material.color.getHex();
               child.material.color.set(0xffffff);
-              child.material.emissive.set(0xffffff);
-              child.material.emissiveIntensity = 3;
+              if (child.material.emissive) {
+                child.material.emissive.set(0xffffff);
+                child.material.emissiveIntensity = 3;
+              }
             } else {
               if (child.material._origColor) {
                 child.material.color.set(child.material._origColor);
               }
-              child.material.emissiveIntensity = 0;
+              if (child.material.emissive) {
+                child.material.emissiveIntensity = 0;
+              }
             }
           }
         });
@@ -680,10 +747,17 @@ export class ThreeRenderer {
     this.updateSlashes(dt);
 
     // Update death particles (spawned from JS via spawnDeathParticles)
+    // === PARTICLE POOL: cap at 300 to prevent OOM ===
+    while (this.deathParticles.length > 300) {
+      const oldest = this.deathParticles.shift();
+      this.scene.remove(oldest.mesh);
+      if (oldest.mesh.geometry) oldest.mesh.geometry.dispose();
+      if (oldest.mesh.material) oldest.mesh.material.dispose();
+    }
+
     for (let i = this.deathParticles.length - 1; i >= 0; i--) {
       const p = this.deathParticles[i];
       if (p.isRing) {
-        // Expanding + moving (cloud breath)
         if (!p.noScale) {
           p.scale += dt * 6;
           p.mesh.scale.setScalar(p.scale);
@@ -697,7 +771,7 @@ export class ThreeRenderer {
         p.mesh.position.x += p.vx * dt;
         p.mesh.position.y += p.vy * dt;
         p.mesh.position.z += p.vz * dt;
-        p.vy -= 10 * dt; // stronger gravity
+        p.vy -= 10 * dt;
         p.life -= dt;
         p.mesh.scale.setScalar(Math.max(0.01, p.life * 2.5));
         if (p.mesh.material.opacity !== undefined) p.mesh.material.opacity = Math.min(1, p.life * 3);
@@ -857,7 +931,13 @@ export class ThreeRenderer {
     const maxPool = data.length + 10; // keep small buffer
     while (pool.length > maxPool) {
       const m = pool.pop();
-      if (m) { this.scene.remove(m); if(m.geometry) m.geometry.dispose(); }
+      if (m) {
+        // Cleanup telegraph lines
+        if (m._telegraphLine) { this.scene.remove(m._telegraphLine); m._telegraphLine.geometry.dispose(); m._telegraphLine.material.dispose(); }
+        if (m._rushLine) { this.scene.remove(m._rushLine); m._rushLine.geometry.dispose(); m._rushLine.material.dispose(); }
+        this.scene.remove(m);
+        if(m.geometry) m.geometry.dispose();
+      }
     }
     // Hide excess
     for (let i = data.length; i < pool.length; i++) {

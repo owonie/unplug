@@ -50,10 +50,74 @@ export class GestureBrush {
   }
 
   /** Start fade-out after gesture release */
-  release() {
+  release(gesture = 'unknown') {
+    // If gesture recognized, snap trail to clean rune shape before fading
+    if (gesture !== 'unknown' && gesture !== 'failed' && this.points.length > 5) {
+      this._snapToRune(gesture);
+    }
     this.fading = true;
     this.fadeTimer = performance.now();
     this._fadeLoop();
+  }
+
+  /** Snap trail to idealized rune shape (인식 완료 → 정렬) */
+  _snapToRune(gesture) {
+    const ctx = this.ctx;
+    const colors = this._getColors();
+    const cx = this.canvas.width / 2;
+    const cy = this.canvas.height / 2;
+
+    // Brief bright flash on the trail
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = `rgba(${colors.r}, ${colors.g}, ${colors.b}, 0.6)`;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = colors.glow;
+    ctx.shadowBlur = 20;
+
+    if (gesture === 'circle' && this.points.length > 10) {
+      // Draw a perfect circle over the messy trail
+      const first = this.points[0];
+      const last = this.points[this.points.length - 1];
+      const midX = (first.x + last.x) / 2;
+      const midY = (first.y + last.y) / 2;
+      let maxDist = 0;
+      for (const p of this.points) {
+        const d = Math.sqrt((p.x - midX) ** 2 + (p.y - midY) ** 2);
+        if (d > maxDist) maxDist = d;
+      }
+      ctx.beginPath();
+      ctx.arc(midX, midY, maxDist * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (gesture === 'zigzag') {
+      // Draw clean zigzag
+      ctx.beginPath();
+      const start = this.points[0];
+      ctx.moveTo(start.x, start.y);
+      const segs = 6;
+      const totalDx = this.points[this.points.length-1].x - start.x;
+      const totalDy = this.points[this.points.length-1].y - start.y;
+      for (let i = 1; i <= segs; i++) {
+        const t = i / segs;
+        const zigX = start.x + totalDx * t + (i % 2 === 0 ? -30 : 30);
+        const zigY = start.y + totalDy * t;
+        ctx.lineTo(zigX, zigY);
+      }
+      ctx.stroke();
+    } else if (gesture === 'vshape') {
+      // Draw clean V
+      const start = this.points[0];
+      const last = this.points[this.points.length - 1];
+      const midY = Math.max(start.y, last.y) + 40;
+      const midX = (start.x + last.x) / 2;
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(midX, midY);
+      ctx.lineTo(last.x, last.y);
+      ctx.stroke();
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.shadowBlur = 0;
   }
 
   /** Clear immediately */
