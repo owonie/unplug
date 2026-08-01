@@ -4,6 +4,8 @@ use super::enemy::Enemy;
 use super::input::InputState;
 use super::bullet::Bullet;
 use super::resource::ResourcePickup;
+use super::item_data::{ItemInventory, ItemBonuses, random_item_choice, ItemId};
+use super::wave_event::WaveEventState;
 
 pub struct World {
     pub player: Player,
@@ -42,6 +44,12 @@ pub struct World {
     pub attack_windup: f32,      // > 0 means winding up
     pub attack_windup_max: f32,  // total windup time
     pub attacking: bool,         // true during windup (for animation)
+    // Passive items
+    pub items: ItemInventory,
+    pub item_bonuses: ItemBonuses,
+    // Wave events
+    pub wave_events: WaveEventState,
+    pub wave_event_pending: bool,
 }
 
 impl World {
@@ -77,13 +85,17 @@ impl World {
             attack_windup: 0.0,
             attack_windup_max: 0.2,
             attacking: false,
+            items: ItemInventory::new(),
+            item_bonuses: ItemBonuses::default(),
+            wave_events: WaveEventState::new(),
+            wave_event_pending: false,
         };
         world.log("SURVIVE. Move with WASD. Auto-attack nearest.".into());
         world
     }
 
     pub fn update(&mut self, dt: f32) {
-        if !self.player.alive || self.level_up_pending || self.paused { return; }
+        if !self.player.alive || self.level_up_pending || self.paused || self.wave_event_pending { return; }
 
         self.time += dt;
         self.game_time += dt;
@@ -93,6 +105,12 @@ impl World {
 
         // Increase difficulty over time (slower curve)
         self.difficulty = 1.0 + self.game_time / 60.0; // +1 every 60s (was 30s)
+
+        // Update wave event timers
+        self.wave_events.update(dt);
+
+        // Apply item effects each frame
+        self.apply_item_effects(dt);
 
         self.handle_input();
         self.player.update(dt);
@@ -133,6 +151,11 @@ impl World {
         self.update_xp_pickup();
         self.spawn_enemies(dt);
         self.gc_cleanup();
+
+        // Phoenix Feather: revive on death
+        if !self.player.alive {
+            self.try_phoenix_revive();
+        }
 
         self.input.end_frame();
     }
@@ -404,7 +427,9 @@ impl World {
     fn update_xp_pickup(&mut self) {
         let px = self.player.x;
         let pz = self.player.z;
-        let pickup_range = self.player.magnet_range;
+        let pickup_range = self.player.magnet_range + self.item_bonuses.magnet_bonus;
+
+        let xp_mult = 1.0 + self.item_bonuses.xp_mult + (self.wave_events.xp_mult - 1.0);
 
         let mut leveled = false;
         for orb in &mut self.xp_orbs {
@@ -412,7 +437,8 @@ impl World {
             let dist = ((orb.x - px).powi(2) + (orb.z - pz).powi(2)).sqrt();
             if dist < pickup_range {
                 orb.alive = false;
-                if self.player.add_xp(orb.xp_value) {
+                let effective_xp = (orb.xp_value as f32 * xp_mult) as u32;
+                if self.player.add_xp(effective_xp) {
                     leveled = true;
                 }
             }
@@ -441,6 +467,10 @@ impl World {
                 };
                 self.xp_orbs.push(ResourcePickup::new(enemy.x, enemy.z, orb_type));
                 self.kills += 1;
+                // Item: Soul Harvest heal on kill
+                if self.item_bonuses.heal_on_kill > 0.0 {
+                    self.player.heal(self.item_bonuses.heal_on_kill);
+                }
             }
         }
         self.enemies.retain(|e| e.alive);
@@ -473,6 +503,9 @@ impl World {
             self.wave_number += 1;
             self.difficulty = 1.0 + self.wave_number as f32 * 0.3;
 
+            // Tick down temporary wave event modifiers
+            self.wave_events.on_new_wave();
+
             self.log_queue.push_back(format!("⚠️ Wave {}!", self.wave_number));
 
             // 10웨이브마다 메인보스
@@ -482,18 +515,32 @@ impl World {
             // 5웨이브마다 중간보스 (보스 웨이브 제외)
             else if self.wave_number % 5 == 0 {
                 self.spawn_elite();
+                // Wave event: offer risk-reward choice
+                let seed = (self.time * 1000.0) as u32 + self.wave_number * 777;
+                self.wave_events.generate_choices(seed);
+                self.wave_event_pending = true;
             }
         }
 
         // 일반 적 스폰 (보스 웨이브에는 스폰 안 함)
         let is_boss_wave = self.wave_number % 10 == 0 && self.wave_number > 0;
+        // S-curve spawn interval: starts slow, gets fast mid-game, plateaus
         let base_interval = match self.wave_number {
-            0 | 1 => 2.5,  // wave1: 느리게
-            2 => 1.8,
-            3 => 1.5,
-            _ => 1.2,
+            0 | 1 => 2.5,
+            2 => 2.0,
+            3 => 1.7,
+            _ => {
+                // S-curve: interval decreases from 1.5 to 0.7
+                let min_interval = 0.7;
+                let max_interval = 1.5;
+                let midpoint = 10.0;
+                let k = 0.4;
+                let s = 1.0 / (1.0 + (-k * (self.wave_number as f32 - midpoint)).exp());
+                max_interval - s * (max_interval - min_interval)
+            }
         };
-        let interval = (base_interval / self.difficulty).max(0.8);
+        // Apply wave event spawn multiplier (Dangerous Rest: 2x enemies = half interval)
+        let interval = (base_interval / self.wave_events.spawn_mult).max(0.5);
         if !is_boss_wave && self.spawn_timer >= interval {
             self.spawn_timer = 0.0;
             self.spawn_wave_enemies();
@@ -634,11 +681,11 @@ impl World {
                     // Even levels: 2 elements + 1 stat (orb collection)
                     self.level_up_choices[0] = self.random_element_choice(seed);
                     self.level_up_choices[1] = self.random_element_choice_exclude(seed / 5, self.level_up_choices[0]);
-                    self.level_up_choices[2] = self.random_stat_choice(seed / 7);
+                    self.level_up_choices[2] = self.random_item_or_stat(seed / 7);
                 } else {
-                    // Odd levels: 1 element + 2 stats (power up)
+                    // Odd levels: 1 element + 1 item + 1 stat
                     self.level_up_choices[0] = self.random_element_choice(seed);
-                    self.level_up_choices[1] = self.random_stat_choice(seed / 3);
+                    self.level_up_choices[1] = self.random_item_or_stat(seed / 3);
                     self.level_up_choices[2] = self.random_stat_choice(seed / 7);
                     if self.level_up_choices[2] == self.level_up_choices[1] {
                         self.level_up_choices[2] = self.random_stat_choice(seed / 13);
@@ -646,24 +693,24 @@ impl World {
                 }
             }
             1 => {
-                // Post-1st: 1 class skill + 1 element + 1 stat
+                // Post-1st: 1 class skill + 1 element + 1 item/stat
                 self.level_up_choices[0] = self.random_class_skill_choice(seed);
                 self.level_up_choices[1] = self.random_element_choice(seed / 3);
-                self.level_up_choices[2] = self.random_stat_choice(seed / 7);
+                self.level_up_choices[2] = self.random_item_or_stat(seed / 7);
             }
             2 => {
-                // Post-2nd: 2 class skills + 1 element
+                // Post-2nd: 1 class skill + 1 item + 1 element/stat
                 self.level_up_choices[0] = self.random_class_skill_choice(seed);
-                self.level_up_choices[1] = self.random_class_skill_choice(seed / 5);
+                self.level_up_choices[1] = self.random_item_choice_wrapped(seed / 5);
                 if self.level_up_choices[1] == self.level_up_choices[0] {
                     self.level_up_choices[1] = self.random_element_choice(seed / 11);
                 }
                 self.level_up_choices[2] = self.random_element_choice(seed / 7);
             }
             3 => {
-                // Post-3rd: 2 ultimate upgrades only
+                // Post-3rd: 1 class skill + 1 item + 1 stat
                 self.level_up_choices[0] = self.random_class_skill_choice(seed);
-                self.level_up_choices[1] = self.random_class_skill_choice(seed / 3);
+                self.level_up_choices[1] = self.random_item_choice_wrapped(seed / 3);
                 if self.level_up_choices[1] == self.level_up_choices[0] {
                     self.level_up_choices[1] = self.random_stat_choice(seed / 11);
                 }
@@ -701,6 +748,23 @@ impl World {
         // Weighted: ATK(60) and ASPD(62) and CRIT(66) appear more often
         let stats = [60, 60, 62, 62, 66, 61, 63, 64, 65, 67, 68]; // dmg×2, aspd×2, crit×1, rest×1
         stats[(seed as usize) % stats.len()] as u32
+    }
+
+    /// Item choice: 400 + item_id (1~12)
+    fn random_item_choice_wrapped(&self, seed: u32) -> u32 {
+        match random_item_choice(&self.items, seed) {
+            Some(id) => 400 + id as u32,
+            None => self.random_stat_choice(seed), // all maxed → fallback to stat
+        }
+    }
+
+    /// Either item or stat (50/50 after level 3)
+    fn random_item_or_stat(&self, seed: u32) -> u32 {
+        if self.player.level >= 3 && seed % 2 == 0 {
+            self.random_item_choice_wrapped(seed / 3)
+        } else {
+            self.random_stat_choice(seed)
+        }
     }
 
     /// Class skill choice: 200 + skill_id (from current class skills)
@@ -857,6 +921,25 @@ impl World {
                 self.apply_skill_bonus(skill_id);
             }
 
+            // === Passive items: 400 + item_id (1~12) ===
+            400..=412 => {
+                let item_id = (upgrade_id - 400) as u8;
+                let (new_level, is_new) = self.items.add_item(item_id);
+                if let Some(item) = ItemId::from_u8(item_id) {
+                    if is_new {
+                        self.log(format!("{} NEW: {} — {}", item.emoji(), item.name(), item.description(new_level)));
+                    } else if new_level > 0 {
+                        self.log(format!("{} {} Lv.{} — {}", item.emoji(), item.name(), new_level, item.description(new_level)));
+                    } else {
+                        // Maxed out — give bonus stat instead
+                        self.player.attack_damage += 8.0;
+                        self.log(format!("{} {} MAX! +DMG instead", item.emoji(), item.name()));
+                    }
+                }
+                // Recompute bonuses
+                self.item_bonuses = self.items.compute_bonuses();
+            }
+
             _ => {}
         }
 
@@ -1006,5 +1089,119 @@ impl World {
 
     fn log(&mut self, msg: String) {
         self.log_queue.push_back(msg);
+    }
+
+    // === Item Effects (applied per frame) ===
+    fn apply_item_effects(&mut self, dt: f32) {
+        let bonuses = &self.item_bonuses;
+
+        // Frost Aura: slow nearby enemies
+        if bonuses.frost_slow > 0.0 {
+            let px = self.player.x;
+            let pz = self.player.z;
+            let range = 3.0;
+            for enemy in &mut self.enemies {
+                if !enemy.alive { continue; }
+                let dist = ((enemy.x - px).powi(2) + (enemy.z - pz).powi(2)).sqrt();
+                if dist < range {
+                    enemy.slow_factor = 1.0 - bonuses.frost_slow.min(0.8);
+                } else {
+                    enemy.slow_factor = 1.0;
+                }
+            }
+        }
+
+        // Shield Generator: periodic shield
+        if bonuses.shield_pct > 0.0 {
+            self.items.shield_gen_timer += dt;
+            if self.items.shield_gen_timer >= 10.0 {
+                self.items.shield_gen_timer = 0.0;
+                if self.player.shield_hp <= 0.0 {
+                    self.player.shield_hp = self.player.max_hp * bonuses.shield_pct;
+                    self.player.shield_timer = 8.0; // longer than manual shield
+                    self.log_queue.push_back("💠 Auto-Shield!".to_string());
+                }
+            }
+        }
+
+        // Berserker Mask: apply ATK multiplier if HP < 50%
+        // (tracked as a flag to avoid stacking — applied in resolve_attack)
+
+        // Wave event invuln
+        if self.wave_events.is_invuln() {
+            self.player.invuln_timer = 0.1;
+        }
+    }
+
+    /// Called when player takes damage — applies item modifiers
+    pub fn apply_damage_modifiers(&self, raw_damage: f32) -> f32 {
+        let mut dmg = raw_damage;
+        // Iron Ring defense
+        dmg -= self.item_bonuses.defense;
+        if dmg < 1.0 { dmg = 1.0; }
+        // Glass Cannon modifier (from wave event)
+        dmg *= self.wave_events.damage_taken_mult;
+        dmg
+    }
+
+    /// Called on enemy kill — applies Soul Harvest, XP Charm
+    pub fn on_enemy_killed(&mut self, _x: f32, _z: f32) {
+        // Soul Harvest
+        if self.item_bonuses.heal_on_kill > 0.0 {
+            self.player.heal(self.item_bonuses.heal_on_kill);
+        }
+    }
+
+    /// Get effective attack damage (with Berserker Mask)
+    pub fn effective_attack_damage(&self) -> f32 {
+        let mut dmg = self.player.attack_damage;
+        if self.item_bonuses.berserk_atk_mult > 0.0 && self.player.hp < self.player.max_hp * 0.5 {
+            dmg *= 1.0 + self.item_bonuses.berserk_atk_mult;
+        }
+        dmg
+    }
+
+    /// Get effective crit chance (with Critical Eye item)
+    pub fn effective_crit_chance(&self) -> f32 {
+        self.player.crit_chance + self.item_bonuses.crit_bonus
+    }
+
+    /// Get effective crit damage multiplier
+    pub fn effective_crit_mult(&self) -> f32 {
+        2.5 + self.item_bonuses.crit_damage_mult
+    }
+
+    /// Check Echo Strike — returns true if double hit procs
+    pub fn echo_strike_proc(&self, seed: f32) -> bool {
+        if self.item_bonuses.echo_chance <= 0.0 { return false; }
+        (seed * 1000.0) as u32 % 100 < (self.item_bonuses.echo_chance * 100.0) as u32
+    }
+
+    /// Phoenix Feather — check on death, returns true if revived
+    pub fn try_phoenix_revive(&mut self) -> bool {
+        if !self.item_bonuses.has_phoenix || self.items.phoenix_used { return false; }
+        self.items.phoenix_used = true;
+        self.player.alive = true;
+        self.player.hp = self.player.max_hp * self.item_bonuses.revive_hp_pct;
+        self.player.invuln_timer = 2.0; // 2s invuln after revive
+        self.log_queue.push_back("🔥 Phoenix Feather! Revived!".to_string());
+        true
+    }
+
+    /// Wave event choice (called from JS: 0 or 1)
+    pub fn choose_wave_event(&mut self, choice: u8) {
+        if !self.wave_event_pending { return; }
+        let msg = self.wave_events.apply_choice(
+            choice,
+            &mut self.player.max_hp,
+            &mut self.player.hp,
+            &mut self.player.attack_damage,
+            &mut self.player.speed,
+            &mut self.player.crit_chance,
+        );
+        if !msg.is_empty() {
+            self.log_queue.push_back(msg);
+        }
+        self.wave_event_pending = false;
     }
 }

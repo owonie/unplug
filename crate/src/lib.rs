@@ -247,6 +247,64 @@ impl GameEngine {
         }
         "Unknown".into()
     }
+
+    // === Passive Items ===
+    pub fn item_count(&self) -> u32 { self.world.items.item_count() as u32 }
+    pub fn item_id_at(&self, i: u32) -> u32 {
+        self.world.items.items.get(i as usize).map(|(id, _)| *id as u32).unwrap_or(0)
+    }
+    pub fn item_level_at(&self, i: u32) -> u32 {
+        self.world.items.items.get(i as usize).map(|(_, lv)| *lv as u32).unwrap_or(0)
+    }
+    pub fn item_name_for_choice(&self, upgrade_id: u32) -> String {
+        if upgrade_id < 400 || upgrade_id > 412 { return "".into(); }
+        let item_id = (upgrade_id - 400) as u8;
+        game::item_data::ItemId::from_u8(item_id)
+            .map(|i| format!("{} {}", i.emoji(), i.name()))
+            .unwrap_or_default()
+    }
+    pub fn item_desc_for_choice(&self, upgrade_id: u32) -> String {
+        if upgrade_id < 400 || upgrade_id > 412 { return "".into(); }
+        let item_id = (upgrade_id - 400) as u8;
+        let current_level = self.world.items.get_level(item_id);
+        let next_level = current_level + 1;
+        game::item_data::ItemId::from_u8(item_id)
+            .map(|i| i.description(next_level))
+            .unwrap_or_default()
+    }
+
+    // === Wave Events ===
+    pub fn wave_event_pending(&self) -> bool { self.world.wave_event_pending }
+    pub fn wave_event_name(&self, choice: u32) -> String {
+        match &self.world.wave_events.pending_choices {
+            Some((a, b)) => {
+                let ev = if choice == 0 { a } else { b };
+                format!("{} {}", ev.emoji(), ev.name())
+            }
+            None => "".into(),
+        }
+    }
+    pub fn wave_event_benefit(&self, choice: u32) -> String {
+        match &self.world.wave_events.pending_choices {
+            Some((a, b)) => {
+                let ev = if choice == 0 { a } else { b };
+                ev.description().0.to_string()
+            }
+            None => "".into(),
+        }
+    }
+    pub fn wave_event_cost(&self, choice: u32) -> String {
+        match &self.world.wave_events.pending_choices {
+            Some((a, b)) => {
+                let ev = if choice == 0 { a } else { b };
+                ev.description().1.to_string()
+            }
+            None => "".into(),
+        }
+    }
+    pub fn choose_wave_event(&mut self, choice: u32) {
+        self.world.choose_wave_event(choice as u8);
+    }
 }
 
 mod console_error_panic_hook {

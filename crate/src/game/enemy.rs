@@ -21,6 +21,8 @@ pub struct Enemy {
     // Boss
     pub phase: u32,           // boss phase (1,2,3)
     pub pattern_timer: f32,   // boss pattern cooldown
+    // Item effects
+    pub slow_factor: f32,     // 1.0 = normal, 0.2 = 80% slow
 }
 
 // Enemy types
@@ -63,16 +65,25 @@ impl Enemy {
             charge_dir_z: 0.0,
             phase: 1,
             pattern_timer: 0.0,
+            slow_factor: 1.0,
         }
     }
 
     pub fn new_scaled(x: f32, z: f32, enemy_type: u32, wave: u32) -> Self {
         let mut e = Self::new(x, z, enemy_type);
-        let scale = 1.0 + wave as f32 * 0.2;
-        e.hp *= scale;
+        // S-curve scaling: slow start, ramp in mid-game, plateau late
+        // sigmoid: 1 + max_scale / (1 + e^(-k*(wave - midpoint)))
+        let max_scale = 3.0;  // enemies can get up to 4x base stats
+        let midpoint = 12.0;  // ramp center at wave 12
+        let k = 0.3;          // steepness
+        let s = max_scale / (1.0 + (-k * (wave as f32 - midpoint)).exp());
+        let hp_scale = 1.0 + s * 0.6;   // HP scales slower
+        let dmg_scale = 1.0 + s * 0.3;  // damage scales slowest
+        let spd_scale = 1.0 + s * 0.05; // speed barely scales (cap feel)
+        e.hp *= hp_scale;
         e.max_hp = e.hp;
-        e.damage *= 1.0 + wave as f32 * 0.1;
-        e.speed *= 1.0 + wave as f32 * 0.015; // very slow speed scaling
+        e.damage *= dmg_scale;
+        e.speed *= spd_scale;
         e
     }
 
@@ -106,9 +117,10 @@ impl Enemy {
             ELITE => self.update_elite(dt, dx, dz, dist, player_x, player_z),
             BOSS => self.update_boss(dt, dx, dz, dist, player_x, player_z),
             _ => {
-                // Default: move toward player
-                self.x += dx / dist * self.speed * dt;
-                self.z += dz / dist * self.speed * dt;
+                // Default: move toward player (with slow_factor)
+                let spd = self.speed * self.slow_factor;
+                self.x += dx / dist * spd * dt;
+                self.z += dz / dist * spd * dt;
             }
         }
     }

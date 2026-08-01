@@ -1,1 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><text y="56" font-size="56">⚔️</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a1a"/>
+      <stop offset="100%" stop-color="#1a0a2a"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="url(#bg)"/>
+  <!-- U shape with 4 element dots -->
+  <path d="M18 16 L18 40 C18 50 26 54 32 54 C38 54 46 50 46 40 L46 16" 
+        fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" filter="url(#glow)"/>
+  <!-- Element orbs at corners -->
+  <circle cx="16" cy="12" r="4" fill="#ff4400" opacity="0.9"/>
+  <circle cx="48" cy="12" r="4" fill="#44ccff" opacity="0.9"/>
+  <circle cx="12" cy="52" r="4" fill="#ffcc00" opacity="0.9"/>
+  <circle cx="52" cy="52" r="4" fill="#9933ff" opacity="0.9"/>
+</svg>

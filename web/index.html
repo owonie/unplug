@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UNPLUG: Elemental Survivor</title>
-  <meta name="description" content="⚔️ 3D Hack-and-Slash Elemental Survivor — 50 classes, 150 skills, gesture-based spellcasting. Built with Rust WASM + Three.js." />
+  <title>UNPLUG — Draw Your Power</title>
+  <meta name="description" content="⚔️ Gesture Roguelite — Draw spells, combine elements, survive. 50 classes, 4 elements, endless waves. Built with Rust WASM + Three.js." />
   
   <!-- OG / Social Card -->
-  <meta property="og:title" content="UNPLUG: Elemental Survivor" />
-  <meta property="og:description" content="⚔️ 원소 조합 핵앤슬래시 서바이버 — 50개 직업, 150개 스킬, 제스처 마법. Rust WASM + Three.js" />
+  <meta property="og:title" content="UNPLUG — Draw Your Power" />
+  <meta property="og:description" content="⚔️ Gesture Roguelite — 마우스 제스처로 스킬을 시전하는 원소 서바이버. 50 클래스 × 4 원소 × 무한 웨이브." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://owonie.github.io/unplug/" />
-  <meta property="og:image" content="https://owonie.github.io/unplug/unplug.png" />
+  <meta property="og:image" content="https://owonie.github.io/unplug/og-image.svg" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="UNPLUG: Elemental Survivor" />
-  <meta name="twitter:description" content="⚔️ 3D Hack-and-Slash Elemental Survivor — Rust WASM + Three.js" />
-  <meta name="twitter:image" content="https://owonie.github.io/unplug/unplug.png" />
+  <meta name="twitter:title" content="UNPLUG — Draw Your Power" />
+  <meta name="twitter:description" content="⚔️ Gesture Roguelite — Draw spells, combine elements, survive." />
+  <meta name="twitter:image" content="https://owonie.github.io/unplug/og-image.svg" />
   
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -64,26 +64,37 @@
 <body>
   <canvas id="game-canvas"></canvas>
   <!-- Start Screen -->
-  <div id="start-screen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000">
-    <img src="unplug.png" alt="UNPLUG" style="max-width:min(95vw,700px);max-height:45vh;margin-bottom:20px;border-radius:8px" />
-    <h1 style="color:#ff8844;font-size:48px;margin-bottom:8px;text-shadow:0 0 20px #ff4400">UNPLUG</h1>
-    <p style="color:#888;font-size:14px;margin-bottom:24px">Elemental Survivor</p>
-    <button id="start-btn" style="padding:12px 32px;font-size:16px;background:#222;color:#fff;border:2px solid #ff8844;border-radius:8px;cursor:pointer;font-family:inherit">⚔️ START GAME</button>
-    <button id="tree-btn" style="padding:8px 24px;font-size:13px;background:#111;color:#aaa;border:1px solid #555;border-radius:6px;cursor:pointer;font-family:inherit;margin-top:12px">📖 Class Tree</button>
-    <p style="color:#555;font-size:11px;margin-top:16px">[WASD] Move | [SPACE] Dash | Level up to survive</p>
-    <div style="margin-top:14px;color:#777;font-size:10px;line-height:1.8;max-width:350px;text-align:center">
-      <p>🖱️ 좌클릭 드래그 바깥 = 방향 공격 | 안쪽 = 쉴드 | 원 = 궁극기</p>
-      <p>🎯 원소 오브를 모아서 전직! (Lv3부터 가능)</p>
-      <p>⚔️ 전직하면 원소 스킬이 활성화됩니다</p>
+  <div id="start-screen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,#0a0812 0%,#0d0a1a 50%,#1a0a2a 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000">
+    <!-- 4 element glow orbs (decorative) -->
+    <div style="position:absolute;top:15%;left:12%;width:60px;height:60px;border-radius:50%;background:radial-gradient(circle,rgba(255,68,0,0.3),transparent);filter:blur(20px)"></div>
+    <div style="position:absolute;top:20%;right:15%;width:50px;height:50px;border-radius:50%;background:radial-gradient(circle,rgba(68,204,255,0.25),transparent);filter:blur(18px)"></div>
+    <div style="position:absolute;bottom:25%;left:18%;width:45px;height:45px;border-radius:50%;background:radial-gradient(circle,rgba(255,204,0,0.25),transparent);filter:blur(16px)"></div>
+    <div style="position:absolute;bottom:20%;right:12%;width:55px;height:55px;border-radius:50%;background:radial-gradient(circle,rgba(153,51,255,0.25),transparent);filter:blur(18px)"></div>
+    
+    <h1 style="color:#fff;font-size:clamp(48px,10vw,72px);margin-bottom:4px;letter-spacing:4px;text-shadow:0 0 30px rgba(255,136,68,0.4),0 0 60px rgba(255,68,0,0.2);font-family:'Courier New',monospace">UNPLUG</h1>
+    <p style="color:#888;font-size:clamp(12px,2vw,16px);letter-spacing:6px;margin-bottom:32px;text-transform:uppercase">Draw your power. Survive.</p>
+    
+    <button id="start-btn" style="padding:14px 40px;font-size:16px;background:transparent;color:#fff;border:2px solid rgba(255,136,68,0.6);border-radius:8px;cursor:pointer;font-family:'Courier New',monospace;letter-spacing:2px;transition:all 0.2s;text-transform:uppercase">▶ START</button>
+    
+    <div style="margin-top:32px;display:flex;gap:20px;align-items:center">
+      <span style="font-size:20px">🔥</span>
+      <span style="font-size:20px">❄️</span>
+      <span style="font-size:20px">⚡</span>
+      <span style="font-size:20px">☠️</span>
     </div>
-    <div style="position:absolute;bottom:24px;text-align:center;color:#666;font-size:11px;font-family:'Courier New',monospace">
-      <p>owon</p>
-      <p style="margin-top:6px">
-        <a href="https://github.com/owonie" target="_blank" style="color:#888;text-decoration:none;margin:0 10px">GitHub</a>
-        <a href="https://linkedin.com/in/owonie" target="_blank" style="color:#888;text-decoration:none;margin:0 10px">LinkedIn</a>
-      </p>
+    
+    <div style="margin-top:24px;color:#555;font-size:11px;line-height:2;text-align:center;max-width:350px">
+      <p>[WASD] Move • [SPACE] Dash • [Drag] Cast Spells</p>
+      <p>Collect orbs → Promote → Unleash elemental power</p>
+    </div>
+    
+    <div style="position:absolute;bottom:24px;display:flex;gap:16px;align-items:center">
+      <span style="color:#444;font-size:11px">by owon</span>
+      <a href="https://github.com/owonie" target="_blank" style="color:#555;font-size:11px;text-decoration:none">GitHub</a>
     </div>
   </div>
+      <p style="margin-top:6px">
+        <a href="https://github.com/owonie" target="_blank" style="color:#888;text-decoration:none;margin:0 10px">GitHub</a>
   <!-- Class Tree Viewer -->
   <div id="class-tree-screen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);display:none;flex-direction:column;align-items:center;z-index:2001;overflow-y:auto;padding:20px">
     <h2 style="color:#ff8844;margin-bottom:12px">📖 Class Promotion Tree</h2>
@@ -149,7 +160,11 @@
     import init, { GameEngine } from './pkg/unplug_engine.js';
     import { ThreeRenderer } from './src/renderer.js';
     import { SoundManager } from './src/sound.js';
+    import { showEnhancedGameOver, showWaveEventUI, hideWaveEventUI, getItemChoiceHtml, updateItemHud, injectUIStyles } from './src/ui-overlay.js';
     let engine;
+
+    // Inject UI styles on load
+    injectUIStyles();
 
     // Helper: 전직 전이면 원소 없음 (무색 공격)
     function getElement() {
@@ -175,6 +190,7 @@
     function getUpgradeName(id) {
       if (id >= 50 && id <= 53) return ['🔥 Fire Orb', '❄️ Ice Orb', '⚡ Thunder Orb', '☠️ Poison Orb'][id - 50];
       if (id >= 60 && id <= 68) return ['⚔️ DMG +10', '👟 SPD +', '⚡ ATK SPD', '🎯 RANGE +', '🔫 CLEAVE +', '❤️ HP +30', '💥 CRIT +15%', '🧛 STEAL +5%', '🧲 MAGNET +'][id - 60];
+      if (id >= 400 && id <= 412) return engine.item_name_for_choice(id);
       if (id >= 100 && id <= 199) {
         if (!engine) return '👑 PROMOTE!';
         const name = engine.class_name_for_choice(id);
@@ -202,6 +218,7 @@
         return descs[id - 60];
       }
       if (id >= 100 && id <= 145) return '🌟 전직! 전용 스킬 3개 해금 + 스탯 대폭 증가.';
+      if (id >= 400 && id <= 412) return engine.item_desc_for_choice(id);
       if (id >= 200) return '전직 스킬 강화. 레벨당 효과 증가.';
       return '';
     }
@@ -366,6 +383,18 @@
         renderer.bulletMeshes.forEach(m => renderer.scene.remove(m));
         renderer.bulletMeshes = [];
       });
+      // Expose restart for UI overlay
+      window._restartGame = () => {
+        engine = new GameEngine();
+        gameStarted = true;
+        gameOverShown = false;
+        renderer.enemyMeshes.forEach(m => renderer.scene.remove(m));
+        renderer.enemyMeshes = [];
+        renderer.orbMeshes.forEach(m => renderer.scene.remove(m));
+        renderer.orbMeshes = [];
+        renderer.bulletMeshes.forEach(m => renderer.scene.remove(m));
+        renderer.bulletMeshes = [];
+      };
 
       // Input (use e.code for Korean IME safety)
       const keyMap = {'KeyW':'w','KeyA':'a','KeyS':'s','KeyD':'d','ArrowUp':'w','ArrowDown':'s','ArrowLeft':'a','ArrowRight':'d','Digit1':'1','Digit2':'2','Digit3':'3'};
@@ -1053,6 +1082,16 @@
 
         if (engine.level_up_pending() && !levelUpShown) { showLevelUp(); levelUpShown = true; sound.playLevelUp(); }
 
+        // Wave event check
+        if (engine.wave_event_pending() && !engine.level_up_pending()) {
+          showWaveEventUI(engine);
+        }
+
+        // Item HUD update (every 30 frames)
+        if (Math.floor(timestamp / 500) !== Math.floor((timestamp - 16) / 500)) {
+          updateItemHud(engine);
+        }
+
         let log;
         while ((log = engine.pop_log()) !== undefined) { logLines.push(log); if (logLines.length > 4) logLines.shift(); }
         document.getElementById('log').textContent = logLines.join('\n');
@@ -1126,44 +1165,7 @@
 
       // Game Over screen with achievements
       function showGameOver(eng) {
-        const t = Math.floor(eng.game_time());
-        const min = Math.floor(t / 60);
-        const sec = t % 60;
-        const kills = eng.kills();
-        const level = eng.player_level();
-        const points = eng.final_points();
-
-        // Add points to saved total
-        let totalPoints = parseInt(localStorage.getItem('unplug_points') || '0');
-        totalPoints += points;
-        localStorage.setItem('unplug_points', totalPoints);
-
-        document.getElementById('final-stats').innerHTML =
-          `⏱️ Survived: ${min}:${sec.toString().padStart(2,'0')}<br>` +
-          `☠️ Kills: ${kills}<br>` +
-          `⭐ Level: ${level}<br>` +
-          `⚔️ Final ATK: ${Math.round(eng.player_damage())}`;
-
-        document.getElementById('points-earned').innerHTML =
-          `💰 +${points} pts (Total: ${totalPoints})`;
-
-        const titles = [];
-        if (kills >= 100) titles.push('💀 Century Slayer');
-        if (kills >= 50) titles.push('⚔️ Warrior');
-        if (kills >= 20) titles.push('🗡️ Fighter');
-        if (level >= 15) titles.push('👑 Legend');
-        if (level >= 10) titles.push('📈 Veteran');
-        if (level >= 5) titles.push('🌱 Apprentice');
-        if (t >= 300) titles.push('⏳ Eternal Survivor');
-        if (t >= 180) titles.push('🕐 Endurer');
-        if (t >= 60) titles.push('⌛ Lasted a Minute');
-        if (eng.player_promoted()) titles.push('👑 Class Promoted');
-        if (eng.player_damage() >= 100) titles.push('🔥 Weapon Master');
-
-        document.getElementById('achievements').innerHTML =
-          titles.length > 0 ? titles.map(t => '🏆 ' + t).join('<br>') : '';
-
-        document.getElementById('gameover-screen').style.display = 'flex';
+        showEnhancedGameOver(eng);
       }
 
       // === GACHA SYSTEM ===
