@@ -259,11 +259,11 @@
       }
 
       // === Class Tree Viewer ===
-      document.getElementById('tree-btn').addEventListener('click', () => {
+      document.getElementById('tree-btn')?.addEventListener('click', () => {
         document.getElementById('class-tree-screen').style.display = 'flex';
         buildClassTree();
       });
-      document.getElementById('tree-close-btn').addEventListener('click', () => {
+      document.getElementById('tree-close-btn')?.addEventListener('click', () => {
         document.getElementById('class-tree-screen').style.display = 'none';
       });
 
@@ -334,7 +334,7 @@
         document.getElementById('class-tree-content').innerHTML = html;
       }
       // Share record to GitHub Issues (tamper-resistant hash)
-      document.getElementById('share-btn').addEventListener('click', () => {
+      document.getElementById('share-btn')?.addEventListener('click', () => {
         const kills = engine.kills();
         const level = engine.player_level();
         const time = Math.floor(engine.game_time());
@@ -370,7 +370,7 @@
         window.open(url, '_blank');
       });
 
-      document.getElementById('retry-btn').addEventListener('click', () => {
+      document.getElementById('retry-btn')?.addEventListener('click', () => {
         document.getElementById('gameover-screen').style.display = 'none';
         engine = new GameEngine();
         gameStarted = true;
