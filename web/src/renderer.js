@@ -33,8 +33,8 @@ export class ThreeRenderer {
     });
 
     // === ART DIRECTION: "죽어가는 저채도 세계에서 원소 룬만 빛나는 오컬트 로우폴리" ===
-    // Palette: bg #090B14, ground #101825, structure #1A2433, enemy #687080, player rim #DCE8FF
-    this.scene.background = new THREE.Color(0x090B14);
+    // Palette adjusted for VISIBILITY: bg dark blue-gray, ground clearly visible
+    this.scene.background = new THREE.Color(0x0d1220);
 
     // Lighting — dark fantasy but READABLE (player/enemies clearly visible)
     const ambient = new THREE.AmbientLight(0x99aacc, 0.6);
@@ -66,7 +66,7 @@ export class ThreeRenderer {
       posAttr.setZ(i, (Math.random() - 0.5) * 0.08);
     }
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x182030, roughness: 0.92, metalness: 0.05,
+      color: 0x2a3545, roughness: 0.88, metalness: 0.05,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -76,14 +76,14 @@ export class ThreeRenderer {
 
     // Central rune circle (world center marker — faint occult glyph)
     const ringGeo = new THREE.RingGeometry(10, 10.3, 64);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x1a2433, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x3a4a5a, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
     ring.position.set(50, 0.01, 50);
     this.scene.add(ring);
 
     // Inner glyph cross (direction reference)
-    const crossMat = new THREE.MeshBasicMaterial({ color: 0x1a2433, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+    const crossMat = new THREE.MeshBasicMaterial({ color: 0x3a4a5a, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
     for (let angle = 0; angle < 4; angle++) {
       const lineGeo = new THREE.PlaneGeometry(0.15, 8);
       const line = new THREE.Mesh(lineGeo, crossMat);
@@ -95,7 +95,7 @@ export class ThreeRenderer {
 
     // Environment: low ruined pillars — #1A2433, non-competing with gameplay
     const pillarGeo = new THREE.CylinderGeometry(0.25, 0.35, 1.8, 5);
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1A2433, roughness: 0.95 });
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x354555, roughness: 0.9 });
     const pillarPositions = [
       [35, 35], [65, 35], [35, 65], [65, 65],
       [30, 50], [70, 50], [50, 30], [50, 70],
@@ -114,7 +114,7 @@ export class ThreeRenderer {
     }
 
     // Fog — matches background, gentle fade
-    this.scene.fog = new THREE.FogExp2(0x090B14, 0.008);
+    this.scene.fog = new THREE.FogExp2(0x0d1220, 0.006);
 
     // === Post-processing: Selective Bloom + Vignette + Tone Mapping ===
     this.composer = new EffectComposer(this.renderer);
