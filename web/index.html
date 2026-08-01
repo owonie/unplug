@@ -1087,10 +1087,8 @@
           showWaveEventUI(engine);
         }
 
-        // Item HUD update (every 30 frames)
-        if (Math.floor(timestamp / 500) !== Math.floor((timestamp - 16) / 500)) {
-          updateItemHud(engine);
-        }
+        // Item HUD update (throttled)
+        updateItemHud(engine);
 
         let log;
         while ((log = engine.pop_log()) !== undefined) { logLines.push(log); if (logLines.length > 4) logLines.shift(); }
