@@ -27,41 +27,42 @@ export class ThreeRenderer {
       this.renderer.setSize(w, h);
     });
 
-    // === ART DIRECTION: "죽어가는 저채도 세계에서 원소 룬만 빛나는 오컬트 로우폴리" ===
-    // Palette adjusted for VISIBILITY: bg dark blue-gray, ground clearly visible
-    this.scene.background = new THREE.Color(0x0a1018);
+    // === ART: Dark dungeon with naturalistic warm/cool lighting ===
+    this.scene.background = new THREE.Color(0x0a0a0f);
 
-    // Lighting — dark fantasy but READABLE (player/enemies clearly visible)
-    const ambient = new THREE.AmbientLight(0xaabbcc, 0.8);
+    // KEY LIGHT: warm torchlight from upper-right (주광)
+    const key = new THREE.DirectionalLight(0xffd4a0, 1.3);
+    key.position.set(8, 20, 12);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.left = -30;
+    key.shadow.camera.right = 30;
+    key.shadow.camera.top = 30;
+    key.shadow.camera.bottom = -30;
+    this.scene.add(key);
+
+    // FILL LIGHT: cool moonlight from opposite (보조광)
+    const fill = new THREE.DirectionalLight(0x6080bb, 0.35);
+    fill.position.set(-10, 12, -8);
+    this.scene.add(fill);
+
+    // AMBIENT: very subtle warm (그림자가 완전 검정이 되지 않도록)
+    const ambient = new THREE.AmbientLight(0x443322, 0.35);
     this.scene.add(ambient);
 
-    const dir = new THREE.DirectionalLight(0xeeeeff, 1.2);
-    dir.position.set(10, 25, 10);
-    dir.castShadow = true;
-    dir.shadow.mapSize.set(2048, 2048);
-    dir.shadow.camera.left = -30;
-    dir.shadow.camera.right = 30;
-    dir.shadow.camera.top = 30;
-    dir.shadow.camera.bottom = -30;
-    this.scene.add(dir);
-
-    const hemi = new THREE.HemisphereLight(0x556688, 0x222233, 0.5);
-    this.scene.add(hemi);
-
-    // Player light — strong rim glow so player always stands out
-    this.playerLight = new THREE.PointLight(0xDCE8FF, 3.0, 12);
+    // Player light — warm point light follows player (횃불 느낌)
+    this.playerLight = new THREE.PointLight(0xffcc88, 2.5, 14);
     this.playerLight.position.set(50, 3, 50);
     this.scene.add(this.playerLight);
 
-    // Ground — #101825 with subtle vertex color variation
+    // GROUND — dark warm stone (MeshStandardMaterial for natural light response)
     const groundGeo = new THREE.PlaneGeometry(120, 120, 40, 40);
-    // Add subtle vertex noise for organic feel
     const posAttr = groundGeo.attributes.position;
     for (let i = 0; i < posAttr.count; i++) {
-      posAttr.setZ(i, (Math.random() - 0.5) * 0.08);
+      posAttr.setZ(i, (Math.random() - 0.5) * 0.06);
     }
-    const groundMat = new THREE.MeshBasicMaterial({
-      color: 0x1e2a38,
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x2a2218, roughness: 0.95, metalness: 0.0,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -71,14 +72,14 @@ export class ThreeRenderer {
 
     // Central rune circle (world center marker — faint occult glyph)
     const ringGeo = new THREE.RingGeometry(10, 10.3, 64);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x3a4a5a, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x553a20, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
     ring.position.set(50, 0.01, 50);
     this.scene.add(ring);
 
     // Inner glyph cross (direction reference)
-    const crossMat = new THREE.MeshBasicMaterial({ color: 0x3a4a5a, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+    const crossMat = new THREE.MeshBasicMaterial({ color: 0x443320, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
     for (let angle = 0; angle < 4; angle++) {
       const lineGeo = new THREE.PlaneGeometry(0.15, 8);
       const line = new THREE.Mesh(lineGeo, crossMat);
@@ -90,7 +91,7 @@ export class ThreeRenderer {
 
     // Environment: low ruined pillars — #1A2433, non-competing with gameplay
     const pillarGeo = new THREE.CylinderGeometry(0.25, 0.35, 1.8, 5);
-    const pillarMat = new THREE.MeshBasicMaterial({ color: 0x2a3848 });
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x3a3028, roughness: 0.9 });
     const pillarPositions = [
       [35, 35], [65, 35], [35, 65], [65, 65],
       [30, 50], [70, 50], [50, 30], [50, 70],
@@ -109,7 +110,7 @@ export class ThreeRenderer {
     }
 
     // Fog — matches background, gentle fade
-    this.scene.fog = new THREE.FogExp2(0x0a1018, 0.005);
+    this.scene.fog = new THREE.FogExp2(0x0a0a0f, 0.006);
 
     // No post-processing — direct rendering for performance and visibility
 
