@@ -36,11 +36,11 @@ export class ThreeRenderer {
     // Palette: bg #090B14, ground #101825, structure #1A2433, enemy #687080, player rim #DCE8FF
     this.scene.background = new THREE.Color(0x090B14);
 
-    // Lighting — low-key, cold, minimal
-    const ambient = new THREE.AmbientLight(0x8899aa, 0.35);
+    // Lighting — dark fantasy but READABLE (player/enemies clearly visible)
+    const ambient = new THREE.AmbientLight(0x99aacc, 0.6);
     this.scene.add(ambient);
 
-    const dir = new THREE.DirectionalLight(0xccddee, 0.6);
+    const dir = new THREE.DirectionalLight(0xddeeff, 1.0);
     dir.position.set(10, 25, 10);
     dir.castShadow = true;
     dir.shadow.mapSize.set(2048, 2048);
@@ -50,11 +50,11 @@ export class ThreeRenderer {
     dir.shadow.camera.bottom = -30;
     this.scene.add(dir);
 
-    const hemi = new THREE.HemisphereLight(0x1a2040, 0x050510, 0.2);
+    const hemi = new THREE.HemisphereLight(0x334466, 0x111122, 0.4);
     this.scene.add(hemi);
 
-    // Player light — rim glow
-    this.playerLight = new THREE.PointLight(0xDCE8FF, 2.0, 10);
+    // Player light — strong rim glow so player always stands out
+    this.playerLight = new THREE.PointLight(0xDCE8FF, 3.0, 12);
     this.playerLight.position.set(50, 3, 50);
     this.scene.add(this.playerLight);
 
@@ -66,7 +66,7 @@ export class ThreeRenderer {
       posAttr.setZ(i, (Math.random() - 0.5) * 0.08);
     }
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x101825, roughness: 0.95, metalness: 0.05,
+      color: 0x182030, roughness: 0.92, metalness: 0.05,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -114,7 +114,7 @@ export class ThreeRenderer {
     }
 
     // Fog — matches background, gentle fade
-    this.scene.fog = new THREE.FogExp2(0x090B14, 0.012);
+    this.scene.fog = new THREE.FogExp2(0x090B14, 0.008);
 
     // === Post-processing: Selective Bloom + Vignette + Tone Mapping ===
     this.composer = new EffectComposer(this.renderer);
@@ -133,7 +133,7 @@ export class ThreeRenderer {
     const vignetteShader = {
       uniforms: {
         tDiffuse: { value: null },
-        darkness: { value: 0.4 },
+        darkness: { value: 0.25 },
         offset: { value: 1.0 },
       },
       vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -158,7 +158,7 @@ export class ThreeRenderer {
 
     // Tone mapping
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.4;
 
     // Object pools
     this.playerGroup = null;
