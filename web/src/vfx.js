@@ -66,7 +66,7 @@ export const vfxMethods = {
       // ⚡ THUNDER: Flash silhouette then multi-direction current lines
       // Bright flash sphere
       const flashGeo = new THREE.SphereGeometry(0.5, 8, 8);
-      const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffaa, transparent: true, opacity: 0.9 });
+      const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffaa, transparent: true, opacity: 0.5 });
       const flash = new THREE.Mesh(flashGeo, flashMat);
       flash.position.set(x, 0.5, z);
       this.scene.add(flash);

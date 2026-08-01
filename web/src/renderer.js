@@ -1,8 +1,4 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { vfxMethods, vfxShieldMethods, vfxDirectionalMethods } from './vfx.js';
 
 export class ThreeRenderer {
@@ -29,18 +25,17 @@ export class ThreeRenderer {
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(w, h);
-      this.composer.setSize(w, h);
     });
 
     // === ART DIRECTION: "죽어가는 저채도 세계에서 원소 룬만 빛나는 오컬트 로우폴리" ===
     // Palette adjusted for VISIBILITY: bg dark blue-gray, ground clearly visible
-    this.scene.background = new THREE.Color(0x0d1220);
+    this.scene.background = new THREE.Color(0x111822);
 
     // Lighting — dark fantasy but READABLE (player/enemies clearly visible)
-    const ambient = new THREE.AmbientLight(0x99aacc, 0.6);
+    const ambient = new THREE.AmbientLight(0xaabbcc, 0.8);
     this.scene.add(ambient);
 
-    const dir = new THREE.DirectionalLight(0xddeeff, 1.0);
+    const dir = new THREE.DirectionalLight(0xeeeeff, 1.2);
     dir.position.set(10, 25, 10);
     dir.castShadow = true;
     dir.shadow.mapSize.set(2048, 2048);
@@ -50,7 +45,7 @@ export class ThreeRenderer {
     dir.shadow.camera.bottom = -30;
     this.scene.add(dir);
 
-    const hemi = new THREE.HemisphereLight(0x334466, 0x111122, 0.4);
+    const hemi = new THREE.HemisphereLight(0x556688, 0x222233, 0.5);
     this.scene.add(hemi);
 
     // Player light — strong rim glow so player always stands out
@@ -66,7 +61,7 @@ export class ThreeRenderer {
       posAttr.setZ(i, (Math.random() - 0.5) * 0.08);
     }
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x2a3545, roughness: 0.88, metalness: 0.05,
+      color: 0x3a4a5a, roughness: 0.85, metalness: 0.0,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -95,7 +90,7 @@ export class ThreeRenderer {
 
     // Environment: low ruined pillars — #1A2433, non-competing with gameplay
     const pillarGeo = new THREE.CylinderGeometry(0.25, 0.35, 1.8, 5);
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x354555, roughness: 0.9 });
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4a5a6a, roughness: 0.85 });
     const pillarPositions = [
       [35, 35], [65, 35], [35, 65], [65, 65],
       [30, 50], [70, 50], [50, 30], [50, 70],
@@ -114,51 +109,9 @@ export class ThreeRenderer {
     }
 
     // Fog — matches background, gentle fade
-    this.scene.fog = new THREE.FogExp2(0x0d1220, 0.006);
+    this.scene.fog = new THREE.FogExp2(0x111822, 0.005);
 
-    // === Post-processing: Selective Bloom + Vignette + Tone Mapping ===
-    this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-
-    // Subtle bloom (threshold high = only bright emissives bloom)
-    const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.4,   // strength (subtle)
-      0.8,   // radius
-      0.85   // threshold (only brightest things bloom)
-    );
-    this.composer.addPass(bloomPass);
-
-    // Vignette + color correction shader
-    const vignetteShader = {
-      uniforms: {
-        tDiffuse: { value: null },
-        darkness: { value: 0.25 },
-        offset: { value: 1.0 },
-      },
-      vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-      fragmentShader: `
-        uniform sampler2D tDiffuse;
-        uniform float darkness;
-        uniform float offset;
-        varying vec2 vUv;
-        void main() {
-          vec4 color = texture2D(tDiffuse, vUv);
-          // Vignette
-          vec2 uv = (vUv - 0.5) * 2.0;
-          float vignette = 1.0 - dot(uv, uv) * darkness;
-          color.rgb *= clamp(vignette, 0.0, 1.0);
-          // Slight contrast boost
-          color.rgb = pow(color.rgb, vec3(1.05));
-          gl_FragColor = color;
-        }
-      `,
-    };
-    this.composer.addPass(new ShaderPass(vignetteShader));
-
-    // Tone mapping
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.4;
+    // No post-processing — direct rendering for performance and visibility
 
     // Object pools
     this.playerGroup = null;
@@ -764,16 +717,16 @@ export class ThreeRenderer {
             m._rushLine.visible = false;
           }
         }
-        // Hit flash — turn white briefly
+        // Hit flash — brief bright tint (NOT pure white, gentler on eyes)
         const isHit = enemies[i].hit;
         m.traverse(child => {
           if (child.isMesh && child.material && child.material.color) {
             if (isHit) {
               if (!child.material._origColor) child.material._origColor = child.material.color.getHex();
-              child.material.color.set(0xffffff);
+              child.material.color.set(0xccddee); // light blue-white, not pure white
               if (child.material.emissive) {
-                child.material.emissive.set(0xffffff);
-                child.material.emissiveIntensity = 3;
+                child.material.emissive.set(0x445566);
+                child.material.emissiveIntensity = 1.0; // was 3, too bright
               }
             } else {
               if (child.material._origColor) {
@@ -791,7 +744,7 @@ export class ThreeRenderer {
       }
     });
 
-    this.composer.render();
+    this.renderer.render(this.scene, this.camera);
 
     // Update slash effects
     this.updateSlashes(dt);
