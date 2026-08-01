@@ -140,20 +140,20 @@
     </div>
   </div>
   <div id="timer">0:00</div>
-  <div id="bgm-btn" style="position:fixed;top:16px;right:80px;color:#666;font-size:11px;cursor:pointer;pointer-events:all;background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:4px;border:1px solid #333">🎵 NEXT</div>
+  <div id="bgm-btn" style="position:fixed;top:16px;right:80px;color:#666;font-size:11px;cursor:pointer;pointer-events:all;background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:4px;border:1px solid #333">♪ NEXT</div>
   <div id="kills">0 kills</div>
   <div id="log"></div>
   <div id="controls-hint">[WASD] Move | [SPACE] Dash | [Drag] Spell | [TAB] Stats</div>
   <div id="tutorial" style="position:fixed;top:30%;left:50%;transform:translateX(-50%);color:#fff;font-size:16px;text-align:center;pointer-events:none;z-index:800;text-shadow:0 0 8px #000,0 2px 4px rgba(0,0,0,0.8);opacity:0;transition:opacity 0.5s;line-height:2"></div>
   <div id="dash-ui" style="position:fixed;bottom:50px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:none">
-    <span style="color:#88ccff;font-size:12px">💨 DASH</span>
+    <span style="color:#88ccff;font-size:12px">DASH</span>
     <div style="width:60px;height:6px;background:#333;border-radius:3px;overflow:hidden">
       <div id="dash-bar" style="width:100%;height:100%;background:#44ccff;border-radius:3px;transition:width 0.1s"></div>
     </div>
     <span id="dash-cd-text" style="color:#666;font-size:10px"></span>
   </div>
   <div id="levelup">
-    <h2>⬆️ LEVEL UP!</h2>
+    <h2>LEVEL UP</h2>
     <button class="choice-btn" id="choice-0"></button>
     <button class="choice-btn" id="choice-1"></button>
     <button class="choice-btn" id="choice-2"></button>
@@ -919,11 +919,14 @@
         spellGuideEl = document.createElement('div');
         spellGuideEl.style.cssText = 'position:fixed;top:80px;right:16px;background:rgba(0,0,0,0.85);border:1px solid #444;border-radius:8px;padding:10px 14px;pointer-events:none;z-index:950;font-size:11px;color:#ccc;line-height:2;min-width:140px';
         spellGuideEl.innerHTML = `
-          <div style="color:#ff8844;font-weight:bold;margin-bottom:4px">🖱️ Spell Guide</div>
-          <div>→ 바깥 드래그 = <span style="color:#ff8844">⚔️ ATK</span></div>
-          <div>← 안쪽 드래그 = <span style="color:#44ff88">🛡️ DEF</span></div>
-          <div>○ 한바퀴 = <span style="color:#ffcc00">💫 ULT</span></div>
-          <div style="color:#555;font-size:9px;margin-top:4px">놓으면 시전!</div>
+          <div style="color:#ff8844;font-weight:bold;margin-bottom:4px">Spell Guide</div>
+          <div>→ Outward = <span style="color:#ff8844">ATK</span></div>
+          <div>← Inward = <span style="color:#44ff88">Shield</span></div>
+          <div>○ Circle = <span style="color:#ffcc00">Ultimate</span></div>
+          <div>↑ Up = <span style="color:#ff66aa">Pierce</span></div>
+          <div>⚡ Zigzag = <span style="color:#ffdd44">Chain</span></div>
+          <div>V = <span style="color:#88ffaa">Parry</span></div>
+          <div style="color:#555;font-size:9px;margin-top:4px">Release to cast</div>
         `;
         document.body.appendChild(spellGuideEl);
       }
@@ -992,7 +995,7 @@
         if (ic > 0) html += `  ❄️ Ice: ${ic}<br>`;
         if (t > 0) html += `  ⚡ Thunder: ${t}<br>`;
         if (p > 0) html += `  ☠️ Poison: ${p}<br>`;
-        if (f + ic + t + p === 0) html += '  <span style="color:#666">없음</span><br>';
+        if (f + ic + t + p === 0) html += '  <span style="color:#666">None</span><br>';
 
         // Current Class
         const tier = engine.player_class_tier();
@@ -1011,8 +1014,8 @@
             }
           }
         } else {
-          html += '<br><span style="color:#666">Lv.10에서 첫 전직 가능</span><br>';
-          html += '<span style="color:#555;font-size:10px">원소를 모아 조합 조건을 맞추세요!</span>';
+          html += '<br><span style="color:#666">Reach Lv.2 for first promotion</span><br>';
+          html += '<span style="color:#555;font-size:10px">Collect element orbs to meet requirements</span>';
         }
 
         // Next promotion hint
@@ -1020,7 +1023,7 @@
           const nextLevel = tier === 0 ? 10 : tier === 1 ? 25 : 45;
           const currentLevel = engine.player_level();
           if (currentLevel < nextLevel) {
-            html += `<br><br><span style="color:#888;font-size:10px">다음 전직: Lv.${nextLevel}</span>`;
+            html += `<br><br><span style="color:#888;font-size:10px">Next promotion: Lv.${nextLevel}</span>`;
           }
         }
 
@@ -1035,8 +1038,23 @@
           const prevTier = engine.player_class_tier();
           engine.choose_upgrade(i);
           const newTier = engine.player_class_tier();
-          if (newTier > prevTier) showPromotionEffect(newTier);
-          else showSkillAcquired(choiceName);
+          if (newTier > prevTier) {
+            showPromotionEffect(newTier);
+          } else {
+            showSkillAcquired(choiceName);
+            // === INSTANT FEEDBACK: 2s demo of acquired upgrade ===
+            const px = engine.player_x(), pz = engine.player_z();
+            if (choiceId >= 50 && choiceId <= 53) {
+              // Element orb chosen: spawn element VFX burst
+              const orbElem = choiceId - 49; // 1-4
+              renderer.spawnDirectionalEffect(px, pz, 0, orbElem, 4);
+              renderer.spawnGroundDecal(px, pz, orbElem);
+              renderer.zoomPunch(0.8, 0.1);
+            } else if (choiceId >= 60) {
+              // Stat upgrade: quick sparkle
+              renderer.spawnDeathParticles(px, pz, getElement());
+            }
+          }
           hideLevelUp();
         });
       }
@@ -1271,13 +1289,13 @@
           sp.style.display = window._showDetailStats ? 'block' : 'none';
           if (window._showDetailStats) {
             sp.innerHTML =
-              `⚔️ ATK <span style="color:#ff8844">${Math.round(engine.player_damage())}</span><br>` +
-              `⚡ SPD <span style="color:#44ccff">${engine.player_atk_speed().toFixed(1)}/s</span><br>` +
-              `🎯 RNG <span style="color:#88ff44">${engine.player_range().toFixed(1)}</span><br>` +
-              `💥 CRT <span style="color:#ff4488">${Math.round(engine.player_crit()*100)}%</span><br>` +
-              `🗡️ PRC <span style="color:#ffcc44">${engine.player_pierce()}</span> ` +
-              `🔫 ×<span style="color:#44ffcc">${engine.player_multi()}</span><br>` +
-              `🧛 STEAL <span style="color:#ff44ff">${Math.round(engine.player_lifesteal()*100)}%</span>`;
+              `ATK <span style="color:#ff8844">${Math.round(engine.player_damage())}</span><br>` +
+              `SPD <span style="color:#44ccff">${engine.player_atk_speed().toFixed(1)}/s</span><br>` +
+              `RNG <span style="color:#88ff44">${engine.player_range().toFixed(1)}</span><br>` +
+              `CRT <span style="color:#ff4488">${Math.round(engine.player_crit()*100)}%</span><br>` +
+              `PRC <span style="color:#ffcc44">${engine.player_pierce()}</span> ` +
+              `×<span style="color:#44ffcc">${engine.player_multi()}</span><br>` +
+              `STEAL <span style="color:#ff44ff">${Math.round(engine.player_lifesteal()*100)}%</span>`;
           }
         }
 
@@ -1286,10 +1304,10 @@
         const SKILL_COLORS = { 0:'#ff4400', 4:'#44ccff', 2:'#ffcc00', 7:'#44ff44' };
         const SKILL_NAMES = { 0:'Fire Blade', 4:'Frost Blade', 2:'Thunder Blade', 7:'Poison Blade' };
         const SKILL_DESC = {
-          0:'🔥 화염 검기. ATK+5, AOE+0.8\nLv2: 주변 화염 오브\nLv5: MAX - 인페르노',
-          4:'❄️ 빙결 검기. ATK+5, RNG+0.5\nLv2: 적 슬로우\nLv5: MAX - 절대영도',
-          2:'⚡ 번개 검기. ATK+5, 공속↑\nLv2: 이동→공속 보너스\nLv5: MAX - 번개 폭풍',
-          7:'☠️ 맹독 검기. ATK+5, 흡혈+3%\nLv2: 주변 DOT\nLv5: MAX - 역병',
+          0:'Fire Blade. ATK+5, AOE+0.8\nLv2: Fire aura\nLv5: MAX - Inferno',
+          4:'Frost Blade. ATK+5, RNG+0.5\nLv2: Enemy slow\nLv5: MAX - Absolute Zero',
+          2:'Thunder Blade. ATK+5, SPD↑\nLv2: Move→ATK SPD bonus\nLv5: MAX - Thunderstorm',
+          7:'Poison Blade. ATK+5, Steal+3%\nLv2: Area DOT\nLv5: MAX - Plague',
         };
         const slotCount = engine.skill_slot_count();
         const classSkillCount = engine.learned_skill_count();
@@ -1659,6 +1677,8 @@
           playerAttacking: engine.player_attacking(),
           playerDashing: engine.player_dashing(),
           dashType: engine.player_dash_type(),
+          hp: engine.player_hp(),
+          maxHp: engine.player_max_hp(),
           nearestEnemyDirX: engine.nearest_enemy_dir_x(),
           element: getElement(),
           elementLevel: engine.active_element_level(),

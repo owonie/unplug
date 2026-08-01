@@ -380,8 +380,28 @@ export class ThreeRenderer {
         const runeColor = elemRuneColors[state.element] || 0xDCE8FF;
         this.playerRuneMesh.material.color.set(runeColor);
         this.playerRuneMesh.material.opacity = state.promoted ? 0.4 : 0.15;
-        // Gentle rotation
         this.playerRuneMesh.rotation.z = this.clock.getElapsedTime() * 0.5;
+
+        // HP-based visual feedback: rune pulses faster at low HP
+        const hpRatio = state.hp / state.maxHp;
+        if (hpRatio < 0.3) {
+          // Critical: rune blinks red
+          const blink = Math.sin(this.clock.getElapsedTime() * 10) > 0;
+          this.playerRuneMesh.material.color.set(blink ? 0xff2222 : runeColor);
+          this.playerRuneMesh.material.opacity = 0.5;
+        }
+      }
+
+      // Hit flash: brief white sprite tint
+      if (state.playerHit) {
+        this.playerSpriteMat.color = this.playerSpriteMat.color || new THREE.Color(1,1,1);
+        this.playerSpriteMat.color.set(0xffffff);
+        this.playerHitFlash = 0.1;
+      } else if (this.playerHitFlash > 0) {
+        this.playerHitFlash -= dt;
+        if (this.playerHitFlash <= 0) {
+          this.playerSpriteMat.color.set(0xffffff); // reset
+        }
       }
 
       // Determine animation state
@@ -522,13 +542,43 @@ export class ThreeRenderer {
         }
       }
 
-      // 전직 후: 플레이어 글로우 강화
+      // 전직 후: 플레이어 글로우 강화 + 대기 파티클
       if (state.promoted && this.playerLight) {
-        const elemColors = { 1: 0xff4400, 2: 0x44ccff, 3: 0xffcc00, 4: 0x44ff44 };
-        if (this.playerLight) {
-          this.playerLight.color.set(elemColors[state.element] || 0xffffcc);
-          this.playerLight.intensity = 3.0;
-          this.playerLight.distance = 8;
+        const elemColors = { 1: 0xff4400, 2: 0x44ccff, 3: 0xffcc00, 4: 0x9933ff };
+        const elemColor = elemColors[state.element] || 0xffffcc;
+        this.playerLight.color.set(elemColor);
+        this.playerLight.intensity = 3.0;
+        this.playerLight.distance = 8;
+
+        // Ambient element particles (spawn rarely, drift upward)
+        if (!this._ambientParticles) this._ambientParticles = [];
+        if (Math.random() < 0.08 && this._ambientParticles.length < 6) {
+          const size = 0.03 + Math.random() * 0.03;
+          const geo = new THREE.SphereGeometry(size, 4, 4);
+          const mat = new THREE.MeshBasicMaterial({ color: elemColor, transparent: true, opacity: 0.6 });
+          const p = new THREE.Mesh(geo, mat);
+          p.position.set(
+            playerX + (Math.random() - 0.5) * 1.0,
+            0.3 + Math.random() * 0.5,
+            playerZ + (Math.random() - 0.5) * 1.0
+          );
+          this.scene.add(p);
+          this._ambientParticles.push({ mesh: p, life: 1.5 + Math.random() });
+        }
+      }
+      // Update ambient particles
+      if (this._ambientParticles) {
+        for (let i = this._ambientParticles.length - 1; i >= 0; i--) {
+          const ap = this._ambientParticles[i];
+          ap.mesh.position.y += dt * 0.5;
+          ap.life -= dt;
+          ap.mesh.material.opacity = Math.max(0, ap.life * 0.4);
+          if (ap.life <= 0) {
+            this.scene.remove(ap.mesh);
+            ap.mesh.geometry.dispose();
+            ap.mesh.material.dispose();
+            this._ambientParticles.splice(i, 1);
+          }
         }
       }
     }
