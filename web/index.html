@@ -1015,13 +1015,21 @@
           const nextLv = classTier === 0 ? 2 : classTier === 1 ? 4 : 7;
           const lvOk = engine.player_level() >= nextLv;
           const orbOk = totalOrbs >= nextReq;
-          const canPromo = lvOk && orbOk;
+          const canPromo = engine.promotion_available_count() > 0;
+          let promoText;
+          if (canPromo) {
+            promoText = '⭐ PROMOTION READY! (Level up to choose)';
+          } else if (!lvOk) {
+            promoText = `Next: Lv${nextLv} + ${nextReq} orbs (${totalOrbs}/${nextReq})`;
+          } else {
+            promoText = `Need ${nextReq} of same element (${totalOrbs} total)`;
+          }
           promoHud.innerHTML =
             `<span style="color:${fireL>0?'#ff4400':'#333'}">🔥${fireL}</span> ` +
             `<span style="color:${iceL>0?'#44ccff':'#333'}">❄️${iceL}</span> ` +
             `<span style="color:${thunderL>0?'#ffcc00':'#333'}">⚡${thunderL}</span> ` +
             `<span style="color:${poisonL>0?'#9933ff':'#333'}">☠️${poisonL}</span>` +
-            `<br><span style="color:${canPromo?'#ffcc00':'#666'};font-size:10px">${canPromo ? '⭐ PROMOTION READY!' : `Next: Lv${nextLv} + ${nextReq} orbs (${totalOrbs}/${nextReq})`}</span>`;
+            `<br><span style="color:${canPromo?'#daa520':'#666'};font-size:10px">${promoText}</span>`;
           promoHud.style.display = 'block';
         } else {
           promoHud.style.display = 'none';

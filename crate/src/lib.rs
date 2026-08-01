@@ -58,6 +58,17 @@ impl GameEngine {
     pub fn player_multi(&self) -> u32 { self.world.player.attack_count }
     pub fn player_promoted(&self) -> bool { self.world.player.promoted }
     pub fn player_promoted_element(&self) -> u32 { self.world.player.promoted_element }
+    pub fn promotion_available_count(&self) -> u32 {
+        let promos = game::class_data::available_promotions(
+            self.world.player.fire_level,
+            self.world.player.ice_level,
+            self.world.player.thunder_level,
+            self.world.player.poison_level,
+            self.world.player.class_id,
+            self.world.player.level,
+        );
+        promos.len() as u32
+    }
     pub fn player_hit(&self) -> bool { self.world.player.invuln_timer > 0.3 }
     pub fn player_attacking(&self) -> bool { self.world.attacking }
     pub fn player_dashing(&self) -> bool { self.world.player.is_dashing() }
