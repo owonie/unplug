@@ -235,16 +235,16 @@ export class ThreeRenderer {
       const r = d[i], g = d[i+1], b = d[i+2];
       const lum = (r + g + b) / 3;
 
-      // Map everything on a dark purple↔black gradient based on luminance
-      // Brighter original → deeper purple (머리/망토)
-      // Darker original → near black (발/외곽)
-      if (lum > 180) {
-        // Very bright highlights → keep (눈 반짝임 등)
+      // BRIGHT recolor: light lavender/silver so player pops against dark bg
+      // Keeps silhouette readable while matching dark fantasy tone
+      if (lum > 200) {
+        // Very bright → white/silver highlights
+        d[i] = 240; d[i+1] = 235; d[i+2] = 255;
       } else {
-        const t = Math.min(1, lum / 120); // 0=darkest, 1=brightest clothing
-        d[i] = Math.round(10 + t * 45);     // R: 10-55
-        d[i+1] = Math.round(3 + t * 12);    // G: 3-15
-        d[i+2] = Math.round(15 + t * 55);   // B: 15-70 (purple)
+        const t = Math.min(1, lum / 150);
+        d[i] = Math.round(80 + t * 140);     // R: 80-220
+        d[i+1] = Math.round(70 + t * 120);   // G: 70-190
+        d[i+2] = Math.round(120 + t * 135);  // B: 120-255 (cool tint)
       }
     }
 
