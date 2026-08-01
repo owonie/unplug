@@ -1082,9 +1082,13 @@
 
         if (engine.level_up_pending() && !levelUpShown) { showLevelUp(); levelUpShown = true; sound.playLevelUp(); }
 
-        // Wave event check
-        if (engine.wave_event_pending() && !engine.level_up_pending()) {
+        // Wave event check (show once)
+        if (engine.wave_event_pending() && !engine.level_up_pending() && !window._waveEventShown) {
+          window._waveEventShown = true;
           showWaveEventUI(engine);
+        }
+        if (!engine.wave_event_pending()) {
+          window._waveEventShown = false;
         }
 
         // Item HUD update (throttled)

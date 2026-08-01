@@ -160,6 +160,7 @@ export function showWaveEventUI(engine) {
       const choice = parseInt(btn.dataset.choice);
       engine.choose_wave_event(choice);
       el.style.display = 'none';
+      window._waveEventShown = false;
     };
   });
 }
