@@ -43,21 +43,31 @@ export class SoundManager {
     }
   }
 
-  _play(key, volume = 0.5) {
+  _play(key, volume = 0.5, pitchVariation = 0) {
     if (!this.enabled || !this._sfxPool[key]) return;
     const pool = this._sfxPool[key];
-    // Find one that's not playing, or reset the first
-    let a = pool.find(x => x.paused || x.ended) || pool[0];
-    a.volume = volume;
+    // Concurrent play limit: max 3 of same sound
+    const playing = pool.filter(x => !x.paused && !x.ended);
+    if (playing.length >= 3) return; // skip if too many playing
+    // Find one that's not playing, or skip
+    let a = pool.find(x => x.paused || x.ended);
+    if (!a) return; // all busy, skip instead of stacking
+    a.volume = Math.min(1, volume);
     a.currentTime = 0;
+    // Pitch variation (±5% default for repeated sounds)
+    if (pitchVariation > 0) {
+      a.playbackRate = 1.0 + (Math.random() - 0.5) * pitchVariation * 2;
+    } else {
+      a.playbackRate = 1.0;
+    }
     a.play().catch(() => {});
   }
 
-  // === COMBAT SFX ===
-  playHit() { this._play('slash', 0.3); }
-  playCrit() { this._play('slashHeavy', 0.4); }
-  playDeath() { this._play('groundImpact', 0.25); }
-  playPlayerHit() { this._play('groundImpact', 0.4); }
+  // === COMBAT SFX (with pitch variation to reduce fatigue) ===
+  playHit() { this._play('slash', 0.3, 0.05); }
+  playCrit() { this._play('slashHeavy', 0.4, 0.03); }
+  playDeath() { this._play('groundImpact', 0.25, 0.07); }
+  playPlayerHit() { this._play('groundImpact', 0.4, 0.03); }
   playPickup() {} // silent (too frequent)
 
   playLevelUp() {

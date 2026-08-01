@@ -8,7 +8,7 @@
   
   <!-- OG / Social Card -->
   <meta property="og:title" content="UNPLUG — Draw Your Power" />
-  <meta property="og:description" content="⚔️ Gesture Roguelite — 마우스 제스처로 스킬을 시전하는 원소 서바이버. 50 클래스 × 4 원소 × 무한 웨이브." />
+  <meta property="og:description" content="⚔️ Gesture Roguelite — Cast spells by drawing mouse gestures. 50 classes × 4 elements × infinite waves." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://owonie.github.io/unplug/" />
   <meta property="og:image" content="https://owonie.github.io/unplug/og-image.svg" />
@@ -97,7 +97,7 @@
   <!-- Class Tree Viewer -->
   <div id="class-tree-screen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);display:none;flex-direction:column;align-items:center;z-index:2001;overflow-y:auto;padding:20px">
     <h2 style="color:#ff8844;margin-bottom:12px">📖 Class Promotion Tree</h2>
-    <p style="color:#666;font-size:11px;margin-bottom:16px">원소 오브를 모아 전직 조건을 맞추세요. Lv10/25/45에서 전직 가능!</p>
+    <p style="color:#666;font-size:11px;margin-bottom:16px">Collect element orbs to unlock promotions. Class up at Lv2/4/7!</p>
     <div id="class-tree-content" style="color:#ccc;font-size:12px;line-height:1.8;max-width:700px;width:100%"></div>
     <button id="tree-close-btn" style="padding:8px 24px;font-size:13px;background:#222;color:#fff;border:1px solid #888;border-radius:6px;cursor:pointer;font-family:inherit;margin-top:20px;margin-bottom:20px">✖ Close</button>
   </div>
@@ -229,16 +229,16 @@
     }
     function getUpgradeDesc(id) {
       if (id >= 50 && id <= 53) {
-        const descs = ['화염 오브 +1. 화염 스킬 해금 조건.', '빙결 오브 +1. 빙결 스킬 해금 조건.', '번개 오브 +1. 번개 스킬 해금 조건.', '맹독 오브 +1. 독 스킬 해금 조건.'];
+        const descs = ['Fire Orb +1. Unlocks fire skills.', 'Ice Orb +1. Unlocks ice skills.', 'Thunder Orb +1. Unlocks thunder skills.', 'Poison Orb +1. Unlocks poison skills.'];
         return descs[id - 50];
       }
       if (id >= 60 && id <= 68) {
-        const descs = ['공격력 +10', '이동속도 +0.6', '공격속도 +', '범위 +0.8', '클리브 +1', 'MAX HP +30', '크리티컬 +15%', '흡혈 +5%', 'XP 범위 +2'];
+        const descs = ['ATK +10', 'Move Speed +0.6', 'Attack Speed +', 'Range +0.8', 'Cleave +1', 'MAX HP +30', 'Crit +15%', 'Lifesteal +5%', 'XP Range +2'];
         return descs[id - 60];
       }
-      if (id >= 100 && id <= 145) return '🌟 전직! 전용 스킬 3개 해금 + 스탯 대폭 증가.';
+      if (id >= 100 && id <= 145) return 'Class promotion! 3 unique skills + massive stat boost.';
       if (id >= 400 && id <= 412) return engine.item_desc_for_choice(id);
-      if (id >= 200) return '전직 스킬 강화. 레벨당 효과 증가.';
+      if (id >= 200) return 'Skill enhancement. Scales with level.';
       return '';
     }
 
@@ -335,7 +335,7 @@
           'Supernova', 'Entropy', 'Archfiend', 'Avatar', 'Primordial God',
         ];
 
-        let html = '<h3 style="color:#ffcc00;margin:8px 0">⭐ 1차 전직 (Lv 10+ / Orb 2+)</h3>';
+        let html = '<h3 style="color:#ffcc00;margin:8px 0">⭐ Tier 1 (Lv2+ / 1 Orb)</h3>';
         html += '<table style="width:100%;border-collapse:collapse;margin-bottom:16px">';
         html += '<tr style="color:#888;border-bottom:1px solid #333"><td>Class</td><td>Requirement</td><td>Style</td></tr>';
         tier1.forEach(c => {
@@ -343,7 +343,7 @@
         });
         html += '</table>';
 
-        html += '<h3 style="color:#ff44ff;margin:8px 0">🌈 히든 전직 (스탯 특화)</h3>';
+        html += '<h3 style="color:#ff44ff;margin:8px 0">Hidden Classes (Stat-based)</h3>';
         html += '<table style="width:100%;border-collapse:collapse;margin-bottom:16px">';
         html += '<tr style="color:#888;border-bottom:1px solid #333"><td>Class</td><td>Requirement</td><td>Style</td></tr>';
         hidden.forEach(c => {
@@ -351,17 +351,17 @@
         });
         html += '</table>';
 
-        html += '<h3 style="color:#44ccff;margin:8px 0">🌟 2차 전직 (Lv 25+ / Orb 6+)</h3>';
+        html += '<h3 style="color:#44ccff;margin:8px 0">🌟 Tier 2 (Lv4+ / 4 Orbs)</h3>';
         html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">';
         tier2.forEach(n => { html += `<span style="background:#1a2a3a;padding:3px 8px;border-radius:4px;font-size:11px">${n}</span>`; });
         html += '</div>';
 
-        html += '<h3 style="color:#ffcc00;margin:8px 0">👑 3차 전직 (Lv 45+ / Orb 10+)</h3>';
+        html += '<h3 style="color:#ffcc00;margin:8px 0">👑 Tier 3 (Lv7+ / 7 Orbs)</h3>';
         html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">';
         tier3.forEach(n => { html += `<span style="background:#2a1a00;padding:3px 8px;border-radius:4px;font-size:11px;color:#ffcc00">${n}</span>`; });
         html += '</div>';
 
-        html += '<p style="color:#555;font-size:10px;margin-top:12px">※ 같은 원소를 집중하면 순수 전직, 분산하면 하이브리드 전직이 해금됩니다.</p>';
+        html += '<p style="color:#555;font-size:10px;margin-top:12px">Focus one element for pure classes, or mix for hybrid promotions.</p>';
         document.getElementById('class-tree-content').innerHTML = html;
       }
       // Share record to GitHub Issues (tamper-resistant hash)
@@ -950,21 +950,37 @@
           const id = engine.level_up_choice(i);
           const name = getUpgradeName(id);
           const desc = getUpgradeDesc(id);
-          document.getElementById(`choice-${i}`).innerHTML = `<span>[${i+1}]</span> ${name}<br><small style="color:#999;font-size:11px">${desc}</small>`;
+          // Build fantasy: show element icon + promotion hint for orb choices
+          let promoHint = '';
+          if (id >= 50 && id <= 53) {
+            const orbElem = id - 50 + 1; // 1=fire, 2=ice, 3=thunder, 4=poison
+            const currentLv = [0, engine.fire_level(), engine.ice_level(), engine.thunder_level(), engine.poison_level()][orbElem];
+            const nextReq = engine.player_class_tier() === 0 ? 1 : 4;
+            const remaining = Math.max(0, nextReq - currentLv - 1);
+            if (remaining === 0) promoHint = `<span style="color:#daa520;font-size:10px">→ PROMOTION READY after this!</span>`;
+            else promoHint = `<span style="color:#555;font-size:10px">→ ${remaining} more to promote</span>`;
+          } else if (id >= 100) {
+            promoHint = `<span style="color:#daa520;font-size:10px">${ICONS.star(10)} Class change!</span>`;
+          }
+          const icon = id >= 50 && id <= 53 ? elemIcon(id - 49, 18) : (id >= 100 ? ICONS.star(18) : '');
+          document.getElementById(`choice-${i}`).innerHTML = `
+            <div style="display:flex;align-items:center;gap:6px">
+              ${icon}<span style="font-size:13px;font-weight:bold">[${i+1}] ${name}</span>
+            </div>
+            <div style="color:#999;font-size:11px;margin-top:4px">${desc}</div>
+            ${promoHint ? `<div style="margin-top:4px">${promoHint}</div>` : ''}
+          `;
         }
-        // 초반 힌트
+        // Hint
         let hint = document.getElementById('levelup-hint');
         if (!hint) {
           hint = document.createElement('div');
           hint.id = 'levelup-hint';
-          hint.style.cssText = 'color:#ffcc44;font-size:11px;margin-top:10px;text-align:center;opacity:0.8';
+          hint.style.cssText = 'color:#daa520;font-size:11px;margin-top:10px;text-align:center;opacity:0.8';
           el.appendChild(hint);
         }
         if (engine.player_class_tier() === 0 && engine.player_level() <= 4) {
-          hint.textContent = '💡 원소를 먼저 올리면 전직이 빨라집니다!';
-          hint.style.display = 'block';
-        } else if (engine.player_class_tier() === 0) {
-          hint.textContent = '💡 원소 오브 2개 이상 모으면 전직 가능!';
+          hint.textContent = 'Choose element orbs to unlock class promotion';
           hint.style.display = 'block';
         } else {
           hint.style.display = 'none';
@@ -987,30 +1003,84 @@
       }
 
       function showPromotionEffect(tier) {
-        // Sound
-        sound.playLevelUp();
-        setTimeout(() => sound.playShield(), 200);
-
-        // Screen flash (gold/element color)
-        const colors = ['', 'rgba(255,200,50,0.4)', 'rgba(100,200,255,0.4)', 'rgba(255,100,255,0.4)'];
-        const flash = document.createElement('div');
-        flash.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:${colors[tier]||colors[1]};pointer-events:none;z-index:9999;transition:opacity 0.8s`;
-        document.body.appendChild(flash);
-        setTimeout(() => { flash.style.opacity = '0'; }, 100);
-        setTimeout(() => flash.remove(), 900);
-
-        // Big text announcement
-        const tierNames = ['', '⚔️ 1차 전직!', '🌟 2차 전직!', '👑 3차 전직!'];
+        const elem = getElement();
         const className = engine.player_class_name() || '';
-        const txt = document.createElement('div');
-        txt.style.cssText = 'position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);z-index:9999;pointer-events:none;text-align:center;animation:promo-pop 1.5s ease-out forwards';
-        txt.innerHTML = `<div style="font-size:36px;color:#ffd700;text-shadow:0 0 20px #ff8800,0 0 40px #ff4400;font-weight:bold">${tierNames[tier]}</div><div style="font-size:20px;color:#fff;margin-top:8px;text-shadow:0 0 10px rgba(255,255,255,0.8)">${className}</div>`;
-        document.body.appendChild(txt);
-        setTimeout(() => txt.remove(), 2000);
+        const elemColors = { 1: '#ff4400', 2: '#44ccff', 3: '#ffcc00', 4: '#9933ff' };
+        const elemColor = elemColors[elem] || '#daa520';
 
-        // Camera + hit stop for drama
-        renderer.shake(0.4, 0.2);
-        renderer.hitStop(0.15);
+        // === PROMOTION SEQUENCE: 2.5s cinematic ===
+        // Phase 1: Hitstop + slow-motion (everything freezes)
+        renderer.hitStop(0.3); // 300ms dramatic freeze
+
+        // Phase 2: Dark vignette + element color buildup
+        const vignette = document.createElement('div');
+        vignette.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:9998;
+          box-shadow:inset 0 0 120px 60px rgba(0,0,0,0.8);transition:box-shadow 0.5s ease-out`;
+        document.body.appendChild(vignette);
+
+        // Phase 3: Element energy glow (building up from center)
+        const glow = document.createElement('div');
+        glow.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:0;height:0;
+          border-radius:50%;background:radial-gradient(circle, ${elemColor}44, transparent);
+          pointer-events:none;z-index:9997;transition:all 0.6s ease-out`;
+        document.body.appendChild(glow);
+        requestAnimationFrame(() => {
+          glow.style.width = '300px';
+          glow.style.height = '300px';
+        });
+
+        // Phase 4: Class name reveal (after 400ms)
+        setTimeout(() => {
+          const tierLabels = ['', 'CLASS PROMOTION', 'ADVANCED CLASS', 'MASTER CLASS'];
+          const txt = document.createElement('div');
+          txt.style.cssText = `position:fixed;top:38%;left:50%;transform:translate(-50%,-50%) scale(0.5);
+            z-index:9999;pointer-events:none;text-align:center;opacity:0;
+            transition:all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)`;
+          txt.innerHTML = `
+            <div style="font-size:12px;color:#888;letter-spacing:4px;margin-bottom:8px">${tierLabels[tier]}</div>
+            <div style="font-size:32px;color:${elemColor};text-shadow:0 0 20px ${elemColor},0 0 40px ${elemColor}66;font-weight:bold;letter-spacing:2px">${className}</div>
+            <div style="font-size:14px;color:#aaa;margin-top:12px;opacity:0.8">${elemIcon(elem, 16)} New abilities unlocked</div>
+          `;
+          document.body.appendChild(txt);
+          requestAnimationFrame(() => {
+            txt.style.opacity = '1';
+            txt.style.transform = 'translate(-50%,-50%) scale(1)';
+          });
+          setTimeout(() => { txt.style.opacity = '0'; txt.style.transform = 'translate(-50%,-50%) scale(1.1)'; }, 1800);
+          setTimeout(() => txt.remove(), 2300);
+        }, 400);
+
+        // Phase 5: Full screen flash (peak at 800ms)
+        setTimeout(() => {
+          const flash = document.createElement('div');
+          flash.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:${elemColor}55;
+            pointer-events:none;z-index:9999;animation:flash-fade 0.5s ease-out forwards`;
+          document.body.appendChild(flash);
+          setTimeout(() => flash.remove(), 500);
+          renderer.shake(0.6, 0.25);
+          renderer.zoomPunch(3, 0.2);
+          // Sound layered
+          sound.playLevelUp();
+          setTimeout(() => sound.playShield(), 100);
+        }, 800);
+
+        // Phase 6: Auto-cast signature skill (at 1.2s)
+        setTimeout(() => {
+          if (elem === 1) engine.use_ultimate_skill();
+          else if (elem === 2) engine.use_shield_skill();
+          else if (elem === 3) engine.use_ultimate_skill();
+          else if (elem === 4) engine.use_ultimate_skill();
+          else engine.use_directional_skill(0); // forward
+          renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), elem, 12);
+          renderer.shake(0.3, 0.15);
+        }, 1200);
+
+        // Cleanup (at 2.5s)
+        setTimeout(() => {
+          vignette.style.boxShadow = 'inset 0 0 0 0 rgba(0,0,0,0)';
+          glow.style.opacity = '0';
+          setTimeout(() => { vignette.remove(); glow.remove(); }, 500);
+        }, 2000);
       }
 
       // HUD
@@ -1324,13 +1394,21 @@
       let comboTimer = 0;
       function showCombo(count) {
         let el = document.getElementById('combo-display');
-        if (!el) { el = document.createElement('div'); el.id = 'combo-display'; el.style.cssText = 'position:fixed;top:20%;left:50%;transform:translateX(-50%);pointer-events:none;z-index:999;text-align:center;transition:opacity 0.3s'; document.body.appendChild(el); }
-        const size = Math.min(36 + count * 2, 64);
-        const color = count >= 20 ? '#ff44ff' : count >= 10 ? '#ffcc00' : '#44ff88';
-        el.innerHTML = `<div style="font-size:${size}px;color:${color};font-weight:bold;text-shadow:0 0 10px ${color},0 0 20px ${color}; font-family:'Courier New',monospace">${count} COMBO!</div>`;
+        if (!el) { el = document.createElement('div'); el.id = 'combo-display'; el.style.cssText = 'position:fixed;top:45%;right:20px;pointer-events:none;z-index:999;text-align:right;transition:opacity 0.3s,transform 0.2s'; document.body.appendChild(el); }
+        const size = Math.min(20 + count * 0.8, 40);
+        const color = count >= 30 ? '#ff44ff' : count >= 20 ? '#ffcc00' : count >= 10 ? '#ff8844' : '#44ff88';
+        // Milestone rewards
+        let milestone = '';
+        if (count === 5) milestone = '<div style="font-size:10px;color:#888;margin-top:2px">♪ rhythm up</div>';
+        else if (count === 10) milestone = '<div style="font-size:10px;color:#ffcc00;margin-top:2px">✦ XP range +</div>';
+        else if (count === 20) milestone = '<div style="font-size:10px;color:#ff8844;margin-top:2px">✦ mana regen</div>';
+        else if (count === 30) milestone = '<div style="font-size:10px;color:#ff44ff;margin-top:2px">✦✦ ELEMENTAL BURST</div>';
+        el.innerHTML = `<div style="font-size:${size}px;color:${color};font-weight:bold;text-shadow:0 0 6px ${color};font-family:monospace;line-height:1">${count}</div><div style="font-size:10px;color:#666;letter-spacing:1px">COMBO</div>${milestone}`;
         el.style.opacity = '1';
+        el.style.transform = 'scale(1.1)';
+        setTimeout(() => { el.style.transform = 'scale(1)'; }, 100);
         clearTimeout(el._fadeTimer);
-        el._fadeTimer = setTimeout(() => { el.style.opacity = '0'; }, 1500);
+        el._fadeTimer = setTimeout(() => { el.style.opacity = '0'; }, 2000);
       }
       function loop(timestamp) {
         const dt = lastTime ? (timestamp - lastTime) / 1000 : 0.016;

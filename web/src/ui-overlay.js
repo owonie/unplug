@@ -39,8 +39,8 @@ export function showEnhancedGameOver(engine) {
   }
 
   // Class badge
-  const tierBadge = classTier === 3 ? '👑' : classTier === 2 ? '🌟' : classTier === 1 ? '⭐' : '🗡️';
-  const classDisplay = classTier > 0 ? `${tierBadge} ${className}` : '🗡️ No Class';
+  const tierBadge = classTier === 3 ? '👑' : classTier === 2 ? '🌟' : classTier === 1 ? '⭐' : '';
+  const classDisplay = classTier > 0 ? `${tierBadge} ${className}` : `Lv.${engine.player_level()} Unpromoted`;
 
   // Achievements
   const titles = [];

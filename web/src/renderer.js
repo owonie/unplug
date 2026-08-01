@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { vfxMethods, vfxShieldMethods, vfxDirectionalMethods } from './vfx.js';
 
 export class ThreeRenderer {
@@ -25,6 +29,7 @@ export class ThreeRenderer {
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(w, h);
+      this.composer.setSize(w, h);
     });
 
     // === ART DIRECTION: "죽어가는 저채도 세계에서 원소 룬만 빛나는 오컬트 로우폴리" ===
@@ -110,6 +115,50 @@ export class ThreeRenderer {
 
     // Fog — matches background, gentle fade
     this.scene.fog = new THREE.FogExp2(0x090B14, 0.012);
+
+    // === Post-processing: Selective Bloom + Vignette + Tone Mapping ===
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+
+    // Subtle bloom (threshold high = only bright emissives bloom)
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.4,   // strength (subtle)
+      0.8,   // radius
+      0.85   // threshold (only brightest things bloom)
+    );
+    this.composer.addPass(bloomPass);
+
+    // Vignette + color correction shader
+    const vignetteShader = {
+      uniforms: {
+        tDiffuse: { value: null },
+        darkness: { value: 0.4 },
+        offset: { value: 1.0 },
+      },
+      vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float darkness;
+        uniform float offset;
+        varying vec2 vUv;
+        void main() {
+          vec4 color = texture2D(tDiffuse, vUv);
+          // Vignette
+          vec2 uv = (vUv - 0.5) * 2.0;
+          float vignette = 1.0 - dot(uv, uv) * darkness;
+          color.rgb *= clamp(vignette, 0.0, 1.0);
+          // Slight contrast boost
+          color.rgb = pow(color.rgb, vec3(1.05));
+          gl_FragColor = color;
+        }
+      `,
+    };
+    this.composer.addPass(new ShaderPass(vignetteShader));
+
+    // Tone mapping
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.1;
 
     // Object pools
     this.playerGroup = null;
@@ -625,7 +674,7 @@ export class ThreeRenderer {
       }
     });
 
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
 
     // Update slash effects
     this.updateSlashes(dt);
