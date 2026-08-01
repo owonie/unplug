@@ -526,9 +526,9 @@ impl World {
         let is_boss_wave = self.wave_number % 10 == 0 && self.wave_number > 0;
         // S-curve spawn interval: starts slow, gets fast mid-game, plateaus
         let base_interval = match self.wave_number {
-            0 | 1 => 2.5,
-            2 => 2.0,
-            3 => 1.7,
+            0 | 1 => 3.5,   // Wave 1: very slow (tutorial pace)
+            2 => 2.8,       // Wave 2: still gentle
+            3 => 2.0,
             _ => {
                 // S-curve: interval decreases from 1.5 to 0.7
                 let min_interval = 0.7;
@@ -554,10 +554,10 @@ impl World {
 
         // 웨이브별 스폰 구성 (근거리4:원거리1 비율 wave2+)
         let (types, count): (Vec<u32>, u32) = match wave {
-            1 => (vec![0, 0, 0, 0, 0], 2),                           // 스켈레톤만
-            2 => (vec![0, 0, 4, 4, 5], 4),                           // +스웜+궁수
-            3 => (vec![0, 2, 4, 4, 5], 5),                           // +임프
-            4 => (vec![0, 2, 3, 4, 5], 6),                           // +레이스
+            1 => (vec![0, 0, 0, 0, 0], 1),                           // 스켈레톤만, 적게
+            2 => (vec![0, 0, 0, 4, 4], 2),                           // +스웜 소수
+            3 => (vec![0, 0, 4, 4, 5], 4),                           // +궁수
+            4 => (vec![0, 2, 3, 4, 5], 5),                           // +임프+레이스
             5 => (vec![0, 1, 2, 4, 5], 6),                           // 혼합
             6 => (vec![0, 4, 4, 6, 5], 7),                           // 스웜+돌격+궁수
             7 => (vec![4, 4, 4, 6, 5], 8),                           // 스웜 물량+궁수
@@ -646,7 +646,7 @@ impl World {
         let all_promos: Vec<u8> = promotions.iter().chain(hidden_promos.iter()).copied().collect();
         let total_orbs = self.player.total_elements();
         // 1st promotion: 2+ orbs
-        if !all_promos.is_empty() && self.player.class_tier == 0 && total_orbs >= 2 {
+        if !all_promos.is_empty() && self.player.class_tier == 0 && total_orbs >= 1 {
             // 1st promotion
             let promo_id = all_promos[(seed as usize) % all_promos.len()];
             self.level_up_choices[0] = 100 + promo_id as u32;
@@ -660,7 +660,7 @@ impl World {
             return;
         }
         // 2nd/3rd promotion: 5+ orbs for 2nd, 8+ for 3rd
-        let orb_req = if self.player.class_tier == 1 { 5 } else { 8 };
+        let orb_req = if self.player.class_tier == 1 { 4 } else { 7 };
         if !all_promos.is_empty() && self.player.class_tier >= 1 && total_orbs >= orb_req && self.player.class_tier < 3 {
             let promo_id = all_promos[(seed as usize) % all_promos.len()];
             self.level_up_choices[0] = 100 + promo_id as u32;
@@ -1014,11 +1014,11 @@ impl World {
             let cost = 20.0;
             if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
             self.player.stamina -= cost;
-            self.player.active_skill_cd = 1.2;
+            self.player.active_skill_cd = 3.5; // Post-promo: 3.5s CD
         } else {
-            // Pre-promo: longer cooldown, no stamina cost
+            // Pre-promo: 4s cooldown, no stamina cost
             if self.player.active_skill_cd > 0.0 { return; }
-            self.player.active_skill_cd = 2.0;
+            self.player.active_skill_cd = 4.0;
         }
 
         let px = self.player.x;
@@ -1063,7 +1063,7 @@ impl World {
         } else {
             if self.player.shield_hp > 0.0 { return; }
             if self.player.active_skill_cd > 0.0 { return; }
-            self.player.active_skill_cd = 3.0;
+            self.player.active_skill_cd = 12.0; // Shield: long CD pre-promo
         }
         let shield_pct = if is_pre_promo { 0.25 } else { 0.4 };
         self.player.shield_hp = self.player.max_hp * shield_pct;
@@ -1083,7 +1083,7 @@ impl World {
         } else {
             // Pre-promo: longer CD, no stamina, weaker
             if self.player.active_skill_cd > 0.0 { return; }
-            self.player.active_skill_cd = 20.0;
+            self.player.active_skill_cd = 45.0;
         }
 
         let px = self.player.x;

@@ -57,6 +57,7 @@
     @keyframes dmg-float{0%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.1)}30%{transform:translateX(-50%) translateY(-20px) scale(1.2)}100%{opacity:0;transform:translateX(-50%) translateY(-60px) scale(0.7)}}
     @keyframes promo-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}30%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(0.9) translateY(-20px)}}
     @keyframes skill-acquired{0%{opacity:0;transform:translateX(-50%) translateY(8px)}15%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.02)}75%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-15px)}}
+    @keyframes flash-fade{0%{opacity:1}100%{opacity:0}}
   </style>
 </head>
 <body>
@@ -597,10 +598,27 @@
             const angle = Math.atan2(-dy, dx);
 
             if (gesture === 'outward') {
-              if (!checkMana(20)) { dragStart=null;isDragging=false;dragPoints=[];return; }
+              if (engine.player_class_tier() > 0 && !checkMana(20)) { dragStart=null;isDragging=false;dragPoints=[];return; }
               engine.use_directional_skill(angle);
-              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, getElement(), 7);
-              renderer.shake(0.35, 0.1);
+              const elem = getElement();
+              // === P0-3: 상용 수준 타격감 ===
+              // 1. 시전 예고 플래시 (0.1s 밝은 원소색)
+              const preFlash = document.createElement('div');
+              const flashColors = {0:'rgba(255,255,255,0.15)',1:'rgba(255,100,0,0.2)',2:'rgba(50,200,255,0.2)',3:'rgba(255,220,0,0.2)',4:'rgba(150,50,255,0.2)'};
+              preFlash.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:${flashColors[elem]||flashColors[0]};pointer-events:none;z-index:998;animation:flash-fade 0.15s ease-out forwards`;
+              document.body.appendChild(preFlash);
+              setTimeout(() => preFlash.remove(), 150);
+              // 2. VFX
+              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, elem, 7);
+              // 3. 히트스톱 50ms + 강한 카메라 임펄스
+              renderer.hitStop(0.05);
+              renderer.shake(0.5, 0.12);
+              // 4. 사운드 (원소별)
+              if (elem === 1) sound.playElementFire();
+              else if (elem === 2) sound.playElementIce();
+              else if (elem === 3) sound.playElementThunder();
+              else if (elem === 4) sound.playElementPoison();
+              else sound.playHit();
               showSkillName('outward');
             } else if (gesture === 'inward') {
               engine.use_shield_skill(); sound.playShield();
@@ -618,6 +636,10 @@
               flash.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.3);pointer-events:none;z-index:999;animation:flash-fade 0.3s ease-out forwards';
               document.body.appendChild(flash);
               setTimeout(() => flash.remove(), 300);
+            } else {
+              // Gesture recognition FAILED → weakened directional attack (50% range/damage)
+              engine.use_directional_skill(Math.atan2(-dy, dx));
+              renderer.shake(0.1, 0.05);
             }
           } else if (!isDragging) {
             engine.use_active_skill();
@@ -984,8 +1006,8 @@
           document.getElementById('stats').appendChild(promoHud);
         }
         if (classTier < 3) {
-          const nextReq = classTier === 0 ? 2 : classTier === 1 ? 5 : 8;
-          const nextLv = classTier === 0 ? 3 : classTier === 1 ? 5 : 8;
+          const nextReq = classTier === 0 ? 1 : classTier === 1 ? 4 : 7;
+          const nextLv = classTier === 0 ? 2 : classTier === 1 ? 4 : 7;
           const lvOk = engine.player_level() >= nextLv;
           const orbOk = totalOrbs >= nextReq;
           const canPromo = lvOk && orbOk;

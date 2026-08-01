@@ -16,9 +16,9 @@ pub struct ClassDef {
 pub fn can_promote_to(class: &ClassDef, fire: u8, ice: u8, thunder: u8, poison: u8, current_class: u8, level: u32) -> bool {
     // Level check
     let level_req = match class.tier {
-        1 => 3,
-        2 => 5,
-        3 => 8,
+        1 => 2,   // Was 3 → faster first promotion
+        2 => 4,   // Was 5
+        3 => 7,   // Was 8
         _ => 999,
     };
     if level < level_req { return false; }
@@ -26,9 +26,9 @@ pub fn can_promote_to(class: &ClassDef, fire: u8, ice: u8, thunder: u8, poison: 
     // Prerequisite class check
     if class.from_class > 0 && current_class != class.from_class { return false; }
 
-    // Total orbs minimum: tier 1 = 2, tier 2 = 5, tier 3 = 8
+    // Total orbs minimum: tier 1 = 1, tier 2 = 4, tier 3 = 7
     let total = fire + ice + thunder + poison;
-    let min_total = match class.tier { 1 => 2, 2 => 5, 3 => 8, _ => 2 };
+    let min_total = match class.tier { 1 => 1, 2 => 4, 3 => 7, _ => 1 };
     if total < min_total { return false; }
 
     // Individual element requirements
@@ -63,10 +63,10 @@ pub fn all_classes() -> &'static [ClassDef] {
 pub static ALL_CLASSES: [ClassDef; 45] = [
     // === 1st Class (C01~C15) ===
     // Pure single element (4)
-    ClassDef { id: 1,  name: "Flame Knight",      tier: 1, from_class: 0, req_fire: 2, req_ice: 0, req_thunder: 0, req_poison: 0 },
-    ClassDef { id: 2,  name: "Frost Mage",        tier: 1, from_class: 0, req_fire: 0, req_ice: 2, req_thunder: 0, req_poison: 0 },
-    ClassDef { id: 3,  name: "Storm Warrior",     tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 2, req_poison: 0 },
-    ClassDef { id: 4,  name: "Plague Bearer",     tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 0, req_poison: 2 },
+    ClassDef { id: 1,  name: "Flame Knight",      tier: 1, from_class: 0, req_fire: 1, req_ice: 0, req_thunder: 0, req_poison: 0 },
+    ClassDef { id: 2,  name: "Frost Mage",        tier: 1, from_class: 0, req_fire: 0, req_ice: 1, req_thunder: 0, req_poison: 0 },
+    ClassDef { id: 3,  name: "Storm Warrior",     tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 1, req_poison: 0 },
+    ClassDef { id: 4,  name: "Plague Bearer",     tier: 1, from_class: 0, req_fire: 0, req_ice: 0, req_thunder: 0, req_poison: 1 },
     // Hybrid 2-element (6)
     ClassDef { id: 5,  name: "Steam Engineer",    tier: 1, from_class: 0, req_fire: 1, req_ice: 1, req_thunder: 0, req_poison: 0 },
     ClassDef { id: 6,  name: "Plasma Mage",       tier: 1, from_class: 0, req_fire: 1, req_ice: 0, req_thunder: 1, req_poison: 0 },
