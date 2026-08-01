@@ -241,20 +241,32 @@
 
       // === Tutorial ===
       function startTutorial() {
-        const steps = [
-          { time: 500, text: '🗡️ WASD로 이동 — 적에게 가까이 가면 자동 공격!', duration: 4000 },
-          { time: 5000, text: '💨 SPACE = 대쉬 (무적 회피!)', duration: 3000 },
-          { time: 12000, text: '⬆️ 레벨업하면 원소 오브를 모으세요\n조합에 따라 전직이 결정됩니다', duration: 5000 },
-          { time: 25000, text: '🖱️ 전직 후: 마우스 클릭/드래그로 스킬 사용!', duration: 4000 },
-        ];
         const el = document.getElementById('tutorial');
-        steps.forEach(step => {
-          setTimeout(() => {
-            el.innerHTML = step.text.replace(/\n/g, '<br>');
-            el.style.opacity = '1';
-            setTimeout(() => { el.style.opacity = '0'; }, step.duration);
-          }, step.time);
-        });
+        // Phase 1: 즉시 제스처 안내 (1초 후)
+        setTimeout(() => {
+          el.innerHTML = '<div style="font-size:22px;color:#daa520">⚔️ DRAG → to attack!</div><div style="font-size:12px;color:#888;margin-top:8px">Click and drag outward</div>';
+          el.style.opacity = '1';
+        }, 800);
+        // Phase 2: 성공하면 사라짐 (제스처 발동 시 hideOnboarding 호출)
+        window._onboardingActive = true;
+        // Phase 3: 이동 안내 (5초 후)
+        setTimeout(() => {
+          if (!window._onboardingActive) return;
+          el.innerHTML = '<div style="font-size:16px;color:#aaa">WASD to move • DRAG → to attack</div>';
+        }, 5000);
+        // Phase 4: 원소 안내 (15초 후)
+        setTimeout(() => {
+          el.style.opacity = '0';
+          window._onboardingActive = false;
+        }, 15000);
+      }
+      function hideOnboarding() {
+        if (!window._onboardingActive) return;
+        window._onboardingActive = false;
+        const el = document.getElementById('tutorial');
+        el.innerHTML = '<div style="font-size:24px;color:#44ff88;text-shadow:0 0 12px #44ff88">✨ PERFECT!</div>';
+        el.style.opacity = '1';
+        setTimeout(() => { el.style.opacity = '0'; }, 1500);
       }
 
       // === Class Tree Viewer ===
@@ -613,6 +625,8 @@
               // 3. 히트스톱 50ms + 강한 카메라 임펄스
               renderer.hitStop(0.05);
               renderer.shake(0.5, 0.12);
+              // Onboarding: first gesture success!
+              if (window._onboardingActive) hideOnboarding();
               // 4. 사운드 (원소별)
               if (elem === 1) sound.playElementFire();
               else if (elem === 2) sound.playElementIce();
