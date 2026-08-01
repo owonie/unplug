@@ -29,7 +29,7 @@ export class ThreeRenderer {
 
     // === ART DIRECTION: "죽어가는 저채도 세계에서 원소 룬만 빛나는 오컬트 로우폴리" ===
     // Palette adjusted for VISIBILITY: bg dark blue-gray, ground clearly visible
-    this.scene.background = new THREE.Color(0x111822);
+    this.scene.background = new THREE.Color(0x0a1018);
 
     // Lighting — dark fantasy but READABLE (player/enemies clearly visible)
     const ambient = new THREE.AmbientLight(0xaabbcc, 0.8);
@@ -60,8 +60,8 @@ export class ThreeRenderer {
     for (let i = 0; i < posAttr.count; i++) {
       posAttr.setZ(i, (Math.random() - 0.5) * 0.08);
     }
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x3a4a5a, roughness: 0.85, metalness: 0.0,
+    const groundMat = new THREE.MeshBasicMaterial({
+      color: 0x1e2a38,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -90,7 +90,7 @@ export class ThreeRenderer {
 
     // Environment: low ruined pillars — #1A2433, non-competing with gameplay
     const pillarGeo = new THREE.CylinderGeometry(0.25, 0.35, 1.8, 5);
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4a5a6a, roughness: 0.85 });
+    const pillarMat = new THREE.MeshBasicMaterial({ color: 0x2a3848 });
     const pillarPositions = [
       [35, 35], [65, 35], [35, 65], [65, 65],
       [30, 50], [70, 50], [50, 30], [50, 70],
@@ -109,7 +109,7 @@ export class ThreeRenderer {
     }
 
     // Fog — matches background, gentle fade
-    this.scene.fog = new THREE.FogExp2(0x111822, 0.005);
+    this.scene.fog = new THREE.FogExp2(0x0a1018, 0.005);
 
     // No post-processing — direct rendering for performance and visibility
 
