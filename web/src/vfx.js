@@ -9,31 +9,40 @@ export const vfxMethods = {
   spawnDeathParticles(x, z, element = 0) {
     let colors, ringColor;
     switch (element) {
-      case 1: colors = [0xff4400, 0xff6600, 0xcc3300, 0xff8800]; ringColor = 0xff4400; break;
-      case 2: colors = [0x446677, 0x5588aa, 0x334455, 0x6699aa]; ringColor = 0x446677; break;
-      case 3: colors = [0xccaa00, 0xffdd44, 0xaa8800, 0xffff88]; ringColor = 0xffcc00; break;
-      case 4: colors = [0x220033, 0x330044, 0x1a0022, 0x440066]; ringColor = 0x330044; break;
-      default: colors = [0x666666, 0x888888, 0x444444, 0xaaaaaa]; ringColor = 0x888888; break;
+      case 1: colors = [0xff4400, 0xff6600, 0xcc3300, 0xff8800, 0xffaa00]; ringColor = 0xff4400; break;
+      case 2: colors = [0x44aacc, 0x66ccee, 0x2288aa, 0x88eeff, 0xaaffff]; ringColor = 0x44ccff; break;
+      case 3: colors = [0xccaa00, 0xffdd44, 0xffff88, 0xaa8800, 0xffffcc]; ringColor = 0xffcc00; break;
+      case 4: colors = [0x6622aa, 0x9933ff, 0x441188, 0xaa44ff, 0x33ff33]; ringColor = 0x9933ff; break;
+      default: colors = [0x888888, 0xaaaaaa, 0xcccccc, 0x666666, 0xffffff]; ringColor = 0xcccccc; break;
     }
-    const count = 6 + Math.floor(Math.random() * 4);
+    // More particles, bigger, faster — JUICE
+    const count = 10 + Math.floor(Math.random() * 6);
     for (let i = 0; i < count; i++) {
-      const size = 0.04 + Math.random() * 0.08;
-      const geo = new THREE.SphereGeometry(size, 4, 4);
-      const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: 0.6 });
+      const size = 0.06 + Math.random() * 0.12;
+      const geo = new THREE.SphereGeometry(size, 5, 5);
+      const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: 0.8 });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x, 0.4 + Math.random() * 0.2, z);
+      mesh.position.set(x, 0.3 + Math.random() * 0.4, z);
       this.scene.add(mesh);
       const angle = Math.random() * Math.PI * 2;
-      const speed = 2 + Math.random() * 4;
-      this.deathParticles.push({ mesh, vx: Math.cos(angle) * speed, vy: 3 + Math.random() * 3, vz: Math.sin(angle) * speed, life: 0.4 + Math.random() * 0.3 });
+      const speed = 3 + Math.random() * 6;
+      this.deathParticles.push({ mesh, vx: Math.cos(angle) * speed, vy: 4 + Math.random() * 4, vz: Math.sin(angle) * speed, life: 0.5 + Math.random() * 0.4 });
     }
-    const ringGeo = new THREE.RingGeometry(0.05, 0.2, 12);
-    const ringMat = new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+    // Bigger shockwave ring
+    const ringGeo = new THREE.RingGeometry(0.1, 0.4, 16);
+    const ringMat = new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.set(x, 0.08, z);
+    ring.position.set(x, 0.1, z);
     ring.rotation.x = -Math.PI / 2;
     this.scene.add(ring);
-    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 0.25, isRing: true, scale: 1 });
+    this.deathParticles.push({ mesh: ring, vx: 0, vy: 0, vz: 0, life: 0.35, isRing: true, scale: 0.5 });
+    // Secondary flash burst
+    const flashGeo = new THREE.SphereGeometry(0.3, 8, 8);
+    const flashMat = new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity: 0.5 });
+    const flash = new THREE.Mesh(flashGeo, flashMat);
+    flash.position.set(x, 0.4, z);
+    this.scene.add(flash);
+    this.deathParticles.push({ mesh: flash, vx: 0, vy: 0, vz: 0, life: 0.12, isRing: true, scale: 1 });
   },
 
   spawnSlash(fromX, fromZ, toX, toZ, isCrit, atkPower = 25, element = 0) {

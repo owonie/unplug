@@ -447,8 +447,8 @@
       gameCanvas.addEventListener('mousedown', e => {
         if (!gameStarted || !engine) return;
         e.preventDefault();
-        if (e.button === 0 && engine.player_class_tier() > 0) {
-          // Left click: 1st class skill (element)
+        if (e.button === 0) {
+          // Left click: gesture skill (works pre-promotion too!)
           dragStart = { x: e.clientX, y: e.clientY, button: 0 };
           dragPoints = [{ x: e.clientX, y: e.clientY }];
           isDragging = false;
@@ -468,6 +468,9 @@
         const dy = e.clientY - dragStart.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         dragPoints.push({ x: e.clientX, y: e.clientY });
+
+        // Draw gesture trail
+        drawGestureTrail(dragPoints);
 
         if (dist > 20) {
           isDragging = true;
@@ -583,6 +586,7 @@
         const dist = Math.sqrt(dx*dx + dy*dy);
         const btn = dragStart.button;
 
+        clearGestureTrail();
         if (magicCircle) { magicCircle.remove(); magicCircle = null; }
         if (arrowEl) { arrowEl.remove(); arrowEl = null; }
         if (trailCanvas) { trailCanvas.remove(); trailCanvas = null; }
@@ -748,6 +752,29 @@
       }
       function hideSpellGuide() {
         if (spellGuideEl) { spellGuideEl.remove(); spellGuideEl = null; }
+      }
+
+      function drawGestureTrail(points) {
+        let svg = document.getElementById('gesture-trail');
+        if (!svg) {
+          svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.id = 'gesture-trail';
+          svg.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:998';
+          document.body.appendChild(svg);
+        }
+        if (points.length < 2) return;
+        const element = getElement();
+        const colors = { 0:'#ffffff', 1:'#ff6644', 2:'#44ccff', 3:'#ffdd44', 4:'#aa44ff' };
+        const color = colors[element] || '#ffffff';
+        // Build path from last N points
+        const recent = points.slice(-30);
+        let d = `M ${recent[0].x} ${recent[0].y}`;
+        for (let i = 1; i < recent.length; i++) { d += ` L ${recent[i].x} ${recent[i].y}`; }
+        svg.innerHTML = `<path d="${d}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" opacity="0.7" filter="url(#glow-trail)"/><defs><filter id="glow-trail"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+      }
+      function clearGestureTrail() {
+        const svg = document.getElementById('gesture-trail');
+        if (svg) svg.innerHTML = '';
       }
 
       function showSkillName(gesture) {
@@ -944,6 +971,37 @@
 
         // Stat panel
         const sp = document.getElementById('stat-panel');
+        // === Promotion Progress HUD ===
+        const classTier = engine.player_class_tier();
+        const fireL = engine.fire_level();
+        const iceL = engine.ice_level();
+        const thunderL = engine.thunder_level();
+        const poisonL = engine.poison_level();
+        const totalOrbs = engine.element_total();
+        let promoHud = document.getElementById('promo-hud');
+        if (!promoHud) {
+          promoHud = document.createElement('div');
+          promoHud.id = 'promo-hud';
+          promoHud.style.cssText = 'margin-top:6px;font-size:12px;color:#aaa;line-height:1.6;background:rgba(0,0,0,0.6);padding:4px 8px;border-radius:4px;border:1px solid #333';
+          document.getElementById('stats').appendChild(promoHud);
+        }
+        if (classTier < 3) {
+          const nextReq = classTier === 0 ? 2 : classTier === 1 ? 5 : 8;
+          const nextLv = classTier === 0 ? 3 : classTier === 1 ? 5 : 8;
+          const lvOk = engine.player_level() >= nextLv;
+          const orbOk = totalOrbs >= nextReq;
+          const canPromo = lvOk && orbOk;
+          promoHud.innerHTML =
+            `<span style="color:${fireL>0?'#ff4400':'#333'}">🔥${fireL}</span> ` +
+            `<span style="color:${iceL>0?'#44ccff':'#333'}">❄️${iceL}</span> ` +
+            `<span style="color:${thunderL>0?'#ffcc00':'#333'}">⚡${thunderL}</span> ` +
+            `<span style="color:${poisonL>0?'#9933ff':'#333'}">☠️${poisonL}</span>` +
+            `<br><span style="color:${canPromo?'#ffcc00':'#666'};font-size:10px">${canPromo ? '⭐ PROMOTION READY!' : `Next: Lv${nextLv} + ${nextReq} orbs (${totalOrbs}/${nextReq})`}</span>`;
+          promoHud.style.display = 'block';
+        } else {
+          promoHud.style.display = 'none';
+        }
+
         if (sp) sp.innerHTML =
           `⚔️ ATK <span style="color:#ff8844">${Math.round(engine.player_damage())}</span><br>` +
           `⚡ SPD <span style="color:#44ccff">${engine.player_atk_speed().toFixed(1)}/s</span><br>` +
@@ -1174,11 +1232,29 @@
       // Game loop
       let lastTime = 0;
       let gameOverShown = false;
+      let comboCount = 0;
+      let comboTimer = 0;
+      function showCombo(count) {
+        let el = document.getElementById('combo-display');
+        if (!el) { el = document.createElement('div'); el.id = 'combo-display'; el.style.cssText = 'position:fixed;top:20%;left:50%;transform:translateX(-50%);pointer-events:none;z-index:999;text-align:center;transition:opacity 0.3s'; document.body.appendChild(el); }
+        const size = Math.min(36 + count * 2, 64);
+        const color = count >= 20 ? '#ff44ff' : count >= 10 ? '#ffcc00' : '#44ff88';
+        el.innerHTML = `<div style="font-size:${size}px;color:${color};font-weight:bold;text-shadow:0 0 10px ${color},0 0 20px ${color}; font-family:'Courier New',monospace">${count} COMBO!</div>`;
+        el.style.opacity = '1';
+        clearTimeout(el._fadeTimer);
+        el._fadeTimer = setTimeout(() => { el.style.opacity = '0'; }, 1500);
+      }
       function loop(timestamp) {
         const dt = lastTime ? (timestamp - lastTime) / 1000 : 0.016;
         lastTime = timestamp;
 
         if (!gameStarted) { requestAnimationFrame(loop); return; }
+
+        // Combo timer decay
+        if (comboTimer > 0) {
+          comboTimer -= dt;
+          if (comboTimer <= 0) { comboCount = 0; }
+        }
 
         // Game over check
         if (!engine.player_alive() && !gameOverShown) {
@@ -1186,7 +1262,20 @@
           showGameOver(engine);
         }
 
-        engine.update(timestamp);
+        // Gesture slowmo: during drag, pass reduced timestamp for 0.3x speed
+        if (isDragging && dragStart) {
+          // Skip engine update partially — update every 3rd frame only
+          if (!window._gestureFrameSkip) window._gestureFrameSkip = 0;
+          window._gestureFrameSkip++;
+          if (window._gestureFrameSkip % 3 !== 0) {
+            // Don't update engine — creates slowmo effect
+          } else {
+            engine.update(timestamp);
+          }
+        } else {
+          window._gestureFrameSkip = 0;
+          engine.update(timestamp);
+        }
 
         // Build world state for Three.js
         const enemies = [];
@@ -1239,7 +1328,13 @@
           }
           if (deathCount > 0) {
             renderer.shake(0.25 + deathCount * 0.1, 0.1);
-            renderer.hitStop(0.03 * Math.min(deathCount, 3)); // brief freeze on kill
+            renderer.hitStop(0.03 * Math.min(deathCount, 3));
+            // Combo counter
+            comboCount += deathCount;
+            comboTimer = 2.0; // 2s window
+            if (comboCount >= 5) {
+              showCombo(comboCount);
+            }
           }
 
           // Skill visual events

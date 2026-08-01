@@ -1007,19 +1007,26 @@ impl World {
 
     /// Directional skill (drag outward) — cone attack in direction
     pub fn use_directional_skill(&mut self, angle: f32) {
-        if self.player.class_tier == 0 { return; }
-        if self.player.active_skill_cd > 0.0 { return; }
-        let cost = 20.0;
-        if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
-
-        self.player.stamina -= cost;
-        self.player.active_skill_cd = 1.2;
+        // Pre-promotion: free basic gesture (no stamina cost, weaker)
+        let is_pre_promo = self.player.class_tier == 0;
+        if !is_pre_promo {
+            if self.player.active_skill_cd > 0.0 { return; }
+            let cost = 20.0;
+            if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
+            self.player.stamina -= cost;
+            self.player.active_skill_cd = 1.2;
+        } else {
+            // Pre-promo: longer cooldown, no stamina cost
+            if self.player.active_skill_cd > 0.0 { return; }
+            self.player.active_skill_cd = 2.0;
+        }
 
         let px = self.player.x;
         let pz = self.player.z;
-        let range = 8.0;
+        let range = if is_pre_promo { 6.0 } else { 8.0 };
         let cone_half = -0.17; // cos(100°) ≈ -0.17, so ~200° wide cone
-        let damage = self.player.attack_damage * 3.0; // 3x ATK
+        let damage_mult = if is_pre_promo { 2.0 } else { 3.0 };
+        let damage = self.player.attack_damage * damage_mult;
 
         let dir_x = angle.cos();
         let dir_z = -angle.sin(); // screen up = world -Z
@@ -1047,31 +1054,42 @@ impl World {
 
     /// Shield skill (drag inward) — grants shield HP, explodes after 5s
     pub fn use_shield_skill(&mut self) {
-        if self.player.class_tier == 0 { return; }
-        let cost = 35.0;
-        if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
-        if self.player.shield_hp > 0.0 { return; } // already shielded
-
-        self.player.stamina -= cost;
-        self.player.shield_hp = self.player.max_hp * 0.4; // 40% of max HP as shield
-        self.player.shield_timer = 5.0; // explodes in 5s
+        let is_pre_promo = self.player.class_tier == 0;
+        if !is_pre_promo {
+            let cost = 35.0;
+            if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
+            if self.player.shield_hp > 0.0 { return; }
+            self.player.stamina -= cost;
+        } else {
+            if self.player.shield_hp > 0.0 { return; }
+            if self.player.active_skill_cd > 0.0 { return; }
+            self.player.active_skill_cd = 3.0;
+        }
+        let shield_pct = if is_pre_promo { 0.25 } else { 0.4 };
+        self.player.shield_hp = self.player.max_hp * shield_pct;
+        self.player.shield_timer = 5.0;
         self.log("🛡️ Shield!".into());
     }
 
     /// Ultimate skill (circle gesture) — massive AoE
     pub fn use_ultimate_skill(&mut self) {
-        if self.player.class_tier == 0 { return; }
-        let cost = 50.0;
-        if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
-        if self.player.active_skill_cd > 3.0 { return; } // still on ult CD
-
-        self.player.stamina -= cost;
-        self.player.active_skill_cd = 15.0; // 15s cooldown
+        let is_pre_promo = self.player.class_tier == 0;
+        if !is_pre_promo {
+            let cost = 50.0;
+            if self.player.stamina < cost { self.log_queue.push_back("⚠️ Not enough mana!".into()); return; }
+            if self.player.active_skill_cd > 3.0 { return; }
+            self.player.stamina -= cost;
+            self.player.active_skill_cd = 15.0;
+        } else {
+            // Pre-promo: longer CD, no stamina, weaker
+            if self.player.active_skill_cd > 0.0 { return; }
+            self.player.active_skill_cd = 20.0;
+        }
 
         let px = self.player.x;
         let pz = self.player.z;
-        let range = 14.0;
-        let damage = self.player.attack_damage * 5.0;
+        let range = if is_pre_promo { 10.0 } else { 14.0 };
+        let damage = self.player.attack_damage * if is_pre_promo { 3.0 } else { 5.0 };
 
         for enemy in &mut self.enemies {
             if !enemy.alive { continue; }
