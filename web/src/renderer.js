@@ -27,15 +27,16 @@ export class ThreeRenderer {
       this.renderer.setSize(w, h);
     });
 
-    // Scene setup
-    this.scene.background = new THREE.Color(0x050308);
+    // === ART DIRECTION: "죽어가는 저채도 세계에서 원소 룬만 빛나는 오컬트 로우폴리" ===
+    // Palette: bg #090B14, ground #101825, structure #1A2433, enemy #687080, player rim #DCE8FF
+    this.scene.background = new THREE.Color(0x090B14);
 
-    // Lighting
-    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+    // Lighting — low-key, cold, minimal
+    const ambient = new THREE.AmbientLight(0x8899aa, 0.35);
     this.scene.add(ambient);
 
-    const dir = new THREE.DirectionalLight(0xffeedd, 1.0);
-    dir.position.set(10, 20, 10);
+    const dir = new THREE.DirectionalLight(0xccddee, 0.6);
+    dir.position.set(10, 25, 10);
     dir.castShadow = true;
     dir.shadow.mapSize.set(2048, 2048);
     dir.shadow.camera.left = -30;
@@ -44,62 +45,71 @@ export class ThreeRenderer {
     dir.shadow.camera.bottom = -30;
     this.scene.add(dir);
 
-    const hemi = new THREE.HemisphereLight(0x8899aa, 0x333322, 0.3);
+    const hemi = new THREE.HemisphereLight(0x1a2040, 0x050510, 0.2);
     this.scene.add(hemi);
 
-    // Player light
-    this.playerLight = new THREE.PointLight(0xffffcc, 1.5, 12);
+    // Player light — rim glow
+    this.playerLight = new THREE.PointLight(0xDCE8FF, 2.0, 10);
     this.playerLight.position.set(50, 3, 50);
     this.scene.add(this.playerLight);
 
-    // Ground — dark fantasy arena (larger, more atmospheric)
-    const groundGeo = new THREE.PlaneGeometry(120, 120, 30, 30);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x0d1a0d, roughness: 0.98 });
+    // Ground — #101825 with subtle vertex color variation
+    const groundGeo = new THREE.PlaneGeometry(120, 120, 40, 40);
+    // Add subtle vertex noise for organic feel
+    const posAttr = groundGeo.attributes.position;
+    for (let i = 0; i < posAttr.count; i++) {
+      posAttr.setZ(i, (Math.random() - 0.5) * 0.08);
+    }
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x101825, roughness: 0.95, metalness: 0.05,
+    });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(50, 0, 50);
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    // Inner arena ring (glowing rune circle)
-    const ringGeo = new THREE.RingGeometry(12, 12.5, 48);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x332200, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+    // Central rune circle (world center marker — faint occult glyph)
+    const ringGeo = new THREE.RingGeometry(10, 10.3, 64);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x1a2433, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
-    ring.position.set(50, 0.02, 50);
+    ring.position.set(50, 0.01, 50);
     this.scene.add(ring);
 
-    // Outer rune ring
-    const outerRingGeo = new THREE.RingGeometry(20, 20.3, 64);
-    const outerRingMat = new THREE.MeshBasicMaterial({ color: 0x1a1100, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
-    const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
-    outerRing.rotation.x = -Math.PI / 2;
-    outerRing.position.set(50, 0.01, 50);
-    this.scene.add(outerRing);
+    // Inner glyph cross (direction reference)
+    const crossMat = new THREE.MeshBasicMaterial({ color: 0x1a2433, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+    for (let angle = 0; angle < 4; angle++) {
+      const lineGeo = new THREE.PlaneGeometry(0.15, 8);
+      const line = new THREE.Mesh(lineGeo, crossMat);
+      line.rotation.x = -Math.PI / 2;
+      line.rotation.z = (angle * Math.PI) / 4;
+      line.position.set(50, 0.01, 50);
+      this.scene.add(line);
+    }
 
-    // Environment: scattered dark stone pillars
-    const pillarGeo = new THREE.CylinderGeometry(0.3, 0.4, 2.5, 6);
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.9 });
+    // Environment: low ruined pillars — #1A2433, non-competing with gameplay
+    const pillarGeo = new THREE.CylinderGeometry(0.25, 0.35, 1.8, 5);
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1A2433, roughness: 0.95 });
     const pillarPositions = [
       [35, 35], [65, 35], [35, 65], [65, 65],
       [30, 50], [70, 50], [50, 30], [50, 70],
-      [38, 42], [62, 58], [42, 62], [58, 38],
     ];
     for (const [px, pz] of pillarPositions) {
       const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-      pillar.position.set(px, 1.25, pz);
+      pillar.position.set(px, 0.9, pz);
       pillar.castShadow = true;
       this.scene.add(pillar);
-      // Tiny glow at top
-      const glowGeo = new THREE.SphereGeometry(0.1, 6, 6);
-      const glowMat = new THREE.MeshBasicMaterial({ color: 0xdaa520, transparent: true, opacity: 0.3 });
-      const glow = new THREE.Mesh(glowGeo, glowMat);
-      glow.position.set(px, 2.6, pz);
-      this.scene.add(glow);
+      // Broken top — no glowing sphere (decorative only, dark)
+      const capGeo = new THREE.ConeGeometry(0.3, 0.3, 5);
+      const cap = new THREE.Mesh(capGeo, pillarMat);
+      cap.position.set(px, 1.85, pz);
+      cap.rotation.x = Math.PI; // inverted
+      this.scene.add(cap);
     }
 
-    // Fog — adds depth and mystery
-    this.scene.fog = new THREE.FogExp2(0x050308, 0.015);
+    // Fog — matches background, gentle fade
+    this.scene.fog = new THREE.FogExp2(0x090B14, 0.012);
 
     // Object pools
     this.playerGroup = null;
@@ -124,6 +134,9 @@ export class ThreeRenderer {
     this._shakeIntensity = 0;
     this._shakeDuration = 0;
     this._hitStopTimer = 0;
+    this._zoomPunchTimer = 0;
+    this._zoomPunchDuration = 0;
+    this._zoomPunchIntensity = 0;
   }
 
   async loadModels() {
@@ -201,11 +214,19 @@ export class ThreeRenderer {
     tex.repeat.set(1 / this.sprites.idle.frames, 1);
     tex.offset.set(0, 0);
 
-    // Plane mesh — 정사각형 비율 유지 (스프라이트가 150x150 per frame)
-    const geo = new THREE.PlaneGeometry(2.5, 2.5);
+    // Plane mesh — ENLARGED 20% for readability (피드백: 15-25% 확대)
+    const geo = new THREE.PlaneGeometry(3.0, 3.0);
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, alphaTest: 0.1, depthWrite: false });
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(30, 1.25, 30);
+    mesh.position.set(30, 1.5, 30);
+
+    // Foot rune — class/element indicator (발밑 문양)
+    const runeGeo = new THREE.RingGeometry(0.4, 0.55, 24);
+    const runeMat = new THREE.MeshBasicMaterial({ color: 0xDCE8FF, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+    this.playerRuneMesh = new THREE.Mesh(runeGeo, runeMat);
+    this.playerRuneMesh.rotation.x = -Math.PI / 2;
+    this.playerRuneMesh.position.set(30, 0.02, 30);
+    this.scene.add(this.playerRuneMesh);
 
     this.playerGroup = mesh;
     this.playerSpriteMat = mat;
@@ -252,6 +273,19 @@ export class ThreeRenderer {
       return; // freeze everything
     }
 
+    // === Zoom Punch recovery ===
+    if (this._zoomPunchTimer > 0) {
+      this._zoomPunchTimer -= dt;
+      if (this._zoomPunchTimer <= 0) {
+        this.camera.fov = 50; // reset to base
+        this.camera.updateProjectionMatrix();
+      } else {
+        const progress = 1.0 - (this._zoomPunchTimer / this._zoomPunchDuration);
+        this.camera.fov = 50 - this._zoomPunchIntensity * (1.0 - progress);
+        this.camera.updateProjectionMatrix();
+      }
+    }
+
     // === Camera Shake ===
     let shakeX = 0, shakeZ = 0;
     if (this._shakeTimer > 0) {
@@ -272,7 +306,7 @@ export class ThreeRenderer {
 
     // Player position + sprite animation
     if (this.playerGroup) {
-      this.playerGroup.position.set(playerX, 0.9, playerZ);
+      this.playerGroup.position.set(playerX, 1.2, playerZ);
 
       // Billboard: face camera (simple quaternion copy)
       this.playerGroup.quaternion.copy(this.camera.quaternion);
@@ -287,8 +321,19 @@ export class ThreeRenderer {
       if (faceDir < -0.01) this.playerFacing = -1;
       else if (faceDir > 0.01) this.playerFacing = 1;
 
-      // Scale (1.8 base, flip X)
-      this.playerGroup.scale.set(1.8 * this.playerFacing, 1.8, 1);
+      // Scale (2.2 enlarged, flip X)
+      this.playerGroup.scale.set(2.2 * this.playerFacing, 2.2, 1);
+
+      // Foot rune follows player + element color
+      if (this.playerRuneMesh) {
+        this.playerRuneMesh.position.set(playerX, 0.02, playerZ);
+        const elemRuneColors = { 1: 0xff4400, 2: 0x44ccff, 3: 0xffcc00, 4: 0x9933ff };
+        const runeColor = elemRuneColors[state.element] || 0xDCE8FF;
+        this.playerRuneMesh.material.color.set(runeColor);
+        this.playerRuneMesh.material.opacity = state.promoted ? 0.4 : 0.15;
+        // Gentle rotation
+        this.playerRuneMesh.rotation.z = this.clock.getElapsedTime() * 0.5;
+      }
 
       // Determine animation state
       let targetAnim = 'idle';
@@ -301,6 +346,8 @@ export class ThreeRenderer {
       const dashType = state.dashType || 5;
       if (state.playerDashing) {
         if (!this._dashTrail) this._dashTrail = [];
+        // Ground decal for dash path
+        if (Math.random() < 0.4) this.spawnDashDecal(playerX, playerZ, state.element || 0);
 
         if (dashType === 4) {
           // ☠️ Smoke: subtle dark purple wisps, player almost invisible
@@ -621,81 +668,137 @@ export class ThreeRenderer {
     const group = new THREE.Group();
     group.userData = { hitTimer: 0 };
 
-    // 9 enemy types
-    const configs = [
-      { bodyColor: 0xb8a878, headColor: 0xddccaa, eyeColor: 0x66ff66, scale: 1.0 },  // 0: 스켈레톤
-      { bodyColor: 0x7a7a8a, headColor: 0x9a9aaa, eyeColor: 0xff6600, scale: 1.5 },  // 1: 골렘
-      { bodyColor: 0xaa4455, headColor: 0xcc6677, eyeColor: 0xff44ff, scale: 0.7 },  // 2: 임프
-      { bodyColor: 0x5588aa, headColor: 0x77aacc, eyeColor: 0x44ffff, scale: 1.0 },  // 3: 레이스
-      { bodyColor: 0x884444, headColor: 0xaa5555, eyeColor: 0xff3333, scale: 0.6 },  // 4: 스웜
-      { bodyColor: 0x558855, headColor: 0x88bb88, eyeColor: 0xffff44, scale: 0.9 },  // 5: 궁수
-      { bodyColor: 0x995533, headColor: 0xbb7744, eyeColor: 0xff4400, scale: 1.3 },  // 6: 돌격병
-      { bodyColor: 0x9944aa, headColor: 0xcc66dd, eyeColor: 0xff88ff, scale: 1.8 },  // 7: 엘리트
-      { bodyColor: 0x551111, headColor: 0x882222, eyeColor: 0xff0000, scale: 2.5 },  // 8: 보스
-    ];
-    const cfg = configs[type] || configs[0];
+    // === ART: 적은 배경보다 25-35% 밝은 #687080 기조. 역할별 실루엣으로 구분 ===
+    // 밝기 계층: 배경(#090B14) < 지면(#101825) < 구조물(#1A2433) < 적(#687080) < 플레이어(#DCE8FF)
+    const baseGray = 0x687080;
+    const darkGray = 0x4a5060;
+    const eyeColors = [0x88ffaa, 0xff6622, 0xaa44ff, 0x44ddff, 0xff4444, 0xffcc00, 0xff6600, 0xff44ff, 0xff0000];
 
-    // Body
-    const body = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.22 * cfg.scale, 0.7 * cfg.scale, 6, 8),
-      new THREE.MeshStandardMaterial({ color: cfg.bodyColor, roughness: 0.8 })
-    );
-    body.position.y = 0.55 * cfg.scale;
-    body.castShadow = true;
-    group.add(body);
+    // Scale by type
+    const scales = [1.0, 1.6, 0.7, 1.0, 0.6, 0.9, 1.3, 1.8, 2.5];
+    const scale = scales[type] || 1.0;
+    const eyeColor = eyeColors[type] || 0x88ffaa;
 
-    // Head
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.16 * cfg.scale, 8, 6),
-      new THREE.MeshStandardMaterial({ color: cfg.headColor, roughness: 0.7 })
-    );
-    head.position.y = 1.1 * cfg.scale;
-    head.castShadow = true;
-    group.add(head);
-
-    // Glowing eyes
-    const eyeMat = new THREE.MeshStandardMaterial({
-      color: cfg.eyeColor,
-      emissive: cfg.eyeColor,
-      emissiveIntensity: 4,
-    });
-    const eyeGeo = new THREE.SphereGeometry(0.03 * cfg.scale, 6, 4);
-    const le = new THREE.Mesh(eyeGeo, eyeMat);
-    le.position.set(-0.05 * cfg.scale, 1.12 * cfg.scale, 0.12 * cfg.scale);
-    group.add(le);
-    const re = new THREE.Mesh(eyeGeo, eyeMat);
-    re.position.set(0.05 * cfg.scale, 1.12 * cfg.scale, 0.12 * cfg.scale);
-    group.add(re);
-
-    // 타입별 장식
-    if (type === 0) {
-      // 스켈레톤: 뼈 느낌 팔
-      const armMat = new THREE.MeshStandardMaterial({ color: 0xccbb99, roughness: 0.9 });
-      const arm = new THREE.CapsuleGeometry(0.04, 0.4, 3, 4);
-      const la = new THREE.Mesh(arm, armMat); la.position.set(-0.25, 0.7, 0.1); la.rotation.x = -0.7; group.add(la);
-      const ra = new THREE.Mesh(arm, armMat); ra.position.set(0.25, 0.7, 0.1); ra.rotation.x = -0.5; group.add(ra);
-    } else if (type === 1) {
-      // 골렘: 어깨 돌덩이
-      const shoulder = new THREE.Mesh(
-        new THREE.BoxGeometry(0.3, 0.2, 0.2),
-        new THREE.MeshStandardMaterial({ color: 0x5a5a6a, roughness: 1.0 })
+    if (type === 0 || type === 4) {
+      // === 추종자 (Follower): 둥글고 넓은 실루엣, 느리고 대량 등장 ===
+      const bodyGeo = new THREE.SphereGeometry(0.35 * scale, 8, 6);
+      const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.85 }));
+      body.position.y = 0.4 * scale;
+      body.scale.set(1.2, 0.9, 1.0); // squat, wide
+      body.castShadow = true;
+      group.add(body);
+      // Small head bump
+      const headGeo = new THREE.SphereGeometry(0.15 * scale, 6, 4);
+      const head = new THREE.Mesh(headGeo, new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.8 }));
+      head.position.y = 0.75 * scale;
+      group.add(head);
+    } else if (type === 6 || type === 1) {
+      // === 사냥개/돌격 (Charger): 낮고 뾰족한 실루엣 ===
+      const bodyGeo = new THREE.ConeGeometry(0.3 * scale, 0.8 * scale, 5);
+      const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: darkGray, roughness: 0.8 }));
+      body.position.y = 0.4 * scale;
+      body.rotation.x = Math.PI / 2 * 0.3; // leaning forward
+      body.scale.set(1.0, 0.7, 1.6); // long, low
+      body.castShadow = true;
+      group.add(body);
+      // Sharp snout
+      const snout = new THREE.Mesh(
+        new THREE.ConeGeometry(0.1 * scale, 0.4 * scale, 4),
+        new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.7 })
       );
-      shoulder.position.set(-0.3, 1.0, 0); group.add(shoulder);
-      const s2 = shoulder.clone(); s2.position.set(0.3, 1.0, 0); group.add(s2);
+      snout.position.set(0, 0.35 * scale, 0.35 * scale);
+      snout.rotation.x = -Math.PI / 2;
+      group.add(snout);
+    } else if (type === 5 || type === 3) {
+      // === 술사 (Caster): 키가 크고 가는 실루엣 ===
+      const bodyGeo = new THREE.CylinderGeometry(0.12 * scale, 0.18 * scale, 1.2 * scale, 6);
+      const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.85 }));
+      body.position.y = 0.6 * scale;
+      body.castShadow = true;
+      group.add(body);
+      // Tall pointed hood
+      const hood = new THREE.Mesh(
+        new THREE.ConeGeometry(0.15 * scale, 0.5 * scale, 5),
+        new THREE.MeshStandardMaterial({ color: darkGray, roughness: 0.9 })
+      );
+      hood.position.y = 1.35 * scale;
+      group.add(hood);
+      // Staff (thin vertical line)
+      const staff = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02 * scale, 0.02 * scale, 1.4 * scale, 4),
+        new THREE.MeshStandardMaterial({ color: 0x3a4050, roughness: 0.9 })
+      );
+      staff.position.set(0.2 * scale, 0.7 * scale, 0);
+      group.add(staff);
+      // Staff tip glow
+      const tipGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05 * scale, 6, 4),
+        new THREE.MeshBasicMaterial({ color: eyeColor, transparent: true, opacity: 0.8 })
+      );
+      tipGlow.position.set(0.2 * scale, 1.4 * scale, 0);
+      group.add(tipGlow);
     } else if (type === 2) {
-      // 임프: 날개
-      const wingMat = new THREE.MeshStandardMaterial({ color: 0x4a1a2a, side: THREE.DoubleSide });
-      const wing = new THREE.PlaneGeometry(0.3, 0.4);
-      const lw = new THREE.Mesh(wing, wingMat); lw.position.set(-0.2, 0.8, -0.1); lw.rotation.y = 0.5; group.add(lw);
-      const rw = new THREE.Mesh(wing, wingMat); rw.position.set(0.2, 0.8, -0.1); rw.rotation.y = -0.5; group.add(rw);
-    } else if (type === 3) {
-      // 레이스: 후광 링
-      const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(0.25, 0.02, 8, 16),
-        new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x0088ff, emissiveIntensity: 2, transparent: true, opacity: 0.6 })
+      // === 방패병 (Shield): 넓은 전면 실루엣 ===
+      const bodyGeo = new THREE.BoxGeometry(0.5 * scale, 0.7 * scale, 0.3 * scale);
+      const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: darkGray, roughness: 0.9 }));
+      body.position.y = 0.5 * scale;
+      body.castShadow = true;
+      group.add(body);
+      // Wide shield in front
+      const shieldGeo = new THREE.BoxGeometry(0.6 * scale, 0.65 * scale, 0.08 * scale);
+      const shield = new THREE.Mesh(shieldGeo, new THREE.MeshStandardMaterial({
+        color: 0x556070, roughness: 0.7, metalness: 0.3,
+      }));
+      shield.position.set(0, 0.45 * scale, 0.22 * scale);
+      group.add(shield);
+      // Small head
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.12 * scale, 6, 4),
+        new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.8 })
       );
-      ring.position.y = 1.3; ring.rotation.x = Math.PI / 2; group.add(ring);
+      head.position.y = 0.9 * scale;
+      group.add(head);
+    } else {
+      // === 기본 (7: 엘리트, 8: 보스 포함) — 크고 위압적 ===
+      const body = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.25 * scale, 0.8 * scale, 6, 8),
+        new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.8 })
+      );
+      body.position.y = 0.6 * scale;
+      body.castShadow = true;
+      group.add(body);
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18 * scale, 8, 6),
+        new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.7 })
+      );
+      head.position.y = 1.2 * scale;
+      group.add(head);
+      // Elites/bosses get crown-like protrusions
+      if (type >= 7) {
+        for (let i = 0; i < 3; i++) {
+          const spike = new THREE.Mesh(
+            new THREE.ConeGeometry(0.06 * scale, 0.3 * scale, 4),
+            new THREE.MeshStandardMaterial({ color: eyeColor, emissive: eyeColor, emissiveIntensity: 1.5 })
+          );
+          spike.position.set((i - 1) * 0.12 * scale, 1.45 * scale, 0);
+          group.add(spike);
+        }
+      }
     }
+
+    // Eyes — all types get glowing eyes (danger indicator, brighter = more dangerous)
+    const eyeIntensity = type >= 7 ? 5 : type >= 5 ? 3 : 2;
+    const eyeMat = new THREE.MeshStandardMaterial({
+      color: eyeColor, emissive: eyeColor, emissiveIntensity: eyeIntensity,
+    });
+    const eyeSize = 0.03 * scale;
+    const eyeY = type === 2 ? 0.9 * scale : type === 6 || type === 1 ? 0.5 * scale : (type === 5 || type === 3) ? 1.2 * scale : 0.75 * scale;
+    const le = new THREE.Mesh(new THREE.SphereGeometry(eyeSize, 4, 4), eyeMat);
+    le.position.set(-0.06 * scale, eyeY, 0.15 * scale);
+    group.add(le);
+    const re = new THREE.Mesh(new THREE.SphereGeometry(eyeSize, 4, 4), eyeMat);
+    re.position.set(0.06 * scale, eyeY, 0.15 * scale);
+    group.add(re);
 
     return group;
   }
@@ -748,6 +851,16 @@ export class ThreeRenderer {
 
   hitStop(duration = 0.04) {
     this._hitStopTimer = duration;
+  }
+
+  // Camera zoom punch (short FOV kick for impact)
+  zoomPunch(intensity = 2, duration = 0.12) {
+    if (this._zoomPunchTimer > 0) return;
+    this._zoomPunchTimer = duration;
+    this._zoomPunchDuration = duration;
+    this._zoomPunchIntensity = intensity;
+    this.camera.fov -= intensity;
+    this.camera.updateProjectionMatrix();
   }
 
   // Convert world position to screen pixel coordinates

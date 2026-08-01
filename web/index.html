@@ -139,7 +139,7 @@
   <div id="bgm-btn" style="position:fixed;top:16px;right:80px;color:#666;font-size:11px;cursor:pointer;pointer-events:all;background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:4px;border:1px solid #333">🎵 NEXT</div>
   <div id="kills">0 kills</div>
   <div id="log"></div>
-  <div id="controls-hint">[WASD] Move | [SPACE] Dash | [Click/Drag] Skill | Survive!</div>
+  <div id="controls-hint">[WASD] Move | [SPACE] Dash | [Drag] Spell | [TAB] Stats</div>
   <div id="tutorial" style="position:fixed;top:30%;left:50%;transform:translateX(-50%);color:#fff;font-size:16px;text-align:center;pointer-events:none;z-index:800;text-shadow:0 0 8px #000,0 2px 4px rgba(0,0,0,0.8);opacity:0;transition:opacity 0.5s;line-height:2"></div>
   <div id="dash-ui" style="position:fixed;bottom:50px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:none">
     <span style="color:#88ccff;font-size:12px">💨 DASH</span>
@@ -161,6 +161,24 @@
     import { SoundManager } from './src/sound.js';
     import { showEnhancedGameOver, showWaveEventUI, hideWaveEventUI, getItemChoiceHtml, updateItemHud, injectUIStyles } from './src/ui-overlay.js';
     import { GestureBrush } from './src/gesture-brush.js';
+
+    // === SVG Icon System (replaces emoji for consistent art direction) ===
+    const ICONS = {
+      fire: (s=16,c='#ff4400') => `<svg width="${s}" height="${s}" viewBox="0 0 16 16"><path d="M8 1C6 4 4 6 4 9c0 2.2 1.8 4 4 4s4-1.8 4-4C12 6 10 4 8 1z" fill="${c}" opacity="0.9"/></svg>`,
+      ice: (s=16,c='#44ccff') => `<svg width="${s}" height="${s}" viewBox="0 0 16 16"><path d="M8 1L9.5 6H14L10.5 9L12 14L8 11L4 14L5.5 9L2 6H6.5Z" fill="${c}" opacity="0.9"/></svg>`,
+      thunder: (s=16,c='#ffcc00') => `<svg width="${s}" height="${s}" viewBox="0 0 16 16"><path d="M10 1L6 7H9L5 15L12 7H9L10 1Z" fill="${c}" opacity="0.9"/></svg>`,
+      poison: (s=16,c='#9933ff') => `<svg width="${s}" height="${s}" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="${c}" stroke-width="1.5"/><circle cx="8" cy="8" r="2" fill="${c}"/></svg>`,
+      sword: (s=16,c='#DCE8FF') => `<svg width="${s}" height="${s}" viewBox="0 0 16 16"><path d="M3 13L7 9M13 3L9 7M7 9L5 11M9 7L11 5M6 6L10 10" stroke="${c}" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>`,
+      star: (s=16,c='#daa520') => `<svg width="${s}" height="${s}" viewBox="0 0 16 16"><path d="M8 2L9.5 6.5H14L10.5 9.5L11.5 14L8 11.5L4.5 14L5.5 9.5L2 6.5H6.5Z" fill="${c}"/></svg>`,
+      dash: (s=16,c='#88ccff') => `<svg width="${s}" height="${s}" viewBox="0 0 16 16"><path d="M2 8H10M10 8L7 5M10 8L7 11M12 4V12" stroke="${c}" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>`,
+      shield: (s=16,c='#88aacc') => `<svg width="${s}" height="${s}" viewBox="0 0 16 16"><path d="M8 2L3 4V8C3 11 8 14 8 14S13 11 13 8V4L8 2Z" fill="none" stroke="${c}" stroke-width="1.5"/></svg>`,
+    };
+    // Helper: get element icon
+    function elemIcon(elem, size=14) {
+      const map = { 1: 'fire', 2: 'ice', 3: 'thunder', 4: 'poison' };
+      return ICONS[map[elem] || 'sword'](size);
+    }
+
     let engine;
     const gestureBrush = new GestureBrush();
 
@@ -427,6 +445,13 @@
           return;
         }
 
+        // Tab = toggle detail stats
+        if (e.code === 'Tab') {
+          e.preventDefault();
+          window._showDetailStats = !window._showDetailStats;
+          return;
+        }
+
         engine.on_key_down(k);
 
         // Level up choice
@@ -468,6 +493,14 @@
           gestureBrush.clear();
           gestureBrush.addPoint(e.clientX, e.clientY);
           showSpellGuide();
+          // === GESTURE STAGE 1: 시작 — 배경 채도 저하 + 커서 변경 ===
+          document.body.style.cursor = 'crosshair';
+          if (!document.getElementById('gesture-desaturate')) {
+            const overlay = document.createElement('div');
+            overlay.id = 'gesture-desaturate';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.15);pointer-events:none;z-index:990;transition:opacity 0.1s';
+            document.body.appendChild(overlay);
+          }
         } else if (e.button === 2 && engine.player_class_tier() >= 2) {
           // Right click: 2nd class skill
           dragStart = { x: e.clientX, y: e.clientY, button: 2 };
@@ -601,6 +634,11 @@
         const dist = Math.sqrt(dx*dx + dy*dy);
         const btn = dragStart.button;
 
+        // === GESTURE END: restore visuals ===
+        document.body.style.cursor = '';
+        const desat = document.getElementById('gesture-desaturate');
+        if (desat) desat.remove();
+
         clearGestureTrail();
         if (magicCircle) { magicCircle.remove(); magicCircle = null; }
         if (arrowEl) { arrowEl.remove(); arrowEl = null; }
@@ -629,6 +667,7 @@
               // 3. 히트스톱 50ms + 강한 카메라 임펄스
               renderer.hitStop(0.05);
               renderer.shake(0.5, 0.12);
+              renderer.zoomPunch(1.5, 0.15);
               // Onboarding: first gesture success!
               if (window._onboardingActive) hideOnboarding();
               // 4. 사운드 (원소별)
@@ -989,9 +1028,9 @@
         // Portrait: 원소에 따라 변경
         const elem = getElement();
         const portrait = document.getElementById('portrait');
-        const portraitIcons = { 0:'🗡️', 1:'🔥', 2:'❄️', 3:'⚡', 4:'☠️' };
-        const portraitBorders = { 0:'#555', 1:'#ff4400', 2:'#44ccff', 3:'#ffcc00', 4:'#44ff44' };
-        portrait.textContent = portraitIcons[elem] || '🗡️';
+        const portraitIcons = { 0: ICONS.sword(24), 1: ICONS.fire(24), 2: ICONS.ice(24), 3: ICONS.thunder(24), 4: ICONS.poison(24) };
+        const portraitBorders = { 0:'#555', 1:'#ff4400', 2:'#44ccff', 3:'#ffcc00', 4:'#9933ff' };
+        portrait.innerHTML = portraitIcons[elem] || ICONS.sword(24);
         portrait.style.borderColor = portraitBorders[elem] || '#555';
         if (promoted) portrait.style.boxShadow = `0 0 10px ${portraitBorders[elem]}`;
         else portrait.style.boxShadow = 'none';
@@ -1036,24 +1075,29 @@
             promoText = `Need ${nextReq} of same element (${totalOrbs} total)`;
           }
           promoHud.innerHTML =
-            `<span style="color:${fireL>0?'#ff4400':'#333'}">🔥${fireL}</span> ` +
-            `<span style="color:${iceL>0?'#44ccff':'#333'}">❄️${iceL}</span> ` +
-            `<span style="color:${thunderL>0?'#ffcc00':'#333'}">⚡${thunderL}</span> ` +
-            `<span style="color:${poisonL>0?'#9933ff':'#333'}">☠️${poisonL}</span>` +
+            `<span style="color:${fireL>0?'#ff4400':'#333'}">${ICONS.fire(12, fireL>0?'#ff4400':'#333')}${fireL}</span> ` +
+            `<span style="color:${iceL>0?'#44ccff':'#333'}">${ICONS.ice(12, iceL>0?'#44ccff':'#333')}${iceL}</span> ` +
+            `<span style="color:${thunderL>0?'#ffcc00':'#333'}">${ICONS.thunder(12, thunderL>0?'#ffcc00':'#333')}${thunderL}</span> ` +
+            `<span style="color:${poisonL>0?'#9933ff':'#333'}">${ICONS.poison(12, poisonL>0?'#9933ff':'#333')}${poisonL}</span>` +
             `<br><span style="color:${canPromo?'#daa520':'#666'};font-size:10px">${promoText}</span>`;
           promoHud.style.display = 'block';
         } else {
           promoHud.style.display = 'none';
         }
 
-        if (sp) sp.innerHTML =
-          `⚔️ ATK <span style="color:#ff8844">${Math.round(engine.player_damage())}</span><br>` +
-          `⚡ SPD <span style="color:#44ccff">${engine.player_atk_speed().toFixed(1)}/s</span><br>` +
-          `🎯 RNG <span style="color:#88ff44">${engine.player_range().toFixed(1)}</span><br>` +
-          `💥 CRT <span style="color:#ff4488">${Math.round(engine.player_crit()*100)}%</span><br>` +
-          `🗡️ PRC <span style="color:#ffcc44">${engine.player_pierce()}</span> ` +
-          `🔫 ×<span style="color:#44ffcc">${engine.player_multi()}</span><br>` +
-          `🧛 STEAL <span style="color:#ff44ff">${Math.round(engine.player_lifesteal()*100)}%</span>`;
+        if (sp) {
+          sp.style.display = window._showDetailStats ? 'block' : 'none';
+          if (window._showDetailStats) {
+            sp.innerHTML =
+              `⚔️ ATK <span style="color:#ff8844">${Math.round(engine.player_damage())}</span><br>` +
+              `⚡ SPD <span style="color:#44ccff">${engine.player_atk_speed().toFixed(1)}/s</span><br>` +
+              `🎯 RNG <span style="color:#88ff44">${engine.player_range().toFixed(1)}</span><br>` +
+              `💥 CRT <span style="color:#ff4488">${Math.round(engine.player_crit()*100)}%</span><br>` +
+              `🗡️ PRC <span style="color:#ffcc44">${engine.player_pierce()}</span> ` +
+              `🔫 ×<span style="color:#44ffcc">${engine.player_multi()}</span><br>` +
+              `🧛 STEAL <span style="color:#ff44ff">${Math.round(engine.player_lifesteal()*100)}%</span>`;
+          }
+        }
 
         // Skill slots (only re-render when changed)
         const SKILL_ICONS = { 0:'🔥', 4:'❄️', 2:'⚡', 7:'☠️' };
@@ -1368,6 +1412,7 @@
           const deathCount = engine.death_event_count();
           for (let i = 0; i < deathCount; i++) {
             renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i), getElement());
+            renderer.spawnGroundDecal(engine.death_event_x(i), engine.death_event_z(i), getElement());
             // Pitch up sound for multi-kills
             if (i === 0) sound.playDeath();
             else if (i < 4) { try { sound.playDeath(); } catch(e){} }

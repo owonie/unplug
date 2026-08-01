@@ -292,4 +292,72 @@ export const vfxDirectionalMethods = {
     for(let i=0;i<3;i++){const ox=(Math.random()-0.5)*1.0;const oz=(Math.random()-0.5)*1.0;const size=0.08+Math.random()*0.1;const geo=new THREE.SphereGeometry(size,4,4);const colors=[0x330044,0x1a0033,0x440066,0x220022];const mat=new THREE.MeshBasicMaterial({color:colors[i%4],transparent:true,opacity:0.2+Math.random()*0.1});const mesh=new THREE.Mesh(geo,mat);mesh.position.set(x+ox,0.2+Math.random()*0.3,z+oz);this.scene.add(mesh);this.deathParticles.push({mesh,vx:(Math.random()-0.5)*0.3,vy:0.3,vz:(Math.random()-0.5)*0.3,life:0.8+Math.random()*0.4,isRing:true,scale:1});}
   },
 
+  // === GROUND DECALS: 지면 반응 레이어 (1-3초 생존) ===
+  spawnGroundDecal(x, z, element = 0) {
+    const decalConfigs = {
+      1: { color: 0x331100, shape: 'scorch' },   // 화염 그을음
+      2: { color: 0x1a3344, shape: 'frost' },    // 서리
+      3: { color: 0x332200, shape: 'crack' },    // 번개 균열
+      4: { color: 0x1a0022, shape: 'corrosion' }, // 독 부식
+    };
+    const cfg = decalConfigs[element] || { color: 0x1a1a1a, shape: 'scorch' };
+    let mesh;
+
+    if (cfg.shape === 'frost') {
+      // 육각형 결정 패턴
+      const geo = new THREE.CircleGeometry(0.5 + Math.random() * 0.3, 6);
+      const mat = new THREE.MeshBasicMaterial({ color: cfg.color, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+      mesh = new THREE.Mesh(geo, mat);
+    } else if (cfg.shape === 'crack') {
+      // 지그재그 선 (번개 균열)
+      const points = [];
+      const len = 0.6 + Math.random() * 0.4;
+      const angle = Math.random() * Math.PI * 2;
+      for (let i = 0; i <= 4; i++) {
+        const t = (i / 4) * len;
+        const jitter = i > 0 && i < 4 ? (Math.random() - 0.5) * 0.2 : 0;
+        points.push(new THREE.Vector3(
+          Math.cos(angle) * t + Math.sin(angle) * jitter,
+          0,
+          Math.sin(angle) * t - Math.cos(angle) * jitter
+        ));
+      }
+      const curve = new THREE.CatmullRomCurve3(points);
+      const tubeGeo = new THREE.TubeGeometry(curve, 6, 0.02, 3, false);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x554400, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+      mesh = new THREE.Mesh(tubeGeo, mat);
+    } else if (cfg.shape === 'corrosion') {
+      // 불규칙한 원
+      const geo = new THREE.CircleGeometry(0.3 + Math.random() * 0.2, 5 + Math.floor(Math.random() * 3));
+      const mat = new THREE.MeshBasicMaterial({ color: cfg.color, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+      mesh = new THREE.Mesh(geo, mat);
+    } else {
+      // 그을음 (불규칙 원)
+      const geo = new THREE.CircleGeometry(0.35 + Math.random() * 0.25, 8);
+      const mat = new THREE.MeshBasicMaterial({ color: cfg.color, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+      mesh = new THREE.Mesh(geo, mat);
+    }
+
+    mesh.position.set(x, 0.015, z);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.rotation.z = Math.random() * Math.PI * 2;
+    this.scene.add(mesh);
+    // Longer life than particles (2-3 seconds)
+    this.deathParticles.push({ mesh, vx: 0, vy: 0, vz: 0, life: 2.0 + Math.random() * 1.0, isRing: true, scale: 1, noScale: true });
+  },
+
+  // Dash trail decal
+  spawnDashDecal(x, z, element = 0) {
+    const colors = { 1: 0x221100, 2: 0x112233, 3: 0x222200, 4: 0x110022 };
+    const color = colors[element] || 0x111111;
+    const geo = new THREE.PlaneGeometry(0.2, 0.2);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, 0.012, z);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.rotation.z = Math.random() * Math.PI;
+    this.scene.add(mesh);
+    this.deathParticles.push({ mesh, vx: 0, vy: 0, vz: 0, life: 1.0, isRing: true, scale: 1, noScale: true });
+  },
+
 };
