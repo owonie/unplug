@@ -90,7 +90,7 @@ impl World {
             wave_events: WaveEventState::new(),
             wave_event_pending: false,
         };
-        world.log("SURVIVE. Move with WASD. Auto-attack nearest.".into());
+        world.log("⚔️ DRAG → to unleash your power!".into());
         world
     }
 
@@ -541,6 +541,19 @@ impl World {
         };
         // Apply wave event spawn multiplier (Dangerous Rest: 2x enemies = half interval)
         let interval = (base_interval / self.wave_events.spawn_mult).max(0.5);
+        // Onboarding: no enemies for first 5 seconds
+        if self.game_time < 5.0 { return; }
+        // Onboarding: spawn 5 dummy enemies in front of player at 5s mark
+        if self.game_time >= 5.0 && self.game_time < 5.2 && self.enemies.is_empty() {
+            let px = self.player.x;
+            let pz = self.player.z;
+            for i in 0..5 {
+                let offset = (i as f32 - 2.0) * 1.5;
+                let enemy = Enemy::new(px + offset, pz - 4.0, 0); // In front of player
+                self.enemies.push(enemy);
+            }
+            self.log_queue.push_back("⚔️ DRAG → to destroy them!".to_string());
+        }
         if !is_boss_wave && self.spawn_timer >= interval {
             self.spawn_timer = 0.0;
             self.spawn_wave_enemies();
@@ -620,6 +633,14 @@ impl World {
         let seed = (self.time * 1000.0) as u32;
         let level = self.player.level;
         let class_tier = self.player.class_tier;
+
+        // First level-up: FORCE element orb choices (guarantee promotion path)
+        if level == 2 && class_tier == 0 && self.player.total_elements() == 0 {
+            self.level_up_choices[0] = 50; // Fire
+            self.level_up_choices[1] = 51; // Ice
+            self.level_up_choices[2] = 52; // Thunder
+            return;
+        }
 
         // Check if promotion is available (element-based)
         let promotions = super::class_data::available_promotions(

@@ -623,15 +623,15 @@ export class ThreeRenderer {
 
     // 9 enemy types
     const configs = [
-      { bodyColor: 0x8a7a5a, headColor: 0xccbb99, eyeColor: 0x44ff44, scale: 1.0 },  // 0: 스켈레톤
-      { bodyColor: 0x4a4a5a, headColor: 0x5a5a6a, eyeColor: 0xff4400, scale: 1.5 },  // 1: 골렘
-      { bodyColor: 0x6a2a3a, headColor: 0x8a3a4a, eyeColor: 0xff00ff, scale: 0.7 },  // 2: 임프
-      { bodyColor: 0x2a4a6a, headColor: 0x3a5a7a, eyeColor: 0x00ffff, scale: 1.0 },  // 3: 레이스
-      { bodyColor: 0x4a1a1a, headColor: 0x6a2a2a, eyeColor: 0xff0000, scale: 0.6 },  // 4: 스웜 (빨간 눈, 좀 더 보임)
-      { bodyColor: 0x3a5a3a, headColor: 0x6a8a6a, eyeColor: 0xffff00, scale: 0.9 },  // 5: 궁수
-      { bodyColor: 0x5a2a1a, headColor: 0x7a3a2a, eyeColor: 0xff2200, scale: 1.3 },  // 6: 돌격병
-      { bodyColor: 0x6a1a6a, headColor: 0x9a3a9a, eyeColor: 0xff44ff, scale: 1.8 },  // 7: 엘리트
-      { bodyColor: 0x2a0a0a, headColor: 0x4a1a1a, eyeColor: 0xff0000, scale: 2.5 },  // 8: 보스
+      { bodyColor: 0xb8a878, headColor: 0xddccaa, eyeColor: 0x66ff66, scale: 1.0 },  // 0: 스켈레톤
+      { bodyColor: 0x7a7a8a, headColor: 0x9a9aaa, eyeColor: 0xff6600, scale: 1.5 },  // 1: 골렘
+      { bodyColor: 0xaa4455, headColor: 0xcc6677, eyeColor: 0xff44ff, scale: 0.7 },  // 2: 임프
+      { bodyColor: 0x5588aa, headColor: 0x77aacc, eyeColor: 0x44ffff, scale: 1.0 },  // 3: 레이스
+      { bodyColor: 0x884444, headColor: 0xaa5555, eyeColor: 0xff3333, scale: 0.6 },  // 4: 스웜
+      { bodyColor: 0x558855, headColor: 0x88bb88, eyeColor: 0xffff44, scale: 0.9 },  // 5: 궁수
+      { bodyColor: 0x995533, headColor: 0xbb7744, eyeColor: 0xff4400, scale: 1.3 },  // 6: 돌격병
+      { bodyColor: 0x9944aa, headColor: 0xcc66dd, eyeColor: 0xff88ff, scale: 1.8 },  // 7: 엘리트
+      { bodyColor: 0x551111, headColor: 0x882222, eyeColor: 0xff0000, scale: 2.5 },  // 8: 보스
     ];
     const cfg = configs[type] || configs[0];
 

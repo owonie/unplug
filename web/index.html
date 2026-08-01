@@ -1358,16 +1358,28 @@
           const deathCount = engine.death_event_count();
           for (let i = 0; i < deathCount; i++) {
             renderer.spawnDeathParticles(engine.death_event_x(i), engine.death_event_z(i), getElement());
+            // Pitch up sound for multi-kills
             if (i === 0) sound.playDeath();
+            else if (i < 4) { try { sound.playDeath(); } catch(e){} }
           }
           if (deathCount > 0) {
-            renderer.shake(0.25 + deathCount * 0.1, 0.1);
-            renderer.hitStop(0.03 * Math.min(deathCount, 3));
+            // Hitstop scales with kill count (30ms base, up to 100ms for 5+ kills)
+            const hitStopMs = Math.min(0.03 + deathCount * 0.015, 0.10);
+            renderer.hitStop(hitStopMs);
+            // Shake scales too
+            renderer.shake(0.25 + deathCount * 0.15, 0.1 + deathCount * 0.02);
             // Combo counter
             comboCount += deathCount;
-            comboTimer = 2.0; // 2s window
+            comboTimer = 2.0;
             if (comboCount >= 5) {
               showCombo(comboCount);
+            }
+            // Multi-kill screen flash for 3+
+            if (deathCount >= 3) {
+              const mkFlash = document.createElement('div');
+              mkFlash.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.08);pointer-events:none;z-index:997;animation:flash-fade 0.2s ease-out forwards';
+              document.body.appendChild(mkFlash);
+              setTimeout(() => mkFlash.remove(), 200);
             }
           }
 
