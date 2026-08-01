@@ -28,7 +28,7 @@ export class ThreeRenderer {
     });
 
     // Scene setup
-    this.scene.background = new THREE.Color(0x0a0812);
+    this.scene.background = new THREE.Color(0x050308);
 
     // Lighting
     const ambient = new THREE.AmbientLight(0xffffff, 0.7);
@@ -52,22 +52,54 @@ export class ThreeRenderer {
     this.playerLight.position.set(50, 3, 50);
     this.scene.add(this.playerLight);
 
-    // Ground (dark fantasy grass/stone)
-    const groundGeo = new THREE.PlaneGeometry(80, 80, 20, 20);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a2a1a, roughness: 0.95 });
+    // Ground — dark fantasy arena (larger, more atmospheric)
+    const groundGeo = new THREE.PlaneGeometry(120, 120, 30, 30);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x0d1a0d, roughness: 0.98 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(50, 0, 50);
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    // Stone circle pattern (arena feel)
-    const ringGeo = new THREE.RingGeometry(14, 15, 32);
-    const ringMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.9 });
+    // Inner arena ring (glowing rune circle)
+    const ringGeo = new THREE.RingGeometry(12, 12.5, 48);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x332200, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
-    ring.position.set(50, 0.01, 50);
+    ring.position.set(50, 0.02, 50);
     this.scene.add(ring);
+
+    // Outer rune ring
+    const outerRingGeo = new THREE.RingGeometry(20, 20.3, 64);
+    const outerRingMat = new THREE.MeshBasicMaterial({ color: 0x1a1100, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+    const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
+    outerRing.rotation.x = -Math.PI / 2;
+    outerRing.position.set(50, 0.01, 50);
+    this.scene.add(outerRing);
+
+    // Environment: scattered dark stone pillars
+    const pillarGeo = new THREE.CylinderGeometry(0.3, 0.4, 2.5, 6);
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.9 });
+    const pillarPositions = [
+      [35, 35], [65, 35], [35, 65], [65, 65],
+      [30, 50], [70, 50], [50, 30], [50, 70],
+      [38, 42], [62, 58], [42, 62], [58, 38],
+    ];
+    for (const [px, pz] of pillarPositions) {
+      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      pillar.position.set(px, 1.25, pz);
+      pillar.castShadow = true;
+      this.scene.add(pillar);
+      // Tiny glow at top
+      const glowGeo = new THREE.SphereGeometry(0.1, 6, 6);
+      const glowMat = new THREE.MeshBasicMaterial({ color: 0xdaa520, transparent: true, opacity: 0.3 });
+      const glow = new THREE.Mesh(glowGeo, glowMat);
+      glow.position.set(px, 2.6, pz);
+      this.scene.add(glow);
+    }
+
+    // Fog — adds depth and mystery
+    this.scene.fog = new THREE.FogExp2(0x050308, 0.015);
 
     // Object pools
     this.playerGroup = null;

@@ -24,43 +24,41 @@
   <meta name="author" content="owon" />
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#000;overflow:hidden;font-family:'Courier New',monospace;-webkit-user-select:none;user-select:none}
+    body{background:#000;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;-webkit-user-select:none;user-select:none}
     #game-canvas{width:100vw;height:100vh;display:block}
-    #hud{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;padding:16px}
-    #stats{color:#fff;font-size:13px;text-shadow:0 0 4px #000;pointer-events:all}
-    #stat-panel{margin-top:8px;font-size:11px;color:#ccc;line-height:1.8;background:rgba(0,0,0,0.7);padding:8px 10px;border-radius:6px;border:1px solid #444;max-width:160px;font-family:'Courier New',monospace}
-    #skill-slots{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;pointer-events:all}
-    .skill-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid #555;position:relative;cursor:pointer;overflow:visible}
-    .skill-icon .sk-lvl{position:absolute;bottom:-2px;right:0;font-size:8px;color:#ffcc00;font-weight:bold}
-    .skill-icon .sk-cd-overlay{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:4px;pointer-events:none;display:none;overflow:hidden}
+    /* === HUD: Dark Fantasy Modern === */
+    #hud{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;padding:12px 16px}
+    #stats{color:#e0ddd8;font-size:12px;pointer-events:all;max-width:180px}
+    #stat-panel{margin-top:6px;font-size:10px;color:#8a8680;line-height:1.7;background:rgba(8,6,12,0.85);padding:6px 10px;border-radius:4px;border:1px solid rgba(255,200,100,0.12);max-width:170px;backdrop-filter:blur(4px)}
+    #skill-slots{margin-top:6px;display:flex;gap:3px;flex-wrap:wrap;pointer-events:all;max-width:170px}
+    .skill-icon{width:26px;height:26px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:12px;border:1px solid rgba(255,200,100,0.2);background:rgba(10,8,16,0.8);position:relative;cursor:pointer;overflow:visible;transition:border-color 0.2s}
+    .skill-icon:hover{border-color:rgba(255,200,100,0.6)}
+    .skill-icon .sk-lvl{position:absolute;bottom:-1px;right:1px;font-size:7px;color:#daa520;font-weight:bold}
+    .skill-icon .sk-cd-overlay{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:3px;pointer-events:none;display:none;overflow:hidden}
     .skill-icon:hover .sk-tooltip{display:block}
-    .sk-tooltip{display:none;position:absolute;bottom:34px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.95);border:1px solid #555;border-radius:6px;padding:8px 10px;font-size:10px;color:#ccc;white-space:nowrap;z-index:3000;min-width:160px;text-align:left;line-height:1.5;pointer-events:none}
+    .sk-tooltip{display:none;position:absolute;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(5,3,10,0.95);border:1px solid rgba(255,200,100,0.2);border-radius:6px;padding:8px 10px;font-size:9px;color:#aaa;white-space:nowrap;z-index:3000;min-width:140px;text-align:left;line-height:1.5;pointer-events:none;backdrop-filter:blur(8px)}
     .skill-icon.active-tip .sk-tooltip{display:block}
-    #hp-bar-bg{width:200px;height:12px;background:#333;border-radius:6px;margin:4px 0;border:1px solid #555;position:relative;overflow:hidden}
-    #hp-bar-fill{height:100%;background:linear-gradient(90deg,#ff2222,#ff6644);border-radius:5px;transition:width 0.2s}
-    #xp-bar-bg{width:200px;height:8px;background:#222;border-radius:4px;margin:2px 0;border:1px solid #444}
-    #xp-bar-fill{height:100%;background:linear-gradient(90deg,#4488ff,#44ddff);border-radius:3px;transition:width 0.1s}
-    #timer{position:fixed;top:16px;right:16px;color:#aaa;font-size:14px}
-    #kills{position:fixed;top:36px;right:16px;color:#ff6644;font-size:13px}
-    #log{position:fixed;bottom:16px;right:16px;color:#8a8;font-size:11px;text-align:right;max-width:300px;opacity:0.8}
-    /* Level up popup */
-    #levelup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);border:2px solid #ffcc00;border-radius:12px;padding:24px;display:none;pointer-events:all;text-align:center;min-width:400px;z-index:1000}
-    #levelup h2{color:#ffcc00;margin-bottom:12px;font-size:18px}
-    .choice-btn{display:block;width:100%;padding:12px;margin:8px 0;background:#1a1a2a;border:1px solid #444;color:#fff;font-size:13px;cursor:pointer;border-radius:6px;font-family:inherit;text-align:left}
-    .choice-btn:hover{background:#2a2a4a;border-color:#ffcc00}
-    .choice-btn span{color:#ffcc00;font-weight:bold}
-    #controls-hint{position:fixed;bottom:16px;left:16px;color:#555;font-size:10px}
-    .dmg-popup{position:fixed;color:#fff;font-weight:bold;pointer-events:none;animation:dmg-float 0.9s ease-out forwards;text-shadow:0 0 4px #000,0 0 2px #000,1px 1px 0 #000;z-index:999;transform:translateX(-50%)}
-    .dmg-popup.crit{color:#ff4400;text-shadow:0 0 10px #ff0000,0 0 20px #ff4400}
-    @keyframes dmg-float{0%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.2)}30%{transform:translateX(-50%) translateY(-25px) scale(1.3)}100%{opacity:0;transform:translateX(-50%) translateY(-70px) scale(0.6)}}
-    @keyframes magic-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-    @keyframes skill-name-fade{0%{opacity:1;transform:translateX(-50%) scale(1.2)}30%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) translateY(-30px) scale(0.8)}}
-    @keyframes flash-fade{0%{opacity:1}100%{opacity:0}}
-    @keyframes lvlflash{0%{opacity:1}100%{opacity:0}}
-    @keyframes promo-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}30%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(0.8) translateY(-30px)}}
-    @keyframes skill-acquired{0%{opacity:0;transform:translateX(-50%) translateY(10px) scale(0.8)}15%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.05)}30%{transform:translateX(-50%) translateY(0) scale(1)}75%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(-20px)}}
+    #hp-bar-bg{width:160px;height:10px;background:rgba(20,15,25,0.9);border-radius:5px;margin:3px 0;border:1px solid rgba(200,50,50,0.3);position:relative;overflow:hidden}
+    #hp-bar-fill{height:100%;background:linear-gradient(90deg,#8b0000,#cc2222);border-radius:4px;transition:width 0.2s;box-shadow:0 0 6px rgba(200,0,0,0.4)}
+    #xp-bar-bg{width:160px;height:6px;background:rgba(15,12,20,0.9);border-radius:3px;margin:2px 0;border:1px solid rgba(100,150,255,0.2)}
+    #xp-bar-fill{height:100%;background:linear-gradient(90deg,#1a3a6a,#3366aa);border-radius:2px;transition:width 0.1s;box-shadow:0 0 4px rgba(50,100,200,0.3)}
+    #timer{position:fixed;top:12px;right:16px;color:rgba(200,190,170,0.6);font-size:12px;font-family:'Courier New',monospace}
+    #kills{position:fixed;top:28px;right:16px;color:rgba(255,100,68,0.7);font-size:11px}
+    #log{position:fixed;bottom:12px;right:16px;color:rgba(150,170,140,0.7);font-size:10px;text-align:right;max-width:280px}
+    /* Level up popup — dark ornate frame */
+    #levelup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(5,3,10,0.97);border:1px solid rgba(218,165,32,0.4);border-radius:8px;padding:20px 28px;display:none;pointer-events:all;text-align:center;min-width:360px;max-width:420px;z-index:1000;box-shadow:0 0 40px rgba(218,165,32,0.1),inset 0 0 30px rgba(0,0,0,0.5);backdrop-filter:blur(8px)}
+    #levelup h2{color:#daa520;margin-bottom:10px;font-size:16px;font-weight:400;letter-spacing:1px}
+    .choice-btn{display:block;width:100%;padding:10px 14px;margin:6px 0;background:rgba(15,12,20,0.9);border:1px solid rgba(255,200,100,0.15);color:#d0ccc5;font-size:12px;cursor:pointer;border-radius:4px;font-family:inherit;text-align:left;transition:all 0.15s}
+    .choice-btn:hover{background:rgba(30,25,40,0.95);border-color:rgba(218,165,32,0.5);transform:translateX(2px)}
+    .choice-btn span{color:#daa520;font-weight:600}
+    #controls-hint{position:fixed;bottom:12px;left:16px;color:rgba(100,95,85,0.5);font-size:9px}
+    .dmg-popup{position:fixed;color:#e8e4dc;font-weight:bold;pointer-events:none;animation:dmg-float 0.9s ease-out forwards;text-shadow:0 0 3px rgba(0,0,0,0.8);z-index:999;transform:translateX(-50%);font-family:'Courier New',monospace}
+    .dmg-popup.crit{color:#ff3300;text-shadow:0 0 8px #ff0000,0 0 16px rgba(255,0,0,0.5);font-size:1.3em}
+    @keyframes dmg-float{0%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.1)}30%{transform:translateX(-50%) translateY(-20px) scale(1.2)}100%{opacity:0;transform:translateX(-50%) translateY(-60px) scale(0.7)}}
+    @keyframes promo-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}30%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(0.9) translateY(-20px)}}
+    @keyframes skill-acquired{0%{opacity:0;transform:translateX(-50%) translateY(8px)}15%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.02)}75%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-15px)}}
   </style>
-  <script type="module" crossorigin src="/unplug/assets/index-BJZE2ax2.js"></script>
+  <script type="module" crossorigin src="/unplug/assets/index-_GxcQUj-.js"></script>
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
