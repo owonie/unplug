@@ -644,16 +644,27 @@
               renderer.shake(0.15, 0.05);
               showSkillName('inward');
             } else if (gesture === 'circle') {
-              if (!checkMana(50)) { dragStart=null;isDragging=false;dragPoints=[];return; }
+              if (engine.player_class_tier() > 0 && !checkMana(50)) { dragStart=null;isDragging=false;dragPoints=[];return; }
               engine.use_ultimate_skill(); sound.playUltimate(getElement());
-              renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), getElement(), 8);
-              renderer.shake(0.6, 0.2);
+              const ultElem = getElement();
+              renderer.spawnUltimateEffect(engine.player_x(), engine.player_z(), ultElem, 10);
+              // === ULTIMATE: Maximum juice ===
+              renderer.hitStop(0.12); // 120ms freeze — dramatic pause
+              renderer.shake(0.8, 0.25); // strongest shake
               showSkillName('circle');
-              // Screen flash
-              const flash = document.createElement('div');
-              flash.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.3);pointer-events:none;z-index:999;animation:flash-fade 0.3s ease-out forwards';
-              document.body.appendChild(flash);
-              setTimeout(() => flash.remove(), 300);
+              // Full-screen element flash (stronger)
+              const ultColors = {0:'rgba(255,255,255,0.4)',1:'rgba(255,80,0,0.35)',2:'rgba(50,180,255,0.35)',3:'rgba(255,200,0,0.35)',4:'rgba(150,50,255,0.35)'};
+              const ultFlash = document.createElement('div');
+              ultFlash.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:${ultColors[ultElem]||ultColors[0]};pointer-events:none;z-index:999;animation:flash-fade 0.4s ease-out forwards`;
+              document.body.appendChild(ultFlash);
+              setTimeout(() => ultFlash.remove(), 400);
+              // Vignette pulse
+              const vignette = document.createElement('div');
+              vignette.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:998;box-shadow:inset 0 0 80px 30px rgba(0,0,0,0.6);animation:flash-fade 0.6s ease-out forwards';
+              document.body.appendChild(vignette);
+              setTimeout(() => vignette.remove(), 600);
+              // Onboarding trigger
+              if (window._onboardingActive) hideOnboarding();
             } else {
               // Gesture recognition FAILED → weakened directional attack (50% range/damage)
               engine.use_directional_skill(Math.atan2(-dy, dx));
