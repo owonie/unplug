@@ -16,8 +16,8 @@ export class ThreeRenderer {
     // Camera — top-down follow
     const aspect = window.innerWidth / window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 200);
-    this.camera.position.set(30, 12, 40); // 시작 위치
-    this.camera.lookAt(30, 0, 30);
+    this.camera.position.set(50, 12, 60); // 플레이어 시작점(50,50) 기준
+    this.camera.lookAt(50, 0, 50);
 
     // Resize
     window.addEventListener('resize', () => {
@@ -49,7 +49,7 @@ export class ThreeRenderer {
 
     // Player light
     this.playerLight = new THREE.PointLight(0xffffcc, 1.5, 12);
-    this.playerLight.position.set(30, 3, 30);
+    this.playerLight.position.set(50, 3, 50);
     this.scene.add(this.playerLight);
 
     // Ground (dark fantasy grass/stone)
@@ -57,7 +57,7 @@ export class ThreeRenderer {
     const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a2a1a, roughness: 0.95 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.set(30, 0, 30);
+    ground.position.set(50, 0, 50);
     ground.receiveShadow = true;
     this.scene.add(ground);
 
@@ -66,7 +66,7 @@ export class ThreeRenderer {
     const ringMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.9 });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
-    ring.position.set(30, 0.01, 30);
+    ring.position.set(50, 0.01, 50);
     this.scene.add(ring);
 
     // Object pools
