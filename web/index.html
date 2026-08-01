@@ -160,7 +160,9 @@
     import { ThreeRenderer } from './src/renderer.js';
     import { SoundManager } from './src/sound.js';
     import { showEnhancedGameOver, showWaveEventUI, hideWaveEventUI, getItemChoiceHtml, updateItemHud, injectUIStyles } from './src/ui-overlay.js';
+    import { GestureBrush } from './src/gesture-brush.js';
     let engine;
+    const gestureBrush = new GestureBrush();
 
     // Inject UI styles on load
     injectUIStyles();
@@ -463,6 +465,8 @@
           dragStart = { x: e.clientX, y: e.clientY, button: 0 };
           dragPoints = [{ x: e.clientX, y: e.clientY }];
           isDragging = false;
+          gestureBrush.clear();
+          gestureBrush.addPoint(e.clientX, e.clientY);
           showSpellGuide();
         } else if (e.button === 2 && engine.player_class_tier() >= 2) {
           // Right click: 2nd class skill
@@ -789,26 +793,13 @@
       }
 
       function drawGestureTrail(points) {
-        let svg = document.getElementById('gesture-trail');
-        if (!svg) {
-          svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          svg.id = 'gesture-trail';
-          svg.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:998';
-          document.body.appendChild(svg);
-        }
-        if (points.length < 2) return;
-        const element = getElement();
-        const colors = { 0:'#ffffff', 1:'#ff6644', 2:'#44ccff', 3:'#ffdd44', 4:'#aa44ff' };
-        const color = colors[element] || '#ffffff';
-        // Build path from last N points
-        const recent = points.slice(-30);
-        let d = `M ${recent[0].x} ${recent[0].y}`;
-        for (let i = 1; i < recent.length; i++) { d += ` L ${recent[i].x} ${recent[i].y}`; }
-        svg.innerHTML = `<path d="${d}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" opacity="0.7" filter="url(#glow-trail)"/><defs><filter id="glow-trail"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+        // Update brush style based on current element/class
+        gestureBrush.setStyle(engine.player_class_tier(), getElement());
+        const last = points[points.length - 1];
+        if (last) gestureBrush.addPoint(last.x, last.y);
       }
       function clearGestureTrail() {
-        const svg = document.getElementById('gesture-trail');
-        if (svg) svg.innerHTML = '';
+        gestureBrush.release(); // fade out gracefully
       }
 
       function showSkillName(gesture) {
