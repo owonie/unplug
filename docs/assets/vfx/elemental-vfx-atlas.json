@@ -1,0 +1,303 @@
+{
+  "frames": {
+    "fire_trail": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "fire_rune": {
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "fire_impact": {
+      "frame": {
+        "x": 1024,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "fire_ultimate": {
+      "frame": {
+        "x": 1536,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "frost_trail": {
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "frost_rune": {
+      "frame": {
+        "x": 512,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "frost_impact": {
+      "frame": {
+        "x": 1024,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "frost_ultimate": {
+      "frame": {
+        "x": 1536,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "storm_trail": {
+      "frame": {
+        "x": 0,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "storm_rune": {
+      "frame": {
+        "x": 512,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "storm_impact": {
+      "frame": {
+        "x": 1024,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "storm_ultimate": {
+      "frame": {
+        "x": 1536,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "venom_trail": {
+      "frame": {
+        "x": 0,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "venom_rune": {
+      "frame": {
+        "x": 512,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "venom_impact": {
+      "frame": {
+        "x": 1024,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    },
+    "venom_ultimate": {
+      "frame": {
+        "x": 1536,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "recommendedBlend": "AdditiveBlending",
+      "depthWrite": false
+    }
+  },
+  "meta": {
+    "image": "elemental-vfx-atlas.png",
+    "size": {
+      "w": 2048,
+      "h": 2048
+    },
+    "scale": 1,
+    "format": "RGBA8888",
+    "premultipliedAlpha": false,
+    "runtime": "Three.js SpriteMaterial or quad shader"
+  }
+}

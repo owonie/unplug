@@ -1,0 +1,334 @@
+{
+  "frames": {
+    "orb_fire": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "orb_frost": {
+      "frame": {
+        "x": 256,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "orb_storm": {
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "orb_venom": {
+      "frame": {
+        "x": 768,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "shard_xp": {
+      "frame": {
+        "x": 1024,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "pickup_life": {
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "pickup_dash": {
+      "frame": {
+        "x": 256,
+        "y": 256,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "pickup_magnet": {
+      "frame": {
+        "x": 512,
+        "y": 256,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "pickup_shield": {
+      "frame": {
+        "x": 768,
+        "y": 256,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "sigil_class": {
+      "frame": {
+        "x": 1024,
+        "y": 256,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "relic_ember_censer": {
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "relic_frozen_hourglass": {
+      "frame": {
+        "x": 256,
+        "y": 512,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "relic_storm_crown": {
+      "frame": {
+        "x": 512,
+        "y": 512,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "relic_venom_chalice": {
+      "frame": {
+        "x": 768,
+        "y": 512,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "relic_gesture_gauntlet": {
+      "frame": {
+        "x": 1024,
+        "y": 512,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "chest_elite_closed": {
+      "frame": {
+        "x": 0,
+        "y": 768,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "chest_elite_open": {
+      "frame": {
+        "x": 256,
+        "y": 768,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "core_boss": {
+      "frame": {
+        "x": 512,
+        "y": 768,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "token_reroll": {
+      "frame": {
+        "x": 768,
+        "y": 768,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "pickup_revive": {
+      "frame": {
+        "x": 1024,
+        "y": 768,
+        "w": 256,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    }
+  },
+  "meta": {
+    "image": "items-atlas.png",
+    "size": {
+      "w": 1280,
+      "h": 1024
+    },
+    "scale": 1,
+    "format": "RGBA8888",
+    "premultipliedAlpha": false
+  }
+}

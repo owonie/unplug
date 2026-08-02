@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { loadAtlas, applyAtlasFrame, makeVfxMaterial, makeItemMaterial } from './atlas-loader.js';
 import { vfxMethods, vfxShieldMethods, vfxDirectionalMethods } from './vfx.js';
 
 export class ThreeRenderer {
@@ -190,6 +191,10 @@ export class ThreeRenderer {
     this.orbMeshes = [];
 
     this.loadModels();
+    // Load runtime asset pack atlases
+    this.itemsAtlas = null;
+    this.vfxAtlas = null;
+    this._loadAtlases();
     this.playerHitFlash = 0;
     this.deathParticles = [];
     this.prevEnemyCount = 0;
@@ -204,6 +209,16 @@ export class ThreeRenderer {
     this._zoomPunchTimer = 0;
     this._zoomPunchDuration = 0;
     this._zoomPunchIntensity = 0;
+  }
+
+  async _loadAtlases() {
+    try {
+      this.itemsAtlas = await loadAtlas('./assets/items/items-atlas');
+      this.vfxAtlas = await loadAtlas('./assets/vfx/elemental-vfx-atlas');
+      console.log('✅ Runtime atlases loaded (items: 20, vfx: 16)');
+    } catch (e) {
+      console.warn('Atlas load failed (using fallback VFX):', e.message);
+    }
   }
 
   async loadModels() {

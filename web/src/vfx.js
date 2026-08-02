@@ -294,6 +294,29 @@ export const vfxDirectionalMethods = {
     const socketOffset = 1.0;
     const x = fromX + dirX * socketOffset;
     const z = fromZ + dirZ * socketOffset;
+
+    // Atlas-based impact sprite (if loaded)
+    if (this.vfxAtlas) {
+      const elemNames = { 1: 'fire', 2: 'frost', 3: 'storm', 4: 'venom' };
+      const eName = elemNames[element] || 'fire';
+      try {
+        const impactTex = this.vfxAtlas.getFrame(`${eName}_impact`);
+        const mat = new THREE.SpriteMaterial({
+          map: impactTex, transparent: true,
+          blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+          opacity: 0.8,
+        });
+        const sprite = new THREE.Sprite(mat);
+        const impactX = fromX + dirX * (range * 0.6);
+        const impactZ = fromZ + dirZ * (range * 0.6);
+        sprite.position.set(impactX, 0.8, impactZ);
+        sprite.scale.set(3, 3, 1);
+        this.scene.add(sprite);
+        // Fade and remove
+        this.deathParticles.push({ mesh: sprite, vx: 0, vy: 0, vz: 0, life: 0.5, isRing: true, scale: 1, noScale: true, _initOpacity: 0.8 });
+      } catch(e) {}
+    }
+
     switch (element) {
       case 1: this._spawnFireBreath(x, z, dirX, dirZ, range); break;
       case 3: this._spawnLightningBolt(x, z, dirX, dirZ, range); break;
