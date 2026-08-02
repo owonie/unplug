@@ -433,6 +433,8 @@ export class ThreeRenderer {
           this._dashTrail[i].life -= dt;
           if (this._dashTrail[i].life <= 0) {
             this.scene.remove(this._dashTrail[i].mesh);
+            if (this._dashTrail[i].mesh.geometry) this._dashTrail[i].mesh.geometry.dispose();
+            if (this._dashTrail[i].mesh.material) this._dashTrail[i].mesh.material.dispose();
             this._dashTrail.splice(i, 1);
           } else {
             const opacity = this._dashTrail[i].life * 1.0;
@@ -473,7 +475,11 @@ export class ThreeRenderer {
     // === Element Orbs — 항상 표시 (전직 후에도 계속 모음) ===
     const orbKey = `${state.fireLv||0}_${state.iceLv||0}_${state.thunderLv||0}_${state.poisonLv||0}_${state.promoted?1:0}`;
     if (orbKey !== this._orbKey) {
-      this.elementOrbs.forEach(o => this.scene.remove(o));
+      this.elementOrbs.forEach(o => {
+        this.scene.remove(o);
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) o.material.dispose();
+      });
       this.elementOrbs = [];
       this._orbKey = orbKey;
 
@@ -766,7 +772,10 @@ export class ThreeRenderer {
           p.scale += dt * 6;
           p.mesh.scale.setScalar(p.scale);
         }
-        p.mesh.material.opacity = Math.min(p.life * 1.5, 0.4);
+        // Fade over entire lifetime (not just last 0.3s)
+        if (!p._maxLife) p._maxLife = p.life; // store initial life
+        const lifeRatio = Math.max(0, p.life / p._maxLife);
+        p.mesh.material.opacity = lifeRatio * (p._initOpacity || 0.4);
         p.mesh.position.x += (p.vx || 0) * dt;
         p.mesh.position.y += (p.vy || 0) * dt;
         p.mesh.position.z += (p.vz || 0) * dt;
@@ -946,6 +955,9 @@ export class ThreeRenderer {
     // Hide excess
     for (let i = data.length; i < pool.length; i++) {
       pool[i].visible = false;
+      // Hide associated telegraph lines
+      if (pool[i]._telegraphLine) pool[i]._telegraphLine.visible = false;
+      if (pool[i]._rushLine) pool[i]._rushLine.visible = false;
     }
     // Show/create — check type match for enemies
     for (let i = 0; i < data.length; i++) {

@@ -696,7 +696,7 @@
               renderer.shake(0.8, 0.25); // strongest shake
               showSkillName('circle');
               // Full-screen element flash (stronger)
-              const ultColors = {0:'rgba(255,255,255,0.4)',1:'rgba(255,80,0,0.35)',2:'rgba(50,180,255,0.35)',3:'rgba(255,200,0,0.35)',4:'rgba(150,50,255,0.35)'};
+              const ultColors = {0:'rgba(255,255,255,0.15)',1:'rgba(255,80,0,0.12)',2:'rgba(50,180,255,0.12)',3:'rgba(255,200,0,0.12)',4:'rgba(150,50,255,0.12)'};
               const ultFlash = document.createElement('div');
               ultFlash.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:${ultColors[ultElem]||ultColors[0]};pointer-events:none;z-index:999;animation:flash-fade 0.4s ease-out forwards`;
               document.body.appendChild(ultFlash);
