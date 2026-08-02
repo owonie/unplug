@@ -322,7 +322,7 @@ export class ThreeRenderer {
 
     // === DUAL-SPRITE CROSSFADE SYSTEM ===
     // Two identical plane meshes: spriteA (current) and spriteB (outgoing)
-    const geo = new THREE.PlaneGeometry(2.0, 2.0);
+    const geo = new THREE.PlaneGeometry(1.6, 1.6);
 
     // Sprite A (primary/incoming)
     const texA = this.sprites.idle.texture.clone();
@@ -336,7 +336,7 @@ export class ThreeRenderer {
     // Subtle ambient tint (10-20% desaturated scene color)
     matA.color = new THREE.Color(0xf4eef0);
     this._spriteA = new THREE.Mesh(geo, matA);
-    this._spriteA.position.y = 0.6; // pivot-based offset
+    this._spriteA.position.y = 0.45; // pivot-based offset for 1.6 geo
     this.visualRoot.add(this._spriteA);
 
     // Sprite B (outgoing — fades out during crossfade)
@@ -350,7 +350,7 @@ export class ThreeRenderer {
     });
     matB.color = new THREE.Color(0xf4eef0);
     this._spriteB = new THREE.Mesh(geo.clone(), matB);
-    this._spriteB.position.y = 0.6;
+    this._spriteB.position.y = 0.45;
     this._spriteB.visible = false;
     this.visualRoot.add(this._spriteB);
 
@@ -478,8 +478,7 @@ export class ThreeRenderer {
     }
 
     // Camera follows player smoothly (chase position — no shake applied here)
-    const isAttacking = this._animLock === 'attack';
-    const camSpeed = state.playerDashing && state.dashType === 1 ? 0.03 : isAttacking ? 0.02 : 0.06;
+    const camSpeed = state.playerDashing && state.dashType === 1 ? 0.03 : 0.06;
     const targetCamPos = new THREE.Vector3(playerX, 12, playerZ + 10);
     this.camera.position.lerp(targetCamPos, camSpeed);
     this.camera.lookAt(playerX, 0, playerZ);
@@ -597,28 +596,8 @@ export class ThreeRenderer {
         }
       }
 
-      // === DUAL-SPRITE CROSSFADE TRANSITION ===
+      // === ANIMATION SWITCH (instant — no crossfade to avoid size pop) ===
       if (targetAnim !== this.playerCurrentAnim && this.sprites[targetAnim]) {
-        // Determine crossfade duration
-        let fadeDur = 0.09; // default
-        const from = this.playerCurrentAnim;
-        const to = targetAnim;
-        if (from === 'idle' && to === 'run') fadeDur = this._transitions.idle_to_run;
-        else if (from === 'run' && to === 'idle') fadeDur = this._transitions.run_to_idle;
-        else if ((from === 'idle' || from === 'run') && to === 'attack') fadeDur = this._transitions.locomotion_to_attack;
-        else if (from === 'attack' && (to === 'idle' || to === 'run')) fadeDur = this._transitions.attack_to_locomotion;
-        else if ((from === 'idle' || from === 'run') && to === 'dash') fadeDur = this._transitions.locomotion_to_dash;
-        else if (from === 'dash' && (to === 'idle' || to === 'run')) fadeDur = this._transitions.dash_to_locomotion;
-        else if (to === 'hit') fadeDur = this._transitions.any_to_hit;
-        else if (from === 'hit') fadeDur = this._transitions.hit_to_locomotion;
-
-        // Move current sprite to B (outgoing)
-        this._spriteB.material.map = this._spriteA.material.map;
-        this._spriteB.material.opacity = 1.0;
-        this._spriteB.visible = true;
-        this._crossfade = { active: true, progress: 0, duration: fadeDur, outFrame: this.playerSpriteFrame };
-
-        // Set new clip on A (incoming)
         this.playerCurrentAnim = targetAnim;
         this.playerSpriteFrame = 0;
         this.playerSpriteTimer = 0;
@@ -629,25 +608,10 @@ export class ThreeRenderer {
         newTex.repeat.set(1 / spriteInfo.frames, 1);
         newTex.offset.set(0, 0);
         this._spriteA.material.map = newTex;
-        this._spriteA.material.opacity = 0.0; // will fade in
+        this._spriteA.material.opacity = 1.0;
         this._spriteA.material.needsUpdate = true;
-      }
-
-      // Update crossfade progress (smoothstep)
-      if (this._crossfade.active) {
-        this._crossfade.progress += dt / this._crossfade.duration;
-        if (this._crossfade.progress >= 1.0) {
-          this._crossfade.active = false;
-          this._spriteA.material.opacity = 1.0;
-          this._spriteB.visible = false;
-          this._spriteB.material.opacity = 0;
-        } else {
-          // smoothstep curve
-          const t = this._crossfade.progress;
-          const smooth = t * t * (3 - 2 * t);
-          this._spriteA.material.opacity = smooth;
-          this._spriteB.material.opacity = 1.0 - smooth;
-        }
+        // Hide B (not used)
+        this._spriteB.visible = false;
       }
 
       // Dash visual: element-specific

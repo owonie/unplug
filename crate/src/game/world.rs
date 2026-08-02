@@ -113,12 +113,6 @@ impl World {
         self.apply_item_effects(dt);
 
         self.handle_input();
-        // Slow movement during attack windup (prevents "sliding attack" feel)
-        if self.attacking {
-            self.player.speed_mult = 0.3;
-        } else {
-            self.player.speed_mult = 1.0;
-        }
         self.player.update(dt);
         self.clamp_player();
         self.auto_attack();
