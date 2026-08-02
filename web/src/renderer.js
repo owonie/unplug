@@ -413,9 +413,11 @@ export class ThreeRenderer {
       // Billboard: face camera (simple quaternion copy)
       this.playerGroup.quaternion.copy(this.camera.quaternion);
 
-      // Flip: 이동 방향 or 적 방향
+      // Flip: face toward mouse cursor (most natural), or movement dir, or nearest enemy
       let faceDir = 0;
-      if (playerMoving) {
+      if (state.mouseWorldX !== undefined) {
+        faceDir = state.mouseWorldX - playerX; // face mouse
+      } else if (playerMoving) {
         faceDir = playerDirX;
       } else if (state.nearestEnemyDirX !== undefined) {
         faceDir = state.nearestEnemyDirX;
@@ -423,8 +425,8 @@ export class ThreeRenderer {
       if (faceDir < -0.01) this.playerFacing = -1;
       else if (faceDir > 0.01) this.playerFacing = 1;
 
-      // Scale: all animations now use consistent 256px cells → unified scale
-      const baseScale = 1.4;
+      // Scale: 1.0 for proper size (256px cell at 2.0 geo = ~2 world units)
+      const baseScale = 1.0;
       this.playerGroup.scale.set(baseScale * this.playerFacing, baseScale, 1);
 
       // Foot rune follows player + element color
