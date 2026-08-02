@@ -238,9 +238,9 @@ export class ThreeRenderer {
         fallbacks: ['./sprites/huntress/huntress_idle_calm_v3_neutral_v4.png'],
       },
       run: {
-        // Motion Set v8: Run v7 (12fr, head stable)
+        // Motion Set v8: Run v7 (12fr, head stable) — slowed to 10fps for weighty feel
         file: './sprites/huntress/huntress_run_head_stable_v7.png',
-        frames: 12, fps: 18, loop: true, eventFrame: null,
+        frames: 12, fps: 10, loop: true, eventFrame: null,
         fallbacks: ['./sprites/huntress/huntress_run_neutral_v5.png', './sprites/huntress/huntress_run_neutral_v4.png'],
       },
       attack: {
@@ -841,10 +841,10 @@ export class ThreeRenderer {
           // Don't advance frame during hold
         } else {
           // Run animation speed scales with movement speed
-          // Base speed 4.5 → 1.0x playback, faster = faster anim, slower = slower anim
+          // Base speed 4.5 → 1.0x playback, capped for weighty feel
           let animSpeed = spriteInfo.speed;
           if (this.playerCurrentAnim === 'run' && state.playerSpeed !== undefined) {
-            const speedRatio = Math.max(0.4, Math.min(1.6, state.playerSpeed / 4.5));
+            const speedRatio = Math.max(0.6, Math.min(1.3, state.playerSpeed / 4.5));
             animSpeed = spriteInfo.speed * speedRatio;
           }
           this.playerSpriteTimer += dt * animSpeed;
