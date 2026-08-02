@@ -809,10 +809,12 @@ export class ThreeRenderer {
           }
           // Don't advance frame during hold
         } else {
-          // Run speed scales with actual movement
+          // Run animation speed scales with movement speed
+          // Base speed 4.5 → 1.0x playback, faster = faster anim, slower = slower anim
           let animSpeed = spriteInfo.speed;
-          if (this.playerCurrentAnim === 'run' && state.playerSpeed) {
-            animSpeed = spriteInfo.speed * Math.max(0.5, state.playerSpeed / 5.0);
+          if (this.playerCurrentAnim === 'run' && state.playerSpeed !== undefined) {
+            const speedRatio = Math.max(0.4, Math.min(1.6, state.playerSpeed / 4.5));
+            animSpeed = spriteInfo.speed * speedRatio;
           }
           this.playerSpriteTimer += dt * animSpeed;
           if (this.playerSpriteTimer >= 1) {
