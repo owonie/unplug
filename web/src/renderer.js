@@ -227,44 +227,74 @@ export class ThreeRenderer {
     // 2D Sprite billboard system instead of 3D models
     const loader = new THREE.TextureLoader();
 
-    // Load Huntress sprite sheets — neutral_light_v5 primary, v4 as fallback
+    // Load Huntress sprite sheets — Motion Set v8 structure
+    // Each clip: { file, frames, fps, loop, eventFrame?, fallbacks[] }
+    // v8 규격: 256×256 cell, pivot (0.5, 0.93), worldScale 1.0, no per-state scale
     this.sprites = {};
     const spriteData = {
-      idle: { file: './sprites/huntress/huntress_idle_calm_v3_neutral_v5.png', frames: 8, speed: 6, loop: true, fallback: './sprites/huntress/huntress_idle_calm_v3_neutral_v4.png', fallbackFrames: 8 },
-      run: { file: './sprites/huntress/huntress_run_neutral_v5.png', frames: 8, speed: 14, loop: true, fallback: './sprites/huntress/huntress_run_neutral_v4.png', fallbackFrames: 8 },
-      attack: { file: './sprites/huntress/huntress_attack_v2_neutral_v5.png', frames: 10, speed: 24, loop: false, eventFrame: 5, fallback: './sprites/huntress/huntress_attack_v2_neutral_v4.png', fallbackFrames: 10 },
-      dash: { file: './sprites/huntress/huntress_dash_neutral_v5.png', frames: 6, speed: 22, loop: false, eventFrame: 2, fallback: './sprites/huntress/huntress_dash_neutral_v4.png', fallbackFrames: 6 },
-      gesture: { file: './sprites/huntress/huntress_gesture_cast_neutral_v5.png', frames: 6, speed: 18, loop: false, eventFrame: 4, fallback: './sprites/huntress/huntress_gesture_cast_neutral_v4.png', fallbackFrames: 6 },
-      hit: { file: './sprites/huntress/huntress_hit_neutral_v5.png', frames: 4, speed: 18, loop: false, eventFrame: 1, fallback: './sprites/huntress/huntress_hit_neutral_v4.png', fallbackFrames: 4 },
-      death: { file: './sprites/huntress/huntress_death_neutral_v5.png', frames: 8, speed: 14, loop: false, fallback: './sprites/huntress/huntress_death_neutral_v4.png', fallbackFrames: 8 },
-      revive: { file: './sprites/huntress/huntress_revive_neutral_v5.png', frames: 8, speed: 16, loop: false, eventFrame: 6, fallback: './sprites/huntress/huntress_revive_neutral_v4.png', fallbackFrames: 8 },
+      idle: {
+        file: './sprites/huntress/huntress_idle_calm_v3_neutral_v5.png',
+        frames: 8, fps: 6, loop: true, eventFrame: null,
+        fallbacks: ['./sprites/huntress/huntress_idle_calm_v3_neutral_v4.png'],
+      },
+      run: {
+        // Motion Set v8: Run v7 (12fr, head stable)
+        file: './sprites/huntress/huntress_run_head_stable_v7.png',
+        frames: 12, fps: 18, loop: true, eventFrame: null,
+        fallbacks: ['./sprites/huntress/huntress_run_neutral_v5.png', './sprites/huntress/huntress_run_neutral_v4.png'],
+      },
+      attack: {
+        file: './sprites/huntress/huntress_attack_v2_neutral_v5.png',
+        frames: 10, fps: 24, loop: false, eventFrame: 5,
+        fallbacks: ['./sprites/huntress/huntress_attack_v2_neutral_v4.png'],
+      },
+      dash: {
+        file: './sprites/huntress/huntress_dash_neutral_v5.png',
+        frames: 6, fps: 22, loop: false, eventFrame: 2,
+        fallbacks: ['./sprites/huntress/huntress_dash_neutral_v4.png'],
+      },
+      gesture: {
+        file: './sprites/huntress/huntress_gesture_cast_neutral_v5.png',
+        frames: 6, fps: 18, loop: false, eventFrame: 4,
+        fallbacks: ['./sprites/huntress/huntress_gesture_cast_neutral_v4.png'],
+      },
+      hit: {
+        file: './sprites/huntress/huntress_hit_neutral_v5.png',
+        frames: 4, fps: 18, loop: false, eventFrame: 1,
+        fallbacks: ['./sprites/huntress/huntress_hit_neutral_v4.png'],
+      },
+      death: {
+        file: './sprites/huntress/huntress_death_neutral_v5.png',
+        frames: 8, fps: 14, loop: false, eventFrame: null,
+        fallbacks: ['./sprites/huntress/huntress_death_neutral_v4.png'],
+      },
+      revive: {
+        file: './sprites/huntress/huntress_revive_neutral_v5.png',
+        frames: 8, fps: 16, loop: false, eventFrame: 6,
+        fallbacks: ['./sprites/huntress/huntress_revive_neutral_v4.png'],
+      },
     };
 
     for (const [key, data] of Object.entries(spriteData)) {
-      try {
-        const tex = await loader.loadAsync(data.file);
-        tex.magFilter = THREE.LinearFilter;
-        tex.minFilter = THREE.LinearFilter;
-        tex.colorSpace = THREE.SRGBColorSpace;
-        this.sprites[key] = {
-          texture: tex, frames: data.frames, speed: data.speed,
-          loop: data.loop !== false,
-          eventFrame: data.eventFrame || null,
-        };
-      } catch (e) {
-        console.warn(`Failed to load v4 sprite: ${key}, trying fallback...`, e);
-        if (data.fallback) {
-          try {
-            const fbTex = await loader.loadAsync(data.fallback);
-            fbTex.magFilter = THREE.LinearFilter;
-            fbTex.minFilter = THREE.LinearFilter;
-            fbTex.colorSpace = THREE.SRGBColorSpace;
-            this.sprites[key] = { texture: fbTex, frames: data.fallbackFrames || data.frames, speed: data.speed, loop: data.loop !== false, eventFrame: data.eventFrame || null };
-          } catch (e2) {
-            console.warn(`Fallback also failed for: ${key}`);
-          }
+      const candidates = [data.file, ...(data.fallbacks || [])];
+      let loaded = false;
+      for (const path of candidates) {
+        try {
+          const tex = await loader.loadAsync(path);
+          tex.magFilter = THREE.LinearFilter;
+          tex.minFilter = THREE.LinearFilter;
+          tex.colorSpace = THREE.SRGBColorSpace;
+          this.sprites[key] = {
+            texture: tex, frames: data.frames, speed: data.fps,
+            loop: data.loop !== false, eventFrame: data.eventFrame,
+          };
+          loaded = true;
+          break;
+        } catch (e) {
+          console.warn(`Sprite load failed: ${path}, trying next...`);
         }
       }
+      if (!loaded) console.warn(`All candidates failed for: ${key}`);
     }
 
     // Load contact shadow
@@ -596,22 +626,90 @@ export class ThreeRenderer {
         }
       }
 
-      // === ANIMATION SWITCH (instant — no crossfade to avoid size pop) ===
-      if (targetAnim !== this.playerCurrentAnim && this.sprites[targetAnim]) {
-        this.playerCurrentAnim = targetAnim;
-        this.playerSpriteFrame = 0;
-        this.playerSpriteTimer = 0;
-        const spriteInfo = this.sprites[targetAnim];
-        const newTex = spriteInfo.texture.clone();
-        newTex.magFilter = THREE.LinearFilter;
-        newTex.minFilter = THREE.LinearFilter;
-        newTex.repeat.set(1 / spriteInfo.frames, 1);
-        newTex.offset.set(0, 0);
-        this._spriteA.material.map = newTex;
-        this._spriteA.material.opacity = 1.0;
-        this._spriteA.material.needsUpdate = true;
-        // Hide B (not used)
+      // === RUN→IDLE DECELERATION (90ms grace, 80ms cancel window, 110ms crossfade) ===
+      // When run→idle: don't switch instantly, wait 90ms in case input resumes
+      if (!this._runToIdleTimer) this._runToIdleTimer = 0;
+      if (!this._runToIdleFade) this._runToIdleFade = { active: false, progress: 0 };
+
+      if (this.playerCurrentAnim === 'run' && targetAnim === 'idle') {
+        if (this._runToIdleTimer === 0) {
+          this._runToIdleTimer = 0.001; // start grace period
+        }
+        this._runToIdleTimer += dt;
+        if (this._runToIdleTimer < 0.090) {
+          targetAnim = 'run'; // keep running during grace period
+        }
+        // else: proceed to transition below
+      } else if (targetAnim === 'run' && this._runToIdleTimer > 0 && this._runToIdleTimer < 0.080) {
+        // Input resumed within 80ms cancel window — stay run
+        this._runToIdleTimer = 0;
+        this._runToIdleFade = { active: false, progress: 0 };
         this._spriteB.visible = false;
+      } else if (targetAnim !== 'idle' || this.playerCurrentAnim !== 'run') {
+        this._runToIdleTimer = 0;
+      }
+
+      // === ANIMATION SWITCH ===
+      if (targetAnim !== this.playerCurrentAnim && this.sprites[targetAnim]) {
+        const from = this.playerCurrentAnim;
+        const to = targetAnim;
+        const isLocomotionTransition = (from === 'run' && to === 'idle') || (from === 'idle' && to === 'run');
+
+        if (isLocomotionTransition) {
+          // Dual-sprite crossfade for Run↔Idle only (same pivot/scale guaranteed)
+          this._spriteB.material.map = this._spriteA.material.map;
+          this._spriteB.material.opacity = 1.0;
+          this._spriteB.visible = true;
+          const fadeDur = (from === 'run' && to === 'idle') ? 0.110 : 0.090;
+          this._runToIdleFade = { active: true, progress: 0, duration: fadeDur };
+
+          // Set new clip on A
+          this.playerCurrentAnim = targetAnim;
+          this.playerSpriteFrame = 0;
+          this.playerSpriteTimer = 0;
+          const spriteInfo = this.sprites[targetAnim];
+          const newTex = spriteInfo.texture.clone();
+          newTex.magFilter = THREE.LinearFilter;
+          newTex.minFilter = THREE.LinearFilter;
+          newTex.repeat.set(1 / spriteInfo.frames, 1);
+          newTex.offset.set(0, 0);
+          this._spriteA.material.map = newTex;
+          this._spriteA.material.opacity = 0.0;
+          this._spriteA.material.needsUpdate = true;
+        } else {
+          // Instant switch for other transitions (attack, dash, etc.)
+          this.playerCurrentAnim = targetAnim;
+          this.playerSpriteFrame = 0;
+          this.playerSpriteTimer = 0;
+          const spriteInfo = this.sprites[targetAnim];
+          const newTex = spriteInfo.texture.clone();
+          newTex.magFilter = THREE.LinearFilter;
+          newTex.minFilter = THREE.LinearFilter;
+          newTex.repeat.set(1 / spriteInfo.frames, 1);
+          newTex.offset.set(0, 0);
+          this._spriteA.material.map = newTex;
+          this._spriteA.material.opacity = 1.0;
+          this._spriteA.material.needsUpdate = true;
+          this._spriteB.visible = false;
+          this._runToIdleTimer = 0;
+        }
+      }
+
+      // Update Run↔Idle crossfade
+      if (this._runToIdleFade && this._runToIdleFade.active) {
+        this._runToIdleFade.progress += dt / this._runToIdleFade.duration;
+        if (this._runToIdleFade.progress >= 1.0) {
+          this._runToIdleFade.active = false;
+          this._spriteA.material.opacity = 1.0;
+          this._spriteB.visible = false;
+          this._spriteB.material.opacity = 0;
+          this._runToIdleTimer = 0;
+        } else {
+          const t = this._runToIdleFade.progress;
+          const smooth = t * t * (3 - 2 * t); // smoothstep
+          this._spriteA.material.opacity = smooth;
+          this._spriteB.material.opacity = 1.0 - smooth;
+        }
       }
 
       // Dash visual: element-specific
