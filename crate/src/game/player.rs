@@ -7,6 +7,7 @@ pub struct Player {
     pub hp: f32,
     pub max_hp: f32,
     pub speed: f32,
+    pub speed_mult: f32, // temporary multiplier (attack slowdown, etc)
     pub alive: bool,
     pub level: u32,
     pub xp: u32,
@@ -84,6 +85,7 @@ impl Player {
             hp: 100.0,
             max_hp: 100.0,
             speed: 4.5,
+            speed_mult: 1.0,
             alive: true,
             level: 1,
             xp: 0,
@@ -184,7 +186,7 @@ impl Player {
                 }
             }
         } else if self.moving {
-            let mut spd = self.speed;
+            let mut spd = self.speed * self.speed_mult;
             // ❄️ Ice Skate: passive speed boost
             if self.dash_element == 2 {
                 spd *= 1.4;

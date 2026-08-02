@@ -478,7 +478,8 @@ export class ThreeRenderer {
     }
 
     // Camera follows player smoothly (chase position — no shake applied here)
-    const camSpeed = state.playerDashing && state.dashType === 1 ? 0.03 : 0.06;
+    const isAttacking = this._animLock === 'attack';
+    const camSpeed = state.playerDashing && state.dashType === 1 ? 0.03 : isAttacking ? 0.02 : 0.06;
     const targetCamPos = new THREE.Vector3(playerX, 12, playerZ + 10);
     this.camera.position.lerp(targetCamPos, camSpeed);
     this.camera.lookAt(playerX, 0, playerZ);
