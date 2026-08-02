@@ -537,7 +537,10 @@
           if (!document.getElementById('gesture-desaturate')) {
             const overlay = document.createElement('div');
             overlay.id = 'gesture-desaturate';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:990;transition:opacity 0.15s;background:radial-gradient(circle 200px at var(--gx, 50%) var(--gy, 50%), rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.35) 60%)';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:990;opacity:0;transition:opacity 0.3s ease-in;background:radial-gradient(circle 280px at var(--gx, 50%) var(--gy, 50%), rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.22) 100%)';
+            document.body.appendChild(overlay);
+            // Fade in smoothly
+            requestAnimationFrame(() => overlay.style.opacity = '1');
             document.body.appendChild(overlay);
           }
         } else if (e.button === 2 && engine.player_class_tier() >= 2) {
@@ -1602,18 +1605,17 @@
           showGameOver(engine);
         }
 
-        // Gesture slowmo: 0.25x time scale for cinematic feel
+        // Gesture slowmo: reduced update rate for cinematic feel
         if (isDragging && dragStart) {
-          // Slow engine updates to 25% speed
-          if (!window._gestureSlowTime) window._gestureSlowTime = 0;
-          window._gestureSlowTime += (timestamp - (window._lastLoopTime || timestamp)) * 0.4;
-          window._lastLoopTime = timestamp;
-          // Only update engine at slowed rate
-          engine.update(window._gestureSlowTime);
-          // Slow movement during gesture (65%), don't fully block
+          if (!window._gestureFrameCount) window._gestureFrameCount = 0;
+          window._gestureFrameCount++;
+          // Update engine every 3rd frame → ~0.33x game speed
+          if (window._gestureFrameCount % 3 === 0) {
+            engine.update(timestamp);
+          }
+          // Renderer still updates every frame (smooth visuals at slow speed)
         } else {
-          window._gestureSlowTime = 0;
-          window._lastLoopTime = timestamp;
+          window._gestureFrameCount = 0;
           // Pass mouse aim direction to engine every frame
           if (window._lastMouseX !== undefined && engine.set_aim) {
             const aimX = (window._lastMouseX - window.innerWidth / 2) * 0.02;
