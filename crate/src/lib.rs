@@ -71,6 +71,15 @@ impl GameEngine {
     }
     pub fn player_hit(&self) -> bool { self.world.player.invuln_timer > 0.3 }
     pub fn player_attacking(&self) -> bool { self.world.attacking }
+
+    /// Set aim direction (normalized mouse direction from player)
+    pub fn set_aim(&mut self, x: f32, z: f32) {
+        let len = (x * x + z * z).sqrt();
+        if len > 0.01 {
+            self.world.aim_x = x / len;
+            self.world.aim_z = z / len;
+        }
+    }
     pub fn player_dashing(&self) -> bool { self.world.player.is_dashing() }
     pub fn player_dash_cooldown(&self) -> f32 { self.world.player.dash_cooldown }
     pub fn player_dash_charges(&self) -> u32 { self.world.player.dash_charges as u32 }

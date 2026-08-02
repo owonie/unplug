@@ -667,12 +667,21 @@ export class ThreeRenderer {
           if (from === 'run' && to === 'idle') fadeDur = 0.110;
           else if (from === 'idle' && to === 'run') fadeDur = 0.090;
           else if (isLocoToAttack) fadeDur = 0.045; // locomotion→attack
+          // Save run frame for phase preservation
+          if (isLocoToAttack && from === 'run') {
+            this._savedRunFrame = this.playerSpriteFrame;
+          }
           else fadeDur = 0.085; // attack→locomotion
           this._runToIdleFade = { active: true, progress: 0, duration: fadeDur };
 
-          // Set new clip on A
+          // Set new clip on A — preserve run phase after attack
           this.playerCurrentAnim = targetAnim;
-          this.playerSpriteFrame = 0;
+          // Only reset frame for non-run targets or fresh starts (preserve run phase after attack)
+          if (isAttackToLoco && to === 'run' && this._savedRunFrame !== undefined) {
+            this.playerSpriteFrame = this._savedRunFrame;
+          } else {
+            this.playerSpriteFrame = 0;
+          }
           this.playerSpriteTimer = 0;
           const spriteInfo = this.sprites[targetAnim];
           const newTex = spriteInfo.texture.clone();
@@ -831,9 +840,12 @@ export class ThreeRenderer {
               this._attackEventFired = true;
               this._contactHoldActive = true;
               this._contactHoldTimer = this._contactHoldMs;
-              // Camera shake for attack (0.35% viewport, 75ms)
-              this.shake(0.07, 0.075);
-              // Dispatch contact event for VFX/SFX sync
+              // Spawn slash arc VFX in mouse aim direction (separate from body)
+              const aimX = state.mouseWorldX !== undefined ? state.mouseWorldX - playerX : this.playerFacing;
+              const aimZ = state.mouseWorldZ !== undefined ? state.mouseWorldZ - playerZ : 0;
+              this.spawnSlash(playerX, playerZ, aimX, aimZ, state.element || 0);
+              // Shake/hitstop ONLY on actual hit (checked via damage events)
+              // Dispatch contact event for external sync
               if (this._onAttackContact) this._onAttackContact();
             }
             // Dash shake on movement start frame

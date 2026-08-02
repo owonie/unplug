@@ -44,6 +44,8 @@ pub struct World {
     pub attack_windup: f32,      // > 0 means winding up
     pub attack_windup_max: f32,  // total windup time
     pub attacking: bool,         // true during windup (for animation)
+    pub aim_x: f32,              // mouse aim direction (normalized)
+    pub aim_z: f32,
     // Passive items
     pub items: ItemInventory,
     pub item_bonuses: ItemBonuses,
@@ -85,6 +87,8 @@ impl World {
             attack_windup: 0.0,
             attack_windup_max: 0.2,
             attacking: false,
+            aim_x: 1.0,
+            aim_z: 0.0,
             items: ItemInventory::new(),
             item_bonuses: ItemBonuses::default(),
             wave_events: WaveEventState::new(),
@@ -113,6 +117,14 @@ impl World {
         self.apply_item_effects(dt);
 
         self.handle_input();
+        // Attack movement: 80% speed during windup, 65% near contact
+        if self.attacking {
+            // Contact window: windup is near 0 (last 50ms)
+            let near_contact = self.attack_windup > 0.0 && self.attack_windup < 0.05;
+            self.player.speed_mult = if near_contact { 0.65 } else { 0.80 };
+        } else {
+            self.player.speed_mult = 1.0;
+        }
         self.player.update(dt);
         self.clamp_player();
         self.auto_attack();
@@ -227,12 +239,19 @@ impl World {
 
         if !self.player.can_attack(self.time) { return; }
 
-        // Check if any enemy in range
+        // Mouse-directed attack: check if any enemy in range AND within aim cone (~120°)
         let px = self.player.x;
         let pz = self.player.z;
         let range = self.player.attack_range;
         let has_target = self.enemies.iter().any(|e| {
-            e.alive && ((e.x - px).powi(2) + (e.z - pz).powi(2)).sqrt() < range
+            if !e.alive { return false; }
+            let dist = ((e.x - px).powi(2) + (e.z - pz).powi(2)).sqrt();
+            if dist >= range { return false; }
+            // Cone check: dot product with aim direction (cos 60° = 0.5 → 120° cone)
+            let dx = (e.x - px) / dist;
+            let dz = (e.z - pz) / dist;
+            let dot = dx * self.aim_x + dz * self.aim_z;
+            dot > 0.0 // ~180° generous cone (auto-attack should feel responsive)
         });
 
         if !has_target { self.attacking = false; return; }
@@ -251,50 +270,42 @@ impl World {
         let crit_chance = self.player.crit_chance;
         let lifesteal = self.player.lifesteal;
         let aoe_radius = self.player.aoe_radius;
+        let aim_x = self.aim_x;
+        let aim_z = self.aim_z;
 
-        // 1. 가장 가까운 적을 메인 타겟으로
-        let mut closest_idx: Option<usize> = None;
-        let mut closest_dist = range;
-        for (i, e) in self.enemies.iter().enumerate() {
-            if !e.alive { continue; }
-            let dist = ((e.x - px).powi(2) + (e.z - pz).powi(2)).sqrt();
-            if dist < closest_dist {
-                closest_dist = dist;
-                closest_idx = Some(i);
-            }
-        }
-
-        let main_target = match closest_idx {
-            Some(idx) => idx,
-            None => return,
-        };
-
-        let target_x = self.enemies[main_target].x;
-        let target_z = self.enemies[main_target].z;
-
-        // 2. 메인 타겟 주변 클리브 범위 (1.5 + 레벨 보너스) 내 모든 적 타격
-        let cleave_radius = 0.8 + self.player.attack_count as f32 * 0.2; // tight cleave, ~2 enemies
+        // Cone-based attack in aim direction (90° half-angle = 180° total)
+        let cleave_radius = 0.8 + self.player.attack_count as f32 * 0.2;
         let mut total_damage = 0.0_f32;
         let mut kills: Vec<(f32, f32)> = Vec::new();
+        let mut hit_any = false;
 
         for enemy in &mut self.enemies {
             if !enemy.alive { continue; }
-            let dist_to_target = ((enemy.x - target_x).powi(2) + (enemy.z - target_z).powi(2)).sqrt();
-            
-            if dist_to_target <= cleave_radius {
-                let is_crit = ((self.time * 1000.0 + enemy.x * 77.0) as u32 % 100) as f32 / 100.0 < crit_chance;
-                let dmg = if is_crit { damage * 2.5 } else { damage };
-                total_damage += dmg;
+            let dx = enemy.x - px;
+            let dz = enemy.z - pz;
+            let dist = (dx * dx + dz * dz).sqrt();
+            if dist >= range + cleave_radius { continue; }
+            if dist < 0.01 { continue; }
 
-                let ex = enemy.x;
-                let ez = enemy.z;
-                let killed = enemy.take_damage(dmg);
-                enemy.apply_knockback(px, pz, 6.0);
-                self.damage_events.push((ex, ez, dmg, is_crit));
+            // Cone check with aim direction (cos 30° = 0.866 → tight 60° cone)
+            let ndx = dx / dist;
+            let ndz = dz / dist;
+            let dot = ndx * aim_x + ndz * aim_z;
+            if dot < 0.3 { continue; } // ~145° total arc — generous but directional
 
-                if killed {
-                    kills.push((ex, ez));
-                }
+            let is_crit = ((self.time * 1000.0 + enemy.x * 77.0) as u32 % 100) as f32 / 100.0 < crit_chance;
+            let dmg = if is_crit { damage * 2.5 } else { damage };
+            total_damage += dmg;
+
+            let ex = enemy.x;
+            let ez = enemy.z;
+            let killed = enemy.take_damage(dmg);
+            enemy.apply_knockback(px, pz, 6.0);
+            self.damage_events.push((ex, ez, dmg, is_crit));
+            hit_any = true;
+
+            if killed {
+                kills.push((ex, ez));
             }
         }
 
@@ -303,7 +314,7 @@ impl World {
             self.player.heal(total_damage * lifesteal);
         }
 
-        // AOE on kill (추가 폭발)
+        // AOE on kill
         for (kx, kz) in &kills {
             if aoe_radius > 0.0 {
                 for enemy in &mut self.enemies {
