@@ -413,12 +413,12 @@ export class ThreeRenderer {
       // Billboard: face camera (simple quaternion copy)
       this.playerGroup.quaternion.copy(this.camera.quaternion);
 
-      // Flip: face toward mouse cursor (most natural), or movement dir, or nearest enemy
+      // Flip: movement direction when moving, mouse direction when idle
       let faceDir = 0;
-      if (state.mouseWorldX !== undefined) {
-        faceDir = state.mouseWorldX - playerX; // face mouse
-      } else if (playerMoving) {
-        faceDir = playerDirX;
+      if (playerMoving) {
+        faceDir = playerDirX; // 이동 중 = 이동 방향
+      } else if (state.mouseWorldX !== undefined) {
+        faceDir = state.mouseWorldX - playerX; // 정지 시 = 마우스 방향
       } else if (state.nearestEnemyDirX !== undefined) {
         faceDir = state.nearestEnemyDirX;
       }
