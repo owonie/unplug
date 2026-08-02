@@ -494,12 +494,10 @@ export class ThreeRenderer {
 
     // Player position + sprite animation (playerRoot/visualRoot architecture)
     if (this.playerRoot) {
-      // === ROOT POSITION: collision body follows game state ===
-      // Attack: lock root world position (no code-driven movement during attack)
-      const isAttackLocked = this._animLock === 'attack';
-      if (!isAttackLocked) {
-        this.playerRoot.position.set(playerX, 0, playerZ);
-      }
+      // === ROOT POSITION: always follows game state (collision body) ===
+      // "lockRootWorldPosition" means: don't add extra code-driven offset during attack
+      // (the sprite art itself has the pose change — no knock-forward needed)
+      this.playerRoot.position.set(playerX, 0, playerZ);
 
       // visualRoot: sprites follow playerRoot (no additional transform during attack)
       // Billboard: face camera
