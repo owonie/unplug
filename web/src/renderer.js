@@ -931,18 +931,32 @@ export class ThreeRenderer {
       }
     }
 
-    // Animate orbs around player
+    // Animate orbs around player (delayed follow — satellite-like)
     if (this.elementOrbs.length > 0) {
       const t = this.clock.getElapsedTime();
       const orbCount = this.elementOrbs.length;
+      // Orbit center follows player with lag (creates trailing effect on movement)
+      if (!this._orbCenter) this._orbCenter = { x: playerX, z: playerZ };
+      const lagSpeed = 4.5; // lower = more trailing lag
+      this._orbCenter.x += (playerX - this._orbCenter.x) * lagSpeed * dt;
+      this._orbCenter.z += (playerZ - this._orbCenter.z) * lagSpeed * dt;
+      const cx = this._orbCenter.x;
+      const cz = this._orbCenter.z;
+
       this.elementOrbs.forEach((orb, i) => {
+        // Each orb has its own phase offset → staggered trailing
+        const phaseDelay = i * 0.08; // later orbs lag slightly more
         const angle = t * 2.5 + (i * Math.PI * 2 / orbCount);
         const radius = 1.0 + Math.sin(t * 1.5 + i) * 0.2;
-        orb.position.set(
-          playerX + Math.cos(angle) * radius,
-          0.6 + Math.sin(t * 3 + i * 2) * 0.2,
-          playerZ + Math.sin(angle) * radius
-        );
+        // Target position (orbit around lagged center)
+        const targetX = cx + Math.cos(angle) * radius;
+        const targetZ = cz + Math.sin(angle) * radius;
+        const targetY = 0.6 + Math.sin(t * 3 + i * 2) * 0.2;
+        // Each orb lerps to its target (creates individual trailing)
+        const orbLag = 6.0 - phaseDelay * 10; // front orbs faster, rear orbs slower
+        orb.position.x += (targetX - orb.position.x) * Math.min(1, orbLag * dt);
+        orb.position.z += (targetZ - orb.position.z) * Math.min(1, orbLag * dt);
+        orb.position.y += (targetY - orb.position.y) * Math.min(1, 8 * dt);
       });
     }
 
