@@ -242,10 +242,9 @@ export class ThreeRenderer {
         // Frame timing: contact frames hold longer, flight frames pass quickly
         file: './sprites/huntress/huntress_run_head_stable_v7.png',
         frames: 12, fps: 14, loop: true, eventFrame: null,
-        // Per-frame duration multiplier: >1 = hold longer (contact), <1 = faster (flight)
-        // Stride 1: frames 0-5, Stride 2: frames 6-11
-        // 0=push-off, 1-2=flight, 3=contact, 4=push-off, 5=flight (mirrored)
-        frameTiming: [1.4, 0.7, 0.7, 1.5, 1.4, 0.7, 0.7, 1.4, 0.7, 0.7, 1.5, 1.4],
+        // Per-frame duration multiplier: subtle rhythm (not extreme)
+        // Contact frames slightly longer, flight slightly shorter
+        frameTiming: [1.2, 0.85, 0.85, 1.25, 1.2, 0.85, 0.85, 1.2, 0.85, 0.85, 1.25, 1.2],
         fallbacks: ['./sprites/huntress/huntress_run_neutral_v5.png', './sprites/huntress/huntress_run_neutral_v4.png'],
       },
       attack: {
@@ -915,8 +914,8 @@ export class ThreeRenderer {
               const aimLen = Math.sqrt(aimX * aimX + aimZ * aimZ) || 1;
               const nAimX = aimX / aimLen;
               const nAimZ = aimZ / aimLen;
-              // Spawn slash VFX offset in aim direction (1.0 unit forward)
-              this.spawnSlash(playerX + nAimX * 1.0, playerZ + nAimZ * 1.0, nAimX, nAimZ, state.element || 0);
+              // Spawn slash VFX offset in aim direction (1.4 unit forward)
+              this.spawnSlash(playerX + nAimX * 1.4, playerZ + nAimZ * 1.4, nAimX, nAimZ, state.element || 0);
               // Dispatch contact event for external sync
               if (this._onAttackContact) this._onAttackContact();
             }
@@ -1140,37 +1139,33 @@ export class ThreeRenderer {
       }
     });
 
-    // Animate enemies (bob + lean + hit flash + attack telegraph)
+    // Animate enemies (2.5D billboard — NO rotation.x tilt)
     this.enemyMeshes.forEach((m, i) => {
       if (m.visible && enemies[i]) {
         // Distance to player
         const dx = playerX - m.position.x;
         const dz = playerZ - m.position.z;
         const distToPlayer = Math.sqrt(dx * dx + dz * dz);
-
-        // Movement lean: smooth tilt forward when chasing (80-120ms smoothing)
         const isCharging = distToPlayer > 1.5 && distToPlayer < 12;
-        const targetLean = isCharging ? 0.2 : 0.0; // ~12° forward lean
-        if (!m._leanCurrent) m._leanCurrent = 0;
-        m._leanCurrent += (targetLean - m._leanCurrent) * Math.min(1, dt / 0.1); // 100ms smooth
-        m.rotation.x = m._leanCurrent;
-        
-        // Subtle bob: max 1.5-2.5% of character height (~0.02-0.03 world units)
-        const bobSpeed = isCharging ? 7 : 3;
-        const bobAmount = isCharging ? 0.025 : 0.015; // was 0.06/0.03, now much subtler
-        m.position.y = Math.abs(Math.sin(t * bobSpeed + i * 2)) * bobAmount;
 
-        // Attack proximity: lean back (smooth, no scale change)
-        if (distToPlayer < 2.0 && distToPlayer > 0.5) {
-          const targetAttackLean = -0.12; // lean back gently
-          m._leanCurrent += (targetAttackLean - m._leanCurrent) * Math.min(1, dt / 0.08);
-          m.rotation.x = m._leanCurrent;
-        }
+        // === NO rotation.x tilt — billboard stays screen-vertical ===
+        m.rotation.x = 0;
+        
+        // Minimal bob: idle 0.5%, chase 1.0% of height (0.008~0.012 units)
+        const bobSpeed = isCharging ? 7 : 3;
+        const bobAmount = isCharging ? 0.012 : 0.006;
+        m.position.y = Math.abs(Math.sin(t * bobSpeed + i * 2)) * bobAmount;
 
         // Ash Hound sprite animation tick
         if (m.userData.isSprite && m.userData.spriteMat) {
-          // Billboard: face camera
-          m.children.forEach(c => { if (c.material === m.userData.spriteMat) c.quaternion.copy(this.camera.quaternion); });
+          // Billboard: face camera (pure quaternion, no parent rotation leak)
+          m.children.forEach(c => {
+            if (c.material === m.userData.spriteMat) {
+              c.quaternion.copy(this.camera.quaternion);
+              // Fix foot pivot: 0.6 for 1.2 geo (pivot 0.93)
+              c.position.y = 0.6;
+            }
+          });
           const info = m.userData.spriteInfo;
           if (info) {
             m.userData.spriteTimer += dt * info.speed;
@@ -1184,11 +1179,50 @@ export class ThreeRenderer {
               m.userData.spriteMat.map.offset.x = m.userData.spriteFrame / info.frames;
             }
           }
+          // Flip sprite toward player (scale.x)
+          if (dx < -0.1) m.scale.x = -1;
+          else if (dx > 0.1) m.scale.x = 1;
         }
 
-        // Face player (dx, dz already computed above)
-        if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
-          m.rotation.y = Math.atan2(dx, dz);
+        // Face player (Y rotation only for 3D mesh enemies)
+        if (!m.userData.isSprite) {
+          if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
+            m.rotation.y = Math.atan2(dx, dz);
+          }
+        }
+
+        // === CONTACT SHADOW (ground plane, fixed to ground) ===
+        if (!m._contactShadow) {
+          const shadowGeo = new THREE.CircleGeometry(0.4, 8);
+          const shadowMat = new THREE.MeshBasicMaterial({
+            color: 0x000000, transparent: true, opacity: 0.22,
+            depthWrite: false, side: THREE.DoubleSide,
+          });
+          m._contactShadow = new THREE.Mesh(shadowGeo, shadowMat);
+          m._contactShadow.rotation.x = -Math.PI / 2;
+          m._contactShadow.position.y = 0.012;
+          this.scene.add(m._contactShadow);
+        }
+        m._contactShadow.position.x = m.position.x;
+        m._contactShadow.position.z = m.position.z;
+        m._contactShadow.visible = m.visible;
+
+        // === 2.5D DEPTH SILHOUETTE (dark offset behind body) ===
+        if (!m._depthSilhouette && m.userData.isSprite && m.userData.spriteMat) {
+          const silGeo = new THREE.PlaneGeometry(1.2, 1.2);
+          const silMat = new THREE.MeshBasicMaterial({
+            map: m.userData.spriteMat.map, transparent: true, opacity: 0.18,
+            color: 0x111122, depthWrite: false, side: THREE.DoubleSide,
+          });
+          m._depthSilhouette = new THREE.Mesh(silGeo, silMat);
+          m._depthSilhouette.position.y = 0.58; // same as sprite
+          m.add(m._depthSilhouette);
+        }
+        if (m._depthSilhouette) {
+          m._depthSilhouette.quaternion.copy(this.camera.quaternion);
+          // Offset: 2-3px equivalent (0.02 world units down-right)
+          m._depthSilhouette.position.x = 0.02;
+          m._depthSilhouette.position.z = -0.01;
         }
 
         // === ATTACK TELEGRAPH: ranged enemies (type 3=caster, 5=archer) show aim line ===
@@ -1346,7 +1380,7 @@ export class ThreeRenderer {
         const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.02, depthWrite: false, side: THREE.DoubleSide });
         const geo = new THREE.PlaneGeometry(1.2 * scale, 1.2 * scale);
         const sprite = new THREE.Mesh(geo, mat);
-        sprite.position.y = 1.0 * scale;
+        sprite.position.y = 0.6 * scale; // pivot (0.5, 0.93) → feet near ground
         group.add(sprite);
         group.userData.isSprite = true;
         group.userData.spriteMat = mat;
@@ -1484,9 +1518,10 @@ export class ThreeRenderer {
     while (pool.length > maxPool) {
       const m = pool.pop();
       if (m) {
-        // Cleanup telegraph lines
+        // Cleanup telegraph lines + contact shadow
         if (m._telegraphLine) { this.scene.remove(m._telegraphLine); m._telegraphLine.geometry.dispose(); m._telegraphLine.material.dispose(); }
         if (m._rushLine) { this.scene.remove(m._rushLine); m._rushLine.geometry.dispose(); m._rushLine.material.dispose(); }
+        if (m._contactShadow) { this.scene.remove(m._contactShadow); m._contactShadow.geometry.dispose(); m._contactShadow.material.dispose(); }
         this.scene.remove(m);
         if(m.geometry) m.geometry.dispose();
       }
@@ -1494,6 +1529,7 @@ export class ThreeRenderer {
     // Hide excess
     for (let i = data.length; i < pool.length; i++) {
       pool[i].visible = false;
+      if (pool[i]._contactShadow) pool[i]._contactShadow.visible = false;
       // Hide associated telegraph lines
       if (pool[i]._telegraphLine) pool[i]._telegraphLine.visible = false;
       if (pool[i]._rushLine) pool[i]._rushLine.visible = false;
@@ -1576,10 +1612,10 @@ export class ThreeRenderer {
       depthWrite: false, side: THREE.DoubleSide,
       color: tint,
     });
-    const geo = new THREE.PlaneGeometry(2.0, 2.0); // 512px arc at game scale
+    const geo = new THREE.PlaneGeometry(2.4, 2.4); // weapon arc at game scale
     const mesh = new THREE.Mesh(geo, mat);
     // Position in aim direction (weapon socket offset)
-    mesh.position.set(px + (aimX || this.playerFacing) * 0.8, 0.7, pz + (aimZ || 0) * 0.8);
+    mesh.position.set(px + (aimX || this.playerFacing) * 1.2, 0.7, pz + (aimZ || 0) * 1.2);
     mesh.quaternion.copy(this.camera.quaternion);
     this.scene.add(mesh);
 
