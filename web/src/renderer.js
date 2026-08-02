@@ -227,20 +227,17 @@ export class ThreeRenderer {
     // 2D Sprite billboard system instead of 3D models
     const loader = new THREE.TextureLoader();
 
-    // Load Huntress sprite sheets
+    // Load Huntress sprite sheets — neutral_light_v4 primary, v3/v2 as fallback
     this.sprites = {};
-    // Feature flag: ?v2sprite in URL enables prototype sprite from art handoff
-    const useV2Idle = window.location.search.includes('v2sprite');
     const spriteData = {
-      // === Runtime Animation Pack v1 (full set) ===
-      idle: { file: './sprites/huntress/huntress_idle_calm_v3.png', frames: 8, speed: 6, loop: true, fallback: './sprites/huntress/huntress_idle_v2.png', fallbackFrames: 8 },
-      run: { file: './sprites/huntress/huntress_run.png', frames: 8, speed: 14, loop: true, fallback: './sprites/huntress/Run.png', fallbackFrames: 8 },
-      attack: { file: './sprites/huntress/huntress_attack_v2.png', frames: 10, speed: 24, loop: false, eventFrame: 5, fallback: './sprites/huntress/huntress_attack.png', fallbackFrames: 6 },
-      dash: { file: './sprites/huntress/huntress_dash.png', frames: 6, speed: 22, loop: false, eventFrame: 2 },
-      gesture: { file: './sprites/huntress/huntress_gesture_cast.png', frames: 6, speed: 18, loop: false, eventFrame: 4 },
-      hit: { file: './sprites/huntress/huntress_hit.png', frames: 4, speed: 18, loop: false, eventFrame: 1, fallback: './sprites/huntress/Take hit.png', fallbackFrames: 3 },
-      death: { file: './sprites/huntress/huntress_death.png', frames: 8, speed: 14, loop: false, fallback: './sprites/huntress/Death.png', fallbackFrames: 8 },
-      revive: { file: './sprites/huntress/huntress_revive.png', frames: 8, speed: 16, loop: false, eventFrame: 6 },
+      idle: { file: './sprites/huntress/huntress_idle_calm_v3_neutral_v4.png', frames: 8, speed: 6, loop: true, fallback: './sprites/huntress/huntress_idle_calm_v3.png', fallbackFrames: 8 },
+      run: { file: './sprites/huntress/huntress_run_neutral_v4.png', frames: 8, speed: 14, loop: true, fallback: './sprites/huntress/huntress_run.png', fallbackFrames: 8 },
+      attack: { file: './sprites/huntress/huntress_attack_v2_neutral_v4.png', frames: 10, speed: 24, loop: false, eventFrame: 5, fallback: './sprites/huntress/huntress_attack_v2.png', fallbackFrames: 10 },
+      dash: { file: './sprites/huntress/huntress_dash_neutral_v4.png', frames: 6, speed: 22, loop: false, eventFrame: 2, fallback: './sprites/huntress/huntress_dash.png', fallbackFrames: 6 },
+      gesture: { file: './sprites/huntress/huntress_gesture_cast_neutral_v4.png', frames: 6, speed: 18, loop: false, eventFrame: 4, fallback: './sprites/huntress/huntress_gesture_cast.png', fallbackFrames: 6 },
+      hit: { file: './sprites/huntress/huntress_hit_neutral_v4.png', frames: 4, speed: 18, loop: false, eventFrame: 1, fallback: './sprites/huntress/huntress_hit.png', fallbackFrames: 4 },
+      death: { file: './sprites/huntress/huntress_death_neutral_v4.png', frames: 8, speed: 14, loop: false, fallback: './sprites/huntress/huntress_death.png', fallbackFrames: 8 },
+      revive: { file: './sprites/huntress/huntress_revive_neutral_v4.png', frames: 8, speed: 16, loop: false, eventFrame: 6, fallback: './sprites/huntress/huntress_revive.png', fallbackFrames: 8 },
     };
 
     for (const [key, data] of Object.entries(spriteData)) {
@@ -249,23 +246,20 @@ export class ThreeRenderer {
         tex.magFilter = THREE.LinearFilter;
         tex.minFilter = THREE.LinearFilter;
         tex.colorSpace = THREE.SRGBColorSpace;
-        const recolored = this._recolorTexture(tex);
         this.sprites[key] = {
-          texture: recolored, frames: data.frames, speed: data.speed,
-          loop: data.loop !== false, // default true
+          texture: tex, frames: data.frames, speed: data.speed,
+          loop: data.loop !== false,
           eventFrame: data.eventFrame || null,
         };
       } catch (e) {
-        console.warn(`Failed to load sprite: ${key}, trying fallback...`, e);
-        // Fallback to legacy asset
+        console.warn(`Failed to load v4 sprite: ${key}, trying fallback...`, e);
         if (data.fallback) {
           try {
             const fbTex = await loader.loadAsync(data.fallback);
-            fbTex.magFilter = THREE.NearestFilter;
-            fbTex.minFilter = THREE.NearestFilter;
+            fbTex.magFilter = THREE.LinearFilter;
+            fbTex.minFilter = THREE.LinearFilter;
             fbTex.colorSpace = THREE.SRGBColorSpace;
-            const recolored = this._recolorTexture(fbTex);
-            this.sprites[key] = { texture: recolored, frames: data.fallbackFrames || data.frames, speed: data.speed, loop: true, eventFrame: null };
+            this.sprites[key] = { texture: fbTex, frames: data.fallbackFrames || data.frames, speed: data.speed, loop: data.loop !== false, eventFrame: data.eventFrame || null };
           } catch (e2) {
             console.warn(`Fallback also failed for: ${key}`);
           }
@@ -273,8 +267,19 @@ export class ThreeRenderer {
       }
     }
 
+    // Load contact shadow
+    try {
+      const shadowTex = await loader.loadAsync('./sprites/huntress/huntress_contact_shadow.png');
+      shadowTex.magFilter = THREE.LinearFilter;
+      shadowTex.minFilter = THREE.LinearFilter;
+      shadowTex.colorSpace = THREE.SRGBColorSpace;
+      this._contactShadowTex = shadowTex;
+    } catch (e) {
+      console.warn('Contact shadow not loaded:', e.message);
+    }
+
     this.setupSpritePlayer();
-    console.log('✅ Sprite system loaded');
+    console.log('✅ Sprite system loaded (neutral_light_v4)');
 
     // Load Ash Hound enemy sprites
     this.ashHoundSprites = {};
@@ -298,38 +303,107 @@ export class ThreeRenderer {
   }
 
   _recolorTexture(tex) {
-    // No recolor — use original sprite (clear silhouette against dark ground)
+    // v4 neutral light — no recolor needed, original clean art
     return tex;
   }
 
   setupSpritePlayer() {
     if (!this.sprites.idle) { this.setupFallbackPlayer(); return; }
 
-    const tex = this.sprites.idle.texture.clone();
-    tex.repeat.set(1 / this.sprites.idle.frames, 1);
-    tex.offset.set(0, 0);
+    // === ARCHITECTURE: playerRoot (collision body) / visualRoot (sprites) separation ===
+    // playerRoot: world position (collision body, gameplay logic)
+    this.playerRoot = new THREE.Object3D();
+    this.playerRoot.position.set(30, 0, 30);
+    this.scene.add(this.playerRoot);
 
-    // Plane mesh — sized for 256px sprites at game scale
+    // visualRoot: attached to playerRoot, holds all visual layers
+    this.visualRoot = new THREE.Object3D();
+    this.playerRoot.add(this.visualRoot);
+
+    // === DUAL-SPRITE CROSSFADE SYSTEM ===
+    // Two identical plane meshes: spriteA (current) and spriteB (outgoing)
     const geo = new THREE.PlaneGeometry(2.0, 2.0);
-    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, alphaTest: 0.1, depthWrite: false });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(30, 1.5, 30);
+
+    // Sprite A (primary/incoming)
+    const texA = this.sprites.idle.texture.clone();
+    texA.repeat.set(1 / this.sprites.idle.frames, 1);
+    texA.offset.set(0, 0);
+    const matA = new THREE.MeshBasicMaterial({
+      map: texA, transparent: true, side: THREE.DoubleSide,
+      alphaTest: 0.02, depthWrite: false,
+      blending: THREE.NormalBlending, // v4: NormalBlending on body
+    });
+    // Subtle ambient tint (10-20% desaturated scene color)
+    matA.color = new THREE.Color(0xf4eef0);
+    this._spriteA = new THREE.Mesh(geo, matA);
+    this._spriteA.position.y = 0.6; // pivot-based offset
+    this.visualRoot.add(this._spriteA);
+
+    // Sprite B (outgoing — fades out during crossfade)
+    const texB = this.sprites.idle.texture.clone();
+    texB.repeat.set(1 / this.sprites.idle.frames, 1);
+    texB.offset.set(0, 0);
+    const matB = new THREE.MeshBasicMaterial({
+      map: texB, transparent: true, side: THREE.DoubleSide,
+      alphaTest: 0.02, depthWrite: false, opacity: 0,
+      blending: THREE.NormalBlending,
+    });
+    matB.color = new THREE.Color(0xf4eef0);
+    this._spriteB = new THREE.Mesh(geo.clone(), matB);
+    this._spriteB.position.y = 0.6;
+    this._spriteB.visible = false;
+    this.visualRoot.add(this._spriteB);
+
+    // Crossfade state
+    this._crossfade = { active: false, progress: 0, duration: 0.09, outAnim: null, outFrame: 0 };
+
+    // === CONTACT SHADOW ===
+    if (this._contactShadowTex) {
+      const shadowMat = new THREE.MeshBasicMaterial({
+        map: this._contactShadowTex, transparent: true, opacity: 0.2,
+        depthWrite: false, side: THREE.DoubleSide,
+        blending: THREE.NormalBlending,
+      });
+      const shadowGeo = new THREE.PlaneGeometry(1.6, 1.6);
+      this._contactShadow = new THREE.Mesh(shadowGeo, shadowMat);
+      this._contactShadow.rotation.x = -Math.PI / 2;
+      this._contactShadow.position.y = 0.02; // just above ground
+      this.playerRoot.add(this._contactShadow);
+    }
+
+    // Legacy references for backward compat
+    this.playerGroup = this._spriteA;
+    this.playerSpriteMat = matA;
+    this.playerSpriteFrame = 0;
+    this.playerSpriteTimer = 0;
+    this.playerCurrentAnim = 'idle';
+    this.playerFacing = 1;
 
     // Foot rune — class/element indicator (발밑 문양)
     const runeGeo = new THREE.RingGeometry(0.4, 0.55, 24);
     const runeMat = new THREE.MeshBasicMaterial({ color: 0xDCE8FF, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
     this.playerRuneMesh = new THREE.Mesh(runeGeo, runeMat);
     this.playerRuneMesh.rotation.x = -Math.PI / 2;
-    this.playerRuneMesh.position.set(30, 0.02, 30);
-    this.scene.add(this.playerRuneMesh);
+    this.playerRuneMesh.position.y = 0.02;
+    this.playerRoot.add(this.playerRuneMesh);
 
-    this.playerGroup = mesh;
-    this.playerSpriteMat = mat;
-    this.playerSpriteFrame = 0;
-    this.playerSpriteTimer = 0;
-    this.playerCurrentAnim = 'idle';
-    this.playerFacing = 1;
-    this.scene.add(mesh);
+    // === MOTION POLISH CONSTANTS (from huntress-motion-polish-profile.json) ===
+    this._transitions = {
+      idle_to_run: 0.090,
+      run_to_idle: 0.110,
+      locomotion_to_attack: 0.045,
+      attack_to_locomotion: 0.085,
+      locomotion_to_dash: 0.030,
+      dash_to_locomotion: 0.070,
+      any_to_hit: 0.025,
+      hit_to_locomotion: 0.080,
+    };
+    this._contactHoldMs = 28;
+    this._contactHoldTimer = 0;
+    this._contactHoldActive = false;
+    this._attackEventFired = false;
+
+    console.log('✅ Player visual root setup (playerRoot/visualRoot split, dual-sprite, contact shadow)');
   }
 
   setupPlayer(gltf) {
@@ -381,21 +455,36 @@ export class ThreeRenderer {
       }
     }
 
-    // === Camera Shake ===
+    // === Camera Shake (inner rig only, not chase position) ===
     let shakeX = 0, shakeZ = 0;
     if (this._shakeTimer > 0) {
       this._shakeTimer -= dt;
       const progress = Math.max(0, this._shakeTimer / this._shakeDuration);
-      const intensity = this._shakeIntensity * progress * progress; // ease-out decay
+      // Edge damping: reduce shake when player is near viewport edge (14% safe area)
+      let edgeDamp = 1.0;
+      if (this.playerRoot) {
+        const projected = new THREE.Vector3(playerX, 0, playerZ).project(this.camera);
+        const distFromEdge = Math.min(
+          1.0 - Math.abs(projected.x),
+          1.0 - Math.abs(projected.y)
+        );
+        if (distFromEdge < 0.28) { // 14% each side = 28% total margin
+          edgeDamp = distFromEdge / 0.28;
+        }
+      }
+      const intensity = this._shakeIntensity * progress * progress * edgeDamp;
       shakeX = (Math.random() - 0.5) * intensity;
       shakeZ = (Math.random() - 0.5) * intensity;
     }
 
-    // Camera follows player smoothly
+    // Camera follows player smoothly (chase position — no shake applied here)
     const camSpeed = state.playerDashing && state.dashType === 1 ? 0.03 : 0.06;
-    const targetCamPos = new THREE.Vector3(playerX + shakeX, 12, playerZ + 10 + shakeZ);
+    const targetCamPos = new THREE.Vector3(playerX, 12, playerZ + 10);
     this.camera.position.lerp(targetCamPos, camSpeed);
-    this.camera.lookAt(playerX, 0, playerZ); // NO shake on lookAt — prevents nausea
+    this.camera.lookAt(playerX, 0, playerZ);
+    // Inner rig shake offset (applied after chase, clamped)
+    this.camera.position.x += shakeX;
+    this.camera.position.z += shakeZ;
 
     this.playerLight.position.set(playerX, 3, playerZ);
     // Update ground shader uniforms
@@ -403,77 +492,88 @@ export class ThreeRenderer {
       this.groundMat.uniforms.uPlayerPos.value.set(playerX, playerZ);
     }
 
-    // Player position + sprite animation
-    if (this.playerGroup) {
-      // Pivot 0.93 = foot at 93% down from top of 256px cell
-      // PlaneGeo 2.0 height → center at 1.0, foot offset = 1.0 * (0.93 - 0.5) = 0.43 below center
-      // So position.y should be ~0.5 to put feet near ground
-      this.playerGroup.position.set(playerX, 0.6, playerZ);
+    // Player position + sprite animation (playerRoot/visualRoot architecture)
+    if (this.playerRoot) {
+      // === ROOT POSITION: collision body follows game state ===
+      // Attack: lock root world position (no code-driven movement during attack)
+      const isAttackLocked = this._animLock === 'attack';
+      if (!isAttackLocked) {
+        this.playerRoot.position.set(playerX, 0, playerZ);
+      }
 
-      // Billboard: face camera (simple quaternion copy)
-      this.playerGroup.quaternion.copy(this.camera.quaternion);
+      // visualRoot: sprites follow playerRoot (no additional transform during attack)
+      // Billboard: face camera
+      this._spriteA.quaternion.copy(this.camera.quaternion);
+      if (this._spriteB.visible) this._spriteB.quaternion.copy(this.camera.quaternion);
 
       // Flip: movement direction when moving, mouse direction when idle
       let faceDir = 0;
       if (playerMoving) {
-        faceDir = playerDirX; // 이동 중 = 이동 방향
+        faceDir = playerDirX;
       } else if (state.mouseWorldX !== undefined) {
-        faceDir = state.mouseWorldX - playerX; // 정지 시 = 마우스 방향
+        faceDir = state.mouseWorldX - playerX;
       } else if (state.nearestEnemyDirX !== undefined) {
         faceDir = state.nearestEnemyDirX;
       }
       if (faceDir < -0.01) this.playerFacing = -1;
       else if (faceDir > 0.01) this.playerFacing = 1;
 
-      // Scale: 1.0 for proper size (256px cell at 2.0 geo = ~2 world units)
-      const baseScale = 1.0;
-      this.playerGroup.scale.set(baseScale * this.playerFacing, baseScale, 1);
+      // Scale: fixed 1.0 — NO scale change during attack/dash (v5 mandate)
+      this.visualRoot.scale.set(this.playerFacing, 1, 1);
 
-      // Foot rune follows player + element color
+      // === CONTACT SHADOW opacity by state ===
+      if (this._contactShadow) {
+        let shadowOpacity = 0.20; // idle/run default
+        if (state.playerDashing) shadowOpacity = 0.07; // dash travel
+        else if (this._animLock === 'attack') shadowOpacity = 0.17;
+        else if (this.playerCurrentAnim === 'death') shadowOpacity = 0.12;
+        this._contactShadow.material.opacity = shadowOpacity;
+        // Dash airborne: shrink shadow
+        if (state.playerDashing) {
+          this._contactShadow.scale.set(0.75, 0.75, 1);
+        } else {
+          this._contactShadow.scale.set(1, 1, 1);
+        }
+      }
+
+      // Foot rune follows playerRoot (now local child)
       if (this.playerRuneMesh) {
-        this.playerRuneMesh.position.set(playerX, 0.02, playerZ);
         const elemRuneColors = { 1: 0xff4400, 2: 0x44ccff, 3: 0xffcc00, 4: 0x9933ff };
         const runeColor = elemRuneColors[state.element] || 0xDCE8FF;
         this.playerRuneMesh.material.color.set(runeColor);
         this.playerRuneMesh.material.opacity = state.promoted ? 0.4 : 0.15;
         this.playerRuneMesh.rotation.z = this.clock.getElapsedTime() * 0.5;
-
-        // HP-based visual feedback: rune pulses faster at low HP
         const hpRatio = state.hp / state.maxHp;
         if (hpRatio < 0.3) {
-          // Critical: rune blinks red
           const blink = Math.sin(this.clock.getElapsedTime() * 10) > 0;
           this.playerRuneMesh.material.color.set(blink ? 0xff2222 : runeColor);
           this.playerRuneMesh.material.opacity = 0.5;
         }
       }
 
-      // Hit flash: brief white sprite tint
+      // Hit flash
       if (state.playerHit) {
-        this.playerSpriteMat.color = this.playerSpriteMat.color || new THREE.Color(1,1,1);
         this.playerSpriteMat.color.set(0xffffff);
         this.playerHitFlash = 0.1;
       } else if (this.playerHitFlash > 0) {
         this.playerHitFlash -= dt;
         if (this.playerHitFlash <= 0) {
-          this.playerSpriteMat.color.set(0xffffff); // reset
+          this.playerSpriteMat.color.set(0xf4eef0); // reset to neutral tint
         }
       }
 
-      // Determine animation state — with animation lock (play-to-completion)
+      // === ANIMATION STATE MACHINE (with lock + crossfade) ===
       let targetAnim = 'idle';
-
-      // Lock: non-looping animations play to completion before allowing switch
       if (this._animLock && this._animLockTimer > 0) {
         this._animLockTimer -= dt;
         targetAnim = this._animLock;
         if (this._animLockTimer <= 0) {
-          this._animLock = null; // release lock
+          this._animLock = null;
+          this._attackEventFired = false;
         }
       } else {
         if (state.playerDashing) {
           targetAnim = this.sprites.dash ? 'dash' : 'run';
-          // Lock dash animation for its full duration
           if (this.sprites.dash && this._animLock !== 'dash') {
             this._animLock = 'dash';
             this._animLockTimer = this.sprites.dash.frames / this.sprites.dash.speed;
@@ -489,6 +589,7 @@ export class ThreeRenderer {
           if (this.sprites.attack && this._animLock !== 'attack') {
             this._animLock = 'attack';
             this._animLockTimer = this.sprites.attack.frames / this.sprites.attack.speed;
+            this._attackEventFired = false;
           }
         } else if (state.playerCasting && this.sprites.gesture) {
           targetAnim = 'gesture';
@@ -497,56 +598,111 @@ export class ThreeRenderer {
         }
       }
 
+      // === DUAL-SPRITE CROSSFADE TRANSITION ===
+      if (targetAnim !== this.playerCurrentAnim && this.sprites[targetAnim]) {
+        // Determine crossfade duration
+        let fadeDur = 0.09; // default
+        const from = this.playerCurrentAnim;
+        const to = targetAnim;
+        if (from === 'idle' && to === 'run') fadeDur = this._transitions.idle_to_run;
+        else if (from === 'run' && to === 'idle') fadeDur = this._transitions.run_to_idle;
+        else if ((from === 'idle' || from === 'run') && to === 'attack') fadeDur = this._transitions.locomotion_to_attack;
+        else if (from === 'attack' && (to === 'idle' || to === 'run')) fadeDur = this._transitions.attack_to_locomotion;
+        else if ((from === 'idle' || from === 'run') && to === 'dash') fadeDur = this._transitions.locomotion_to_dash;
+        else if (from === 'dash' && (to === 'idle' || to === 'run')) fadeDur = this._transitions.dash_to_locomotion;
+        else if (to === 'hit') fadeDur = this._transitions.any_to_hit;
+        else if (from === 'hit') fadeDur = this._transitions.hit_to_locomotion;
+
+        // Move current sprite to B (outgoing)
+        this._spriteB.material.map = this._spriteA.material.map;
+        this._spriteB.material.opacity = 1.0;
+        this._spriteB.visible = true;
+        this._crossfade = { active: true, progress: 0, duration: fadeDur, outFrame: this.playerSpriteFrame };
+
+        // Set new clip on A (incoming)
+        this.playerCurrentAnim = targetAnim;
+        this.playerSpriteFrame = 0;
+        this.playerSpriteTimer = 0;
+        const spriteInfo = this.sprites[targetAnim];
+        const newTex = spriteInfo.texture.clone();
+        newTex.magFilter = THREE.LinearFilter;
+        newTex.minFilter = THREE.LinearFilter;
+        newTex.repeat.set(1 / spriteInfo.frames, 1);
+        newTex.offset.set(0, 0);
+        this._spriteA.material.map = newTex;
+        this._spriteA.material.opacity = 0.0; // will fade in
+        this._spriteA.material.needsUpdate = true;
+      }
+
+      // Update crossfade progress (smoothstep)
+      if (this._crossfade.active) {
+        this._crossfade.progress += dt / this._crossfade.duration;
+        if (this._crossfade.progress >= 1.0) {
+          this._crossfade.active = false;
+          this._spriteA.material.opacity = 1.0;
+          this._spriteB.visible = false;
+          this._spriteB.material.opacity = 0;
+        } else {
+          // smoothstep curve
+          const t = this._crossfade.progress;
+          const smooth = t * t * (3 - 2 * t);
+          this._spriteA.material.opacity = smooth;
+          this._spriteB.material.opacity = 1.0 - smooth;
+        }
+      }
+
       // Dash visual: element-specific
       const dashType = state.dashType || 5;
       if (state.playerDashing) {
         if (!this._dashTrail) this._dashTrail = [];
-        // Ground decal for dash path
         if (Math.random() < 0.4) this.spawnDashDecal(playerX, playerZ, state.element || 0);
 
         if (dashType === 4) {
-          // ☠️ Smoke: subtle dark purple wisps, player almost invisible
-          this.playerSpriteMat.opacity = 0.08;
+          this._spriteA.material.opacity = Math.min(this._spriteA.material.opacity, 0.08);
           const wisp = new THREE.Mesh(
             new THREE.SphereGeometry(0.2, 4, 4),
             new THREE.MeshBasicMaterial({ color: 0x220033, transparent: true, opacity: 0.25 })
           );
-          wisp.position.copy(this.playerGroup.position);
-          wisp.position.y = 0.4;
+          wisp.position.set(playerX, 0.4, playerZ);
           wisp.position.x += (Math.random() - 0.5) * 0.3;
           wisp.position.z += (Math.random() - 0.5) * 0.3;
           this.scene.add(wisp);
           this._dashTrail.push({ mesh: wisp, life: 0.4 });
         } else if (dashType === 3) {
-          // ⚡ Triple: yellow electric sparks
-          this.playerSpriteMat.opacity = 0.6;
+          this._spriteA.material.opacity = Math.min(this._spriteA.material.opacity, 0.6);
           const spark = new THREE.Mesh(
             new THREE.SphereGeometry(0.08, 4, 4),
             new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.9 })
           );
           spark.position.set(
-            this.playerGroup.position.x + (Math.random()-0.5)*0.5,
+            playerX + (Math.random()-0.5)*0.5,
             0.5 + Math.random() * 0.8,
-            this.playerGroup.position.z + (Math.random()-0.5)*0.5
+            playerZ + (Math.random()-0.5)*0.5
           );
           this.scene.add(spark);
           this._dashTrail.push({ mesh: spark, life: 0.15 });
         } else if (dashType === 1) {
-          // 🔥 Blink: already teleported, just flash
-          this.playerSpriteMat.opacity = 0.3;
+          this._spriteA.material.opacity = Math.min(this._spriteA.material.opacity, 0.3);
         } else {
-          // Default: afterimage
-          this.playerSpriteMat.opacity = 0.5;
-          const ghost = this.playerGroup.clone();
-          ghost.traverse(c => { if (c.material) { c.material = c.material.clone(); c.material.opacity = 0.3; c.material.transparent = true; } });
-          ghost.position.copy(this.playerGroup.position);
+          this._spriteA.material.opacity = Math.min(this._spriteA.material.opacity, 0.5);
+          // Afterimage as separate sprite (VFX layer, not body scale)
+          const ghost = this._spriteA.clone();
+          ghost.material = ghost.material.clone();
+          ghost.material.opacity = 0.3;
+          ghost.material.blending = THREE.AdditiveBlending; // VFX: additive
+          ghost.position.set(playerX, 0.6, playerZ);
+          ghost.quaternion.copy(this.camera.quaternion);
           this.scene.add(ghost);
           this._dashTrail.push({ mesh: ghost, life: 0.2 });
         }
       } else {
-        this.playerSpriteMat.opacity = 1.0;
-        // ❄️ Ice Skate: leave frost footprints while moving
+        // Not dashing — restore opacity (only if crossfade isn't controlling it)
+        if (!this._crossfade.active) {
+          this._spriteA.material.opacity = 1.0;
+        }
+        // Ice footprints
         if (dashType === 2 && playerMoving && Math.random() < 0.3) {
+          if (!this._dashTrail) this._dashTrail = [];
           const footprint = new THREE.Mesh(
             new THREE.CircleGeometry(0.15, 6),
             new THREE.MeshBasicMaterial({ color: 0x446677, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
@@ -554,7 +710,6 @@ export class ThreeRenderer {
           footprint.position.set(playerX, 0.02, playerZ);
           footprint.rotation.x = -Math.PI / 2;
           this.scene.add(footprint);
-          if (!this._dashTrail) this._dashTrail = [];
           this._dashTrail.push({ mesh: footprint, life: 1.5 });
         }
       }
@@ -575,39 +730,47 @@ export class ThreeRenderer {
         }
       }
 
-      // Switch animation
-      if (targetAnim !== this.playerCurrentAnim && this.sprites[targetAnim]) {
-        this.playerCurrentAnim = targetAnim;
-        this.playerSpriteFrame = 0;
-        this.playerSpriteTimer = 0;
-        const spriteInfo = this.sprites[targetAnim];
-        const tex = spriteInfo.texture.clone();
-        tex.magFilter = THREE.LinearFilter;
-        tex.minFilter = THREE.LinearFilter;
-        tex.repeat.set(1 / spriteInfo.frames, 1);
-        tex.offset.set(0, 0);
-        this.playerSpriteMat.map = tex;
-        this.playerSpriteMat.needsUpdate = true;
-      }
-
-      // Animate frames
+      // === ANIMATE FRAMES (with contact hold) ===
       const spriteInfo = this.sprites[this.playerCurrentAnim];
-      if (spriteInfo && this.playerSpriteMat.map) {
-        // Run speed scales with actual movement (prevents sliding feel)
-        let animSpeed = spriteInfo.speed;
-        if (this.playerCurrentAnim === 'run' && state.playerSpeed) {
-          animSpeed = spriteInfo.speed * Math.max(0.5, state.playerSpeed / 5.0);
-        }
-        this.playerSpriteTimer += dt * animSpeed;
-        if (this.playerSpriteTimer >= 1) {
-          this.playerSpriteTimer = 0;
-          if (spriteInfo.loop === false && this.playerSpriteFrame >= spriteInfo.frames - 1) {
-            // Stay on last frame (death, etc)
-            this.playerSpriteFrame = spriteInfo.frames - 1;
-          } else {
-            this.playerSpriteFrame = (this.playerSpriteFrame + 1) % spriteInfo.frames;
+      if (spriteInfo && this._spriteA.material.map) {
+        // Contact hold: pause on eventFrame for 28ms
+        if (this._contactHoldActive) {
+          this._contactHoldTimer -= dt * 1000; // ms
+          if (this._contactHoldTimer <= 0) {
+            this._contactHoldActive = false;
           }
-          this.playerSpriteMat.map.offset.x = this.playerSpriteFrame / spriteInfo.frames;
+          // Don't advance frame during hold
+        } else {
+          // Run speed scales with actual movement
+          let animSpeed = spriteInfo.speed;
+          if (this.playerCurrentAnim === 'run' && state.playerSpeed) {
+            animSpeed = spriteInfo.speed * Math.max(0.5, state.playerSpeed / 5.0);
+          }
+          this.playerSpriteTimer += dt * animSpeed;
+          if (this.playerSpriteTimer >= 1) {
+            this.playerSpriteTimer = 0;
+            if (spriteInfo.loop === false && this.playerSpriteFrame >= spriteInfo.frames - 1) {
+              this.playerSpriteFrame = spriteInfo.frames - 1;
+            } else {
+              this.playerSpriteFrame = (this.playerSpriteFrame + 1) % spriteInfo.frames;
+            }
+
+            // Attack contact frame: fire event + hold
+            if (this.playerCurrentAnim === 'attack' && this.playerSpriteFrame === 5 && !this._attackEventFired) {
+              this._attackEventFired = true;
+              this._contactHoldActive = true;
+              this._contactHoldTimer = this._contactHoldMs;
+              // Camera shake for attack (0.35% viewport, 75ms)
+              this.shake(0.07, 0.075);
+              // Dispatch contact event for VFX/SFX sync
+              if (this._onAttackContact) this._onAttackContact();
+            }
+            // Dash shake on movement start frame
+            if (this.playerCurrentAnim === 'dash' && this.playerSpriteFrame === 2) {
+              this.shake(0.05, 0.090);
+            }
+          }
+          this._spriteA.material.map.offset.x = this.playerSpriteFrame / spriteInfo.frames;
         }
       }
     }
