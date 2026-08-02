@@ -914,8 +914,10 @@ export class ThreeRenderer {
               const aimLen = Math.sqrt(aimX * aimX + aimZ * aimZ) || 1;
               const nAimX = aimX / aimLen;
               const nAimZ = aimZ / aimLen;
-              // Spawn slash VFX offset in aim direction (1.4 unit forward)
-              this.spawnSlash(playerX + nAimX * 1.4, playerZ + nAimZ * 1.4, nAimX, nAimZ, state.element || 0);
+              // Spawn slash VFX: from player → toward aim (1.4 unit forward)
+              const slashToX = playerX + nAimX * 1.8;
+              const slashToZ = playerZ + nAimZ * 1.8;
+              this.spawnSlash(playerX, playerZ, slashToX, slashToZ, false, 25, state.element || 0);
               // Dispatch contact event for external sync
               if (this._onAttackContact) this._onAttackContact();
             }
@@ -1016,7 +1018,7 @@ export class ThreeRenderer {
       const orbCount = this.elementOrbs.length;
       // Orbit center follows player with lag (creates trailing effect on movement)
       if (!this._orbCenter) this._orbCenter = { x: playerX, z: playerZ };
-      const lagSpeed = 4.5; // lower = more trailing lag
+      const lagSpeed = 10; // higher = tighter follow (less lag distance)
       this._orbCenter.x += (playerX - this._orbCenter.x) * lagSpeed * dt;
       this._orbCenter.z += (playerZ - this._orbCenter.z) * lagSpeed * dt;
       const cx = this._orbCenter.x;
@@ -1031,11 +1033,11 @@ export class ThreeRenderer {
         const targetX = cx + Math.cos(angle) * radius;
         const targetZ = cz + Math.sin(angle) * radius;
         const targetY = 0.6 + Math.sin(t * 3 + i * 2) * 0.2;
-        // Each orb lerps to its target (creates individual trailing)
-        const orbLag = 6.0 - phaseDelay * 10; // front orbs faster, rear orbs slower
+        // Each orb lerps to its target (close follow with slight inertia)
+        const orbLag = 12.0 - phaseDelay * 8; // tight follow
         orb.position.x += (targetX - orb.position.x) * Math.min(1, orbLag * dt);
         orb.position.z += (targetZ - orb.position.z) * Math.min(1, orbLag * dt);
-        orb.position.y += (targetY - orb.position.y) * Math.min(1, 8 * dt);
+        orb.position.y += (targetY - orb.position.y) * Math.min(1, 12 * dt);
       });
     }
 
