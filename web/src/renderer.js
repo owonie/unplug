@@ -1060,10 +1060,29 @@ export class ThreeRenderer {
       }
     });
 
-    // Animate enemies (bob + hit flash + attack telegraph)
+    // Animate enemies (bob + lean + hit flash + attack telegraph)
     this.enemyMeshes.forEach((m, i) => {
       if (m.visible && enemies[i]) {
-        m.position.y = Math.sin(t * 3 + i * 2) * 0.04;
+        // Distance to player
+        const dx = playerX - m.position.x;
+        const dz = playerZ - m.position.z;
+        const distToPlayer = Math.sqrt(dx * dx + dz * dz);
+
+        // Movement lean: tilt forward when chasing (gives "charging" feel)
+        const isCharging = distToPlayer > 1.5 && distToPlayer < 12;
+        const leanAngle = isCharging ? 0.2 : 0.0; // ~12° forward lean
+        m.rotation.x = leanAngle;
+        
+        // Subtle bob (running bounce)
+        const bobSpeed = isCharging ? 8 : 3;
+        const bobAmount = isCharging ? 0.06 : 0.03;
+        m.position.y = Math.abs(Math.sin(t * bobSpeed + i * 2)) * bobAmount;
+
+        // Attack proximity: rear up when close (telegraphs incoming attack)
+        if (distToPlayer < 2.0 && distToPlayer > 0.5) {
+          m.rotation.x = -0.15; // lean back = about to strike
+          m.position.y += 0.05; // slight rise
+        }
 
         // Ash Hound sprite animation tick
         if (m.userData.isSprite && m.userData.spriteMat) {
@@ -1084,9 +1103,7 @@ export class ThreeRenderer {
           }
         }
 
-        // Face player
-        const dx = playerX - m.position.x;
-        const dz = playerZ - m.position.z;
+        // Face player (dx, dz already computed above)
         if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
           m.rotation.y = Math.atan2(dx, dz);
         }
@@ -1103,7 +1120,6 @@ export class ThreeRenderer {
           m._telegraphTimer = 0;
         }
         if (m._telegraphLine) {
-          const distToPlayer = Math.sqrt(dx * dx + dz * dz);
           // Show telegraph when within attack range (5-8 units)
           if (distToPlayer < 8 && distToPlayer > 1) {
             m._telegraphTimer += dt;
@@ -1133,7 +1149,6 @@ export class ThreeRenderer {
           m._rushLine = rushLine;
         }
         if (m._rushLine) {
-          const distToPlayer = Math.sqrt(dx * dx + dz * dz);
           if (distToPlayer < 5 && distToPlayer > 1.5) {
             m._rushLine.material.opacity = 0.3;
             const fwdX = m.position.x + dx * 0.3;
@@ -1167,9 +1182,7 @@ export class ThreeRenderer {
             }
           }
         });
-        // Scale punch on hit
-        const s = isHit ? 1.2 : 1.0;
-        m.scale.set(s, s, s);
+        // No scale punch — prevents "squish" feel (scale stays 1.0)
       }
     });
 
