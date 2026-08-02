@@ -233,9 +233,9 @@ export class ThreeRenderer {
     const useV2Idle = window.location.search.includes('v2sprite');
     const spriteData = {
       // === Runtime Animation Pack v1 (full set) ===
-      idle: { file: './sprites/huntress/huntress_idle.png', frames: 6, speed: 7, loop: true, fallback: './sprites/huntress/Idle.png', fallbackFrames: 8 },
+      idle: { file: './sprites/huntress/huntress_idle_v2.png', frames: 8, speed: 10, loop: true, fallback: './sprites/huntress/huntress_idle.png', fallbackFrames: 6 },
       run: { file: './sprites/huntress/huntress_run.png', frames: 8, speed: 14, loop: true, fallback: './sprites/huntress/Run.png', fallbackFrames: 8 },
-      attack: { file: './sprites/huntress/huntress_attack.png', frames: 6, speed: 18, loop: false, eventFrame: 3, fallback: './sprites/huntress/Attack1.png', fallbackFrames: 5 },
+      attack: { file: './sprites/huntress/huntress_attack_v2.png', frames: 10, speed: 24, loop: false, eventFrame: 5, fallback: './sprites/huntress/huntress_attack.png', fallbackFrames: 6 },
       dash: { file: './sprites/huntress/huntress_dash.png', frames: 6, speed: 22, loop: false, eventFrame: 2 },
       gesture: { file: './sprites/huntress/huntress_gesture_cast.png', frames: 6, speed: 18, loop: false, eventFrame: 4 },
       hit: { file: './sprites/huntress/huntress_hit.png', frames: 4, speed: 18, loop: false, eventFrame: 1, fallback: './sprites/huntress/Take hit.png', fallbackFrames: 3 },
