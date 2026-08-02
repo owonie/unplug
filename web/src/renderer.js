@@ -227,17 +227,17 @@ export class ThreeRenderer {
     // 2D Sprite billboard system instead of 3D models
     const loader = new THREE.TextureLoader();
 
-    // Load Huntress sprite sheets — neutral_light_v4 primary, v3/v2 as fallback
+    // Load Huntress sprite sheets — neutral_light_v5 primary, v4 as fallback
     this.sprites = {};
     const spriteData = {
-      idle: { file: './sprites/huntress/huntress_idle_calm_v3_neutral_v4.png', frames: 8, speed: 6, loop: true, fallback: './sprites/huntress/huntress_idle_calm_v3.png', fallbackFrames: 8 },
-      run: { file: './sprites/huntress/huntress_run_neutral_v4.png', frames: 8, speed: 14, loop: true, fallback: './sprites/huntress/huntress_run.png', fallbackFrames: 8 },
-      attack: { file: './sprites/huntress/huntress_attack_v2_neutral_v4.png', frames: 10, speed: 24, loop: false, eventFrame: 5, fallback: './sprites/huntress/huntress_attack_v2.png', fallbackFrames: 10 },
-      dash: { file: './sprites/huntress/huntress_dash_neutral_v4.png', frames: 6, speed: 22, loop: false, eventFrame: 2, fallback: './sprites/huntress/huntress_dash.png', fallbackFrames: 6 },
-      gesture: { file: './sprites/huntress/huntress_gesture_cast_neutral_v4.png', frames: 6, speed: 18, loop: false, eventFrame: 4, fallback: './sprites/huntress/huntress_gesture_cast.png', fallbackFrames: 6 },
-      hit: { file: './sprites/huntress/huntress_hit_neutral_v4.png', frames: 4, speed: 18, loop: false, eventFrame: 1, fallback: './sprites/huntress/huntress_hit.png', fallbackFrames: 4 },
-      death: { file: './sprites/huntress/huntress_death_neutral_v4.png', frames: 8, speed: 14, loop: false, fallback: './sprites/huntress/huntress_death.png', fallbackFrames: 8 },
-      revive: { file: './sprites/huntress/huntress_revive_neutral_v4.png', frames: 8, speed: 16, loop: false, eventFrame: 6, fallback: './sprites/huntress/huntress_revive.png', fallbackFrames: 8 },
+      idle: { file: './sprites/huntress/huntress_idle_calm_v3_neutral_v5.png', frames: 8, speed: 6, loop: true, fallback: './sprites/huntress/huntress_idle_calm_v3_neutral_v4.png', fallbackFrames: 8 },
+      run: { file: './sprites/huntress/huntress_run_neutral_v5.png', frames: 8, speed: 14, loop: true, fallback: './sprites/huntress/huntress_run_neutral_v4.png', fallbackFrames: 8 },
+      attack: { file: './sprites/huntress/huntress_attack_v2_neutral_v5.png', frames: 10, speed: 24, loop: false, eventFrame: 5, fallback: './sprites/huntress/huntress_attack_v2_neutral_v4.png', fallbackFrames: 10 },
+      dash: { file: './sprites/huntress/huntress_dash_neutral_v5.png', frames: 6, speed: 22, loop: false, eventFrame: 2, fallback: './sprites/huntress/huntress_dash_neutral_v4.png', fallbackFrames: 6 },
+      gesture: { file: './sprites/huntress/huntress_gesture_cast_neutral_v5.png', frames: 6, speed: 18, loop: false, eventFrame: 4, fallback: './sprites/huntress/huntress_gesture_cast_neutral_v4.png', fallbackFrames: 6 },
+      hit: { file: './sprites/huntress/huntress_hit_neutral_v5.png', frames: 4, speed: 18, loop: false, eventFrame: 1, fallback: './sprites/huntress/huntress_hit_neutral_v4.png', fallbackFrames: 4 },
+      death: { file: './sprites/huntress/huntress_death_neutral_v5.png', frames: 8, speed: 14, loop: false, fallback: './sprites/huntress/huntress_death_neutral_v4.png', fallbackFrames: 8 },
+      revive: { file: './sprites/huntress/huntress_revive_neutral_v5.png', frames: 8, speed: 16, loop: false, eventFrame: 6, fallback: './sprites/huntress/huntress_revive_neutral_v4.png', fallbackFrames: 8 },
     };
 
     for (const [key, data] of Object.entries(spriteData)) {
