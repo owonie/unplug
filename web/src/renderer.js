@@ -261,9 +261,10 @@ export class ThreeRenderer {
         fallbacks: ['./sprites/huntress/huntress_attack_stable_v8.png'],
       },
       dash: {
-        file: './sprites/huntress/huntress_dash_neutral_v5.png',
-        frames: 6, fps: 22, loop: false, eventFrame: 2,
-        fallbacks: ['./sprites/huntress/huntress_dash_neutral_v4.png'],
+        // Motion Set v8: Dash v8 (10fr@36fps, head stable, body only)
+        file: './sprites/huntress/huntress_dash_v8.png',
+        frames: 10, fps: 36, loop: false, eventFrame: 2,
+        fallbacks: ['./sprites/huntress/huntress_dash_neutral_v5.png', './sprites/huntress/huntress_dash_neutral_v4.png'],
       },
       gesture: {
         file: './sprites/huntress/huntress_gesture_cast_neutral_v5.png',
@@ -683,8 +684,9 @@ export class ThreeRenderer {
         const isLocomotionTransition = (from === 'run' && to === 'idle') || (from === 'idle' && to === 'run');
         const isAttackToLoco = (from === 'attack' || from === 'attack_move') && (to === 'idle' || to === 'run');
         const isLocoToAttack = (from === 'idle' || from === 'run') && (to === 'attack' || to === 'attack_move');
+        const isDashToLoco = from === 'dash' && (to === 'idle' || to === 'run');
 
-        if (isLocomotionTransition || isAttackToLoco || isLocoToAttack) {
+        if (isLocomotionTransition || isAttackToLoco || isLocoToAttack || isDashToLoco) {
           // Dual-sprite crossfade (same pivot/scale guaranteed)
           this._spriteB.material.map = this._spriteA.material.map;
           this._spriteB.material.opacity = 1.0;
@@ -694,17 +696,18 @@ export class ThreeRenderer {
           else if (from === 'idle' && to === 'run') fadeDur = 0.090;
           else if (isLocoToAttack) fadeDur = 0.045; // locomotion→attack
           else if (from === 'attack_move') fadeDur = 0.075; // attack_move→run
+          else if (isDashToLoco) fadeDur = 0.070; // dash→locomotion
           else fadeDur = 0.085; // attack_stable→locomotion
           // Save run frame for phase preservation
-          if (isLocoToAttack && from === 'run') {
+          if ((isLocoToAttack || isDashToLoco) && from === 'run') {
             this._savedRunFrame = this.playerSpriteFrame;
           }
           this._runToIdleFade = { active: true, progress: 0, duration: fadeDur };
 
           // Set new clip on A — preserve run phase after attack
           this.playerCurrentAnim = targetAnim;
-          // Only reset frame for non-run targets or fresh starts (preserve run phase after attack)
-          if (isAttackToLoco && to === 'run' && this._savedRunFrame !== undefined) {
+          // Only reset frame for non-run targets or fresh starts (preserve run phase after attack/dash)
+          if ((isAttackToLoco || isDashToLoco) && to === 'run' && this._savedRunFrame !== undefined) {
             this.playerSpriteFrame = this._savedRunFrame;
           } else {
             this.playerSpriteFrame = 0;
@@ -755,53 +758,61 @@ export class ThreeRenderer {
         }
       }
 
-      // Dash visual: element-specific
+      // Dash visual: v8 — body stays NormalBlending, no opacity/scale change
+      // Afterimages spawned from code (frames 3-6)
       const dashType = state.dashType || 5;
       if (state.playerDashing) {
         if (!this._dashTrail) this._dashTrail = [];
         if (Math.random() < 0.4) this.spawnDashDecal(playerX, playerZ, state.element || 0);
 
-        if (dashType === 4) {
-          this._spriteA.material.opacity = Math.min(this._spriteA.material.opacity, 0.08);
-          const wisp = new THREE.Mesh(
-            new THREE.SphereGeometry(0.2, 4, 4),
-            new THREE.MeshBasicMaterial({ color: 0x220033, transparent: true, opacity: 0.25 })
-          );
-          wisp.position.set(playerX, 0.4, playerZ);
-          wisp.position.x += (Math.random() - 0.5) * 0.3;
-          wisp.position.z += (Math.random() - 0.5) * 0.3;
-          this.scene.add(wisp);
-          this._dashTrail.push({ mesh: wisp, life: 0.4 });
-        } else if (dashType === 3) {
-          this._spriteA.material.opacity = Math.min(this._spriteA.material.opacity, 0.6);
-          const spark = new THREE.Mesh(
-            new THREE.SphereGeometry(0.08, 4, 4),
-            new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.9 })
-          );
-          spark.position.set(
-            playerX + (Math.random()-0.5)*0.5,
-            0.5 + Math.random() * 0.8,
-            playerZ + (Math.random()-0.5)*0.5
-          );
-          this.scene.add(spark);
-          this._dashTrail.push({ mesh: spark, life: 0.15 });
-        } else if (dashType === 1) {
-          this._spriteA.material.opacity = Math.min(this._spriteA.material.opacity, 0.3);
-        } else {
-          this._spriteA.material.opacity = Math.min(this._spriteA.material.opacity, 0.5);
-          // Afterimage as separate sprite (VFX layer, not body scale)
+        // Dash v8 afterimage: frames 3-6, spawn body clone behind player
+        const dashFrame = this.playerSpriteFrame;
+        if (dashFrame >= 3 && dashFrame <= 6 && this.playerCurrentAnim === 'dash') {
+          // Element color at 15-25% saturation
+          const elemColors = { 1: 0xffaa88, 2: 0x88ccdd, 3: 0xddcc88, 4: 0x99bb99 };
+          const tint = elemColors[state.element] || 0xcccccc;
+          const opacities = [0.18, 0.14, 0.09, 0.05]; // fade per spawn
+          const idx = dashFrame - 3;
           const ghost = this._spriteA.clone();
           ghost.material = ghost.material.clone();
-          ghost.material.opacity = 0.3;
-          ghost.material.blending = THREE.AdditiveBlending; // VFX: additive
-          ghost.position.set(playerX, 0.6, playerZ);
+          ghost.material.opacity = opacities[idx] || 0.09;
+          ghost.material.blending = THREE.NormalBlending; // NOT additive on afterimage
+          ghost.material.color = new THREE.Color(tint);
+          // Position behind player (opposite of movement direction)
+          const offsetDist = 0.12 + idx * 0.04;
+          const dirX = playerDirX || this.playerFacing;
+          const dirZ = playerDirZ || 0;
+          ghost.position.set(
+            playerX - dirX * offsetDist,
+            0.45,
+            playerZ - dirZ * offsetDist
+          );
           ghost.quaternion.copy(this.camera.quaternion);
           this.scene.add(ghost);
-          this._dashTrail.push({ mesh: ghost, life: 0.2 });
+          this._dashTrail.push({ mesh: ghost, life: 0.09 + idx * 0.02 });
+        }
+
+        // Element-specific particles (small, not body changes)
+        if (dashType === 4 && Math.random() < 0.5) {
+          const wisp = new THREE.Mesh(
+            new THREE.SphereGeometry(0.12, 4, 4),
+            new THREE.MeshBasicMaterial({ color: 0x220033, transparent: true, opacity: 0.2 })
+          );
+          wisp.position.set(playerX + (Math.random()-0.5)*0.3, 0.3, playerZ + (Math.random()-0.5)*0.3);
+          this.scene.add(wisp);
+          this._dashTrail.push({ mesh: wisp, life: 0.3 });
+        } else if (dashType === 3 && Math.random() < 0.4) {
+          const spark = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06, 4, 4),
+            new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.7 })
+          );
+          spark.position.set(playerX + (Math.random()-0.5)*0.4, 0.4 + Math.random()*0.5, playerZ + (Math.random()-0.5)*0.4);
+          this.scene.add(spark);
+          this._dashTrail.push({ mesh: spark, life: 0.12 });
         }
       } else {
-        // Not dashing — restore opacity (only if crossfade isn't controlling it)
-        if (!this._crossfade.active) {
+        // Not dashing — ensure full opacity
+        if (!this._runToIdleFade || !this._runToIdleFade.active) {
           this._spriteA.material.opacity = 1.0;
         }
         // Ice footprints
@@ -1104,20 +1115,23 @@ export class ThreeRenderer {
         const dz = playerZ - m.position.z;
         const distToPlayer = Math.sqrt(dx * dx + dz * dz);
 
-        // Movement lean: tilt forward when chasing (gives "charging" feel)
+        // Movement lean: smooth tilt forward when chasing (80-120ms smoothing)
         const isCharging = distToPlayer > 1.5 && distToPlayer < 12;
-        const leanAngle = isCharging ? 0.2 : 0.0; // ~12° forward lean
-        m.rotation.x = leanAngle;
+        const targetLean = isCharging ? 0.2 : 0.0; // ~12° forward lean
+        if (!m._leanCurrent) m._leanCurrent = 0;
+        m._leanCurrent += (targetLean - m._leanCurrent) * Math.min(1, dt / 0.1); // 100ms smooth
+        m.rotation.x = m._leanCurrent;
         
-        // Subtle bob (running bounce)
-        const bobSpeed = isCharging ? 8 : 3;
-        const bobAmount = isCharging ? 0.06 : 0.03;
+        // Subtle bob: max 1.5-2.5% of character height (~0.02-0.03 world units)
+        const bobSpeed = isCharging ? 7 : 3;
+        const bobAmount = isCharging ? 0.025 : 0.015; // was 0.06/0.03, now much subtler
         m.position.y = Math.abs(Math.sin(t * bobSpeed + i * 2)) * bobAmount;
 
-        // Attack proximity: rear up when close (telegraphs incoming attack)
+        // Attack proximity: lean back (smooth, no scale change)
         if (distToPlayer < 2.0 && distToPlayer > 0.5) {
-          m.rotation.x = -0.15; // lean back = about to strike
-          m.position.y += 0.05; // slight rise
+          const targetAttackLean = -0.12; // lean back gently
+          m._leanCurrent += (targetAttackLean - m._leanCurrent) * Math.min(1, dt / 0.08);
+          m.rotation.x = m._leanCurrent;
         }
 
         // Ash Hound sprite animation tick
