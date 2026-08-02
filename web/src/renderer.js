@@ -841,14 +841,12 @@ export class ThreeRenderer {
     const group = new THREE.Group();
     group.userData = { hitTimer: 0 };
 
-    // === ART: 적은 배경보다 25-35% 밝은 #687080 기조. 역할별 실루엣으로 구분 ===
-    // 밝기 계층: 배경(#090B14) < 지면(#101825) < 구조물(#1A2433) < 적(#687080) < 플레이어(#DCE8FF)
-    const baseGray = bodyAccents[type] || 0x687080;
-    const darkGray = 0x4a5060;
-    // Eye colors by role (clear functional distinction)
-    // 0,4=follower(green), 1,6=charger(orange), 3,5=caster(purple), 2=shield(blue), 7=elite(pink), 8=boss(red)
+    // === ART: 역할별 색상 차별화 ===
+    // Eye colors by role: follower=green, charger=orange, caster=purple, shield=blue, elite=pink, boss=red
     const eyeColors = [0x44ff66, 0xff8822, 0x4488ff, 0xaa44ff, 0x44ff66, 0xaa44ff, 0xff8822, 0xff44ff, 0xff2200];
     const bodyAccents = [0x556655, 0x665544, 0x445566, 0x554466, 0x556655, 0x554466, 0x665544, 0x664455, 0x553333];
+    const baseGray = bodyAccents[type] || 0x687080;
+    const darkGray = 0x4a5060;
 
     // Scale by type
     const scales = [1.0, 1.6, 0.7, 1.0, 0.6, 0.9, 1.3, 1.8, 2.5];
