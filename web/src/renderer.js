@@ -267,9 +267,10 @@ export class ThreeRenderer {
         fallbacks: ['./sprites/huntress/huntress_dash_neutral_v5.png', './sprites/huntress/huntress_dash_neutral_v4.png'],
       },
       gesture: {
-        file: './sprites/huntress/huntress_gesture_cast_neutral_v5.png',
-        frames: 6, fps: 18, loop: false, eventFrame: 4,
-        fallbacks: ['./sprites/huntress/huntress_gesture_cast_neutral_v4.png'],
+        // Motion Set v8: Gesture Cast v8 (12fr@24fps, body only)
+        file: './sprites/huntress/huntress_gesture_cast_v8.png',
+        frames: 12, fps: 24, loop: false, eventFrame: 9,
+        fallbacks: ['./sprites/huntress/huntress_gesture_cast_neutral_v5.png', './sprites/huntress/huntress_gesture_cast_neutral_v4.png'],
       },
       hit: {
         file: './sprites/huntress/huntress_hit_neutral_v5.png',
@@ -685,8 +686,9 @@ export class ThreeRenderer {
         const isAttackToLoco = (from === 'attack' || from === 'attack_move') && (to === 'idle' || to === 'run');
         const isLocoToAttack = (from === 'idle' || from === 'run') && (to === 'attack' || to === 'attack_move');
         const isDashToLoco = from === 'dash' && (to === 'idle' || to === 'run');
+        const isGestureToLoco = from === 'gesture' && (to === 'idle' || to === 'run');
 
-        if (isLocomotionTransition || isAttackToLoco || isLocoToAttack || isDashToLoco) {
+        if (isLocomotionTransition || isAttackToLoco || isLocoToAttack || isDashToLoco || isGestureToLoco) {
           // Dual-sprite crossfade (same pivot/scale guaranteed)
           this._spriteB.material.map = this._spriteA.material.map;
           this._spriteB.material.opacity = 1.0;
@@ -697,9 +699,10 @@ export class ThreeRenderer {
           else if (isLocoToAttack) fadeDur = 0.045; // locomotion→attack
           else if (from === 'attack_move') fadeDur = 0.075; // attack_move→run
           else if (isDashToLoco) fadeDur = 0.070; // dash→locomotion
+          else if (isGestureToLoco) fadeDur = 0.080; // gesture→locomotion
           else fadeDur = 0.085; // attack_stable→locomotion
           // Save run frame for phase preservation
-          if ((isLocoToAttack || isDashToLoco) && from === 'run') {
+          if ((isLocoToAttack || isDashToLoco || isGestureToLoco) && from === 'run') {
             this._savedRunFrame = this.playerSpriteFrame;
           }
           this._runToIdleFade = { active: true, progress: 0, duration: fadeDur };
@@ -707,7 +710,7 @@ export class ThreeRenderer {
           // Set new clip on A — preserve run phase after attack
           this.playerCurrentAnim = targetAnim;
           // Only reset frame for non-run targets or fresh starts (preserve run phase after attack/dash)
-          if ((isAttackToLoco || isDashToLoco) && to === 'run' && this._savedRunFrame !== undefined) {
+          if ((isAttackToLoco || isDashToLoco || isGestureToLoco) && to === 'run' && this._savedRunFrame !== undefined) {
             this.playerSpriteFrame = this._savedRunFrame;
           } else {
             this.playerSpriteFrame = 0;

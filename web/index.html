@@ -1606,12 +1606,11 @@
         if (isDragging && dragStart) {
           // Slow engine updates to 25% speed
           if (!window._gestureSlowTime) window._gestureSlowTime = 0;
-          window._gestureSlowTime += (timestamp - (window._lastLoopTime || timestamp)) * 0.25;
+          window._gestureSlowTime += (timestamp - (window._lastLoopTime || timestamp)) * 0.4;
           window._lastLoopTime = timestamp;
           // Only update engine at slowed rate
           engine.update(window._gestureSlowTime);
-          // Block movement input during gesture (character stands still)
-          engine.on_key_up('w'); engine.on_key_up('a'); engine.on_key_up('s'); engine.on_key_up('d');
+          // Slow movement during gesture (65%), don't fully block
         } else {
           window._gestureSlowTime = 0;
           window._lastLoopTime = timestamp;
