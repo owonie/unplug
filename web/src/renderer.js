@@ -233,7 +233,7 @@ export class ThreeRenderer {
     const useV2Idle = window.location.search.includes('v2sprite');
     const spriteData = {
       // === Runtime Animation Pack v1 (full set) ===
-      idle: { file: './sprites/huntress/huntress_idle_v2.png', frames: 8, speed: 10, loop: true, fallback: './sprites/huntress/huntress_idle.png', fallbackFrames: 6 },
+      idle: { file: './sprites/huntress/huntress_idle_calm_v3.png', frames: 8, speed: 6, loop: true, fallback: './sprites/huntress/huntress_idle_v2.png', fallbackFrames: 8 },
       run: { file: './sprites/huntress/huntress_run.png', frames: 8, speed: 14, loop: true, fallback: './sprites/huntress/Run.png', fallbackFrames: 8 },
       attack: { file: './sprites/huntress/huntress_attack_v2.png', frames: 10, speed: 24, loop: false, eventFrame: 5, fallback: './sprites/huntress/huntress_attack.png', fallbackFrames: 6 },
       dash: { file: './sprites/huntress/huntress_dash.png', frames: 6, speed: 22, loop: false, eventFrame: 2 },
