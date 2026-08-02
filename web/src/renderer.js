@@ -656,8 +656,9 @@ export class ThreeRenderer {
         const to = targetAnim;
         const isLocomotionTransition = (from === 'run' && to === 'idle') || (from === 'idle' && to === 'run');
         const isAttackToLoco = (from === 'attack') && (to === 'idle' || to === 'run');
+        const isLocoToAttack = (from === 'idle' || from === 'run') && to === 'attack';
 
-        if (isLocomotionTransition || isAttackToLoco) {
+        if (isLocomotionTransition || isAttackToLoco || isLocoToAttack) {
           // Dual-sprite crossfade (same pivot/scale guaranteed)
           this._spriteB.material.map = this._spriteA.material.map;
           this._spriteB.material.opacity = 1.0;
@@ -665,6 +666,7 @@ export class ThreeRenderer {
           let fadeDur;
           if (from === 'run' && to === 'idle') fadeDur = 0.110;
           else if (from === 'idle' && to === 'run') fadeDur = 0.090;
+          else if (isLocoToAttack) fadeDur = 0.045; // locomotion→attack
           else fadeDur = 0.085; // attack→locomotion
           this._runToIdleFade = { active: true, progress: 0, duration: fadeDur };
 
