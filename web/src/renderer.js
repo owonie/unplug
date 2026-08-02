@@ -893,14 +893,22 @@ export class ThreeRenderer {
               // Spawn slash arc VFX in mouse aim direction (separate from body)
               const aimX = state.mouseWorldX !== undefined ? state.mouseWorldX - playerX : this.playerFacing;
               const aimZ = state.mouseWorldZ !== undefined ? state.mouseWorldZ - playerZ : 0;
-              this.spawnSlash(playerX, playerZ, aimX, aimZ, state.element || 0);
+              // Normalize aim direction
+              const aimLen = Math.sqrt(aimX * aimX + aimZ * aimZ) || 1;
+              const nAimX = aimX / aimLen;
+              const nAimZ = aimZ / aimLen;
+              // Spawn slash VFX offset in aim direction (1.0 unit forward)
+              this.spawnSlash(playerX + nAimX * 1.0, playerZ + nAimZ * 1.0, nAimX, nAimZ, state.element || 0);
               // Dispatch contact event for external sync
               if (this._onAttackContact) this._onAttackContact();
             }
             // Weapon Arc: start at frame 5 of attack clips (separate additive sprite)
             if (isAtkAnim && this.playerSpriteFrame === 5 && !this._weaponArcStarted && this._weaponArcTex) {
               this._weaponArcStarted = true;
-              this._spawnWeaponArc(playerX, playerZ, state);
+              const wAimX = state.mouseWorldX !== undefined ? state.mouseWorldX - playerX : this.playerFacing;
+              const wAimZ = state.mouseWorldZ !== undefined ? state.mouseWorldZ - playerZ : 0;
+              const wLen = Math.sqrt(wAimX * wAimX + wAimZ * wAimZ) || 1;
+              this._spawnWeaponArc(playerX, playerZ, state, wAimX / wLen, wAimZ / wLen);
             }
             // Dash shake on movement start frame
             if (this.playerCurrentAnim === 'dash' && this.playerSpriteFrame === 2) {
@@ -1536,7 +1544,7 @@ export class ThreeRenderer {
   // VFX methods (shield, ultimate, directional, element-specific) → see vfx.js
 
   // === WEAPON ARC VFX (separate sprite, additive, 6fr@30fps) ===
-  _spawnWeaponArc(px, pz, state) {
+  _spawnWeaponArc(px, pz, state, aimX, aimZ) {
     if (!this._weaponArcTex) return;
     const tex = this._weaponArcTex.clone();
     tex.repeat.set(1 / 6, 1);
@@ -1552,7 +1560,8 @@ export class ThreeRenderer {
     });
     const geo = new THREE.PlaneGeometry(2.0, 2.0); // 512px arc at game scale
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(px + this.playerFacing * 0.5, 0.7, pz);
+    // Position in aim direction (weapon socket offset)
+    mesh.position.set(px + (aimX || this.playerFacing) * 0.8, 0.7, pz + (aimZ || 0) * 0.8);
     mesh.quaternion.copy(this.camera.quaternion);
     this.scene.add(mesh);
 

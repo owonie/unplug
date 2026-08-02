@@ -1774,6 +1774,7 @@
           maxHp: engine.player_max_hp(),
           nearestEnemyDirX: engine.nearest_enemy_dir_x(),
           mouseWorldX: engine.player_x() + (window._lastMouseX !== undefined ? (window._lastMouseX - window.innerWidth/2) * 0.02 : 0),
+          mouseWorldZ: engine.player_z() + (window._lastMouseY !== undefined ? (window._lastMouseY - window.innerHeight/2) * 0.02 : 0),
           element: getElement(),
           elementLevel: engine.active_element_level(),
           fireLv: engine.fire_level(),
