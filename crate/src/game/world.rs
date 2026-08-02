@@ -1045,7 +1045,7 @@ impl World {
         let px = self.player.x;
         let pz = self.player.z;
         let range = if is_pre_promo { 6.0 } else { 8.0 };
-        let cone_half = 0.35; // cos(~70°) — matches VFX spread (~80-90° cone)
+        let cone_half = 0.1; // cos(~84°) — generous cone, slightly wider than VFX
         let damage_mult = if is_pre_promo { 2.0 } else { 3.0 };
         let damage = self.player.attack_damage * damage_mult;
 
