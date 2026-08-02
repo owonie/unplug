@@ -244,9 +244,10 @@ export class ThreeRenderer {
         fallbacks: ['./sprites/huntress/huntress_run_neutral_v5.png', './sprites/huntress/huntress_run_neutral_v4.png'],
       },
       attack: {
-        file: './sprites/huntress/huntress_attack_v2_neutral_v5.png',
-        frames: 10, fps: 24, loop: false, eventFrame: 5,
-        fallbacks: ['./sprites/huntress/huntress_attack_v2_neutral_v4.png'],
+        // Motion Set v8: Attack stable v8 (11fr, eventFrame 6)
+        file: './sprites/huntress/huntress_attack_stable_v8.png',
+        frames: 11, fps: 24, loop: false, eventFrame: 6,
+        fallbacks: ['./sprites/huntress/huntress_attack_v2_neutral_v5.png', './sprites/huntress/huntress_attack_v2_neutral_v4.png'],
       },
       dash: {
         file: './sprites/huntress/huntress_dash_neutral_v5.png',
@@ -654,13 +655,17 @@ export class ThreeRenderer {
         const from = this.playerCurrentAnim;
         const to = targetAnim;
         const isLocomotionTransition = (from === 'run' && to === 'idle') || (from === 'idle' && to === 'run');
+        const isAttackToLoco = (from === 'attack') && (to === 'idle' || to === 'run');
 
-        if (isLocomotionTransition) {
-          // Dual-sprite crossfade for Run↔Idle only (same pivot/scale guaranteed)
+        if (isLocomotionTransition || isAttackToLoco) {
+          // Dual-sprite crossfade (same pivot/scale guaranteed)
           this._spriteB.material.map = this._spriteA.material.map;
           this._spriteB.material.opacity = 1.0;
           this._spriteB.visible = true;
-          const fadeDur = (from === 'run' && to === 'idle') ? 0.110 : 0.090;
+          let fadeDur;
+          if (from === 'run' && to === 'idle') fadeDur = 0.110;
+          else if (from === 'idle' && to === 'run') fadeDur = 0.090;
+          else fadeDur = 0.085; // attack→locomotion
           this._runToIdleFade = { active: true, progress: 0, duration: fadeDur };
 
           // Set new clip on A
@@ -817,7 +822,8 @@ export class ThreeRenderer {
             }
 
             // Attack contact frame: fire event + hold
-            if (this.playerCurrentAnim === 'attack' && this.playerSpriteFrame === 5 && !this._attackEventFired) {
+            // Attack contact frame: fire event + hold (uses eventFrame from spriteData)
+            if (this.playerCurrentAnim === 'attack' && spriteInfo.eventFrame && this.playerSpriteFrame === spriteInfo.eventFrame && !this._attackEventFired) {
               this._attackEventFired = true;
               this._contactHoldActive = true;
               this._contactHoldTimer = this._contactHoldMs;
