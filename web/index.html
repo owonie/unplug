@@ -537,7 +537,7 @@
           if (!document.getElementById('gesture-desaturate')) {
             const overlay = document.createElement('div');
             overlay.id = 'gesture-desaturate';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.15);pointer-events:none;z-index:990;transition:opacity 0.1s';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:990;transition:opacity 0.15s;background:radial-gradient(circle 200px at var(--gx, 50%) var(--gy, 50%), rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.35) 60%)';
             document.body.appendChild(overlay);
           }
         } else if (e.button === 2 && engine.player_class_tier() >= 2) {
@@ -557,6 +557,13 @@
         const dy = e.clientY - dragStart.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         dragPoints.push({ x: e.clientX, y: e.clientY });
+
+        // Update gesture overlay glow position (bright circle follows cursor)
+        const gestureOverlay = document.getElementById('gesture-desaturate');
+        if (gestureOverlay) {
+          gestureOverlay.style.setProperty('--gx', e.clientX + 'px');
+          gestureOverlay.style.setProperty('--gy', e.clientY + 'px');
+        }
 
         // Draw gesture trail
         drawGestureTrail(dragPoints);
@@ -1595,18 +1602,19 @@
           showGameOver(engine);
         }
 
-        // Gesture slowmo: during drag, pass reduced timestamp for 0.3x speed
+        // Gesture slowmo: 0.25x time scale for cinematic feel
         if (isDragging && dragStart) {
-          // Skip engine update partially — update every 3rd frame only
-          if (!window._gestureFrameSkip) window._gestureFrameSkip = 0;
-          window._gestureFrameSkip++;
-          if (window._gestureFrameSkip % 3 !== 0) {
-            // Don't update engine — creates slowmo effect
-          } else {
-            engine.update(timestamp);
-          }
+          // Slow engine updates to 25% speed
+          if (!window._gestureSlowTime) window._gestureSlowTime = 0;
+          window._gestureSlowTime += (timestamp - (window._lastLoopTime || timestamp)) * 0.25;
+          window._lastLoopTime = timestamp;
+          // Only update engine at slowed rate
+          engine.update(window._gestureSlowTime);
+          // Block movement input during gesture (character stands still)
+          engine.on_key_up('w'); engine.on_key_up('a'); engine.on_key_up('s'); engine.on_key_up('d');
         } else {
-          window._gestureFrameSkip = 0;
+          window._gestureSlowTime = 0;
+          window._lastLoopTime = timestamp;
           // Pass mouse aim direction to engine every frame
           if (window._lastMouseX !== undefined && engine.set_aim) {
             const aimX = (window._lastMouseX - window.innerWidth / 2) * 0.02;
