@@ -273,19 +273,28 @@ export class ThreeRenderer {
         fallbacks: ['./sprites/huntress/huntress_gesture_cast_neutral_v5.png', './sprites/huntress/huntress_gesture_cast_neutral_v4.png'],
       },
       hit: {
-        file: './sprites/huntress/huntress_hit_neutral_v5.png',
-        frames: 4, fps: 18, loop: false, eventFrame: 1,
-        fallbacks: ['./sprites/huntress/huntress_hit_neutral_v4.png'],
+        // Motion Set v8: Hit v8 (6fr@24fps, impactFrame 1, staggerFrame 2)
+        file: './sprites/huntress/huntress_hit_v8.png',
+        frames: 6, fps: 24, loop: false, eventFrame: 1,
+        fallbacks: ['./sprites/huntress/huntress_hit_neutral_v5.png', './sprites/huntress/huntress_hit_neutral_v4.png'],
       },
       death: {
-        file: './sprites/huntress/huntress_death_neutral_v5.png',
-        frames: 8, fps: 14, loop: false, eventFrame: null,
-        fallbacks: ['./sprites/huntress/huntress_death_neutral_v4.png'],
+        // Motion Set v8: Death v8 (11fr@18fps, hold frame 10)
+        file: './sprites/huntress/huntress_death_v8.png',
+        frames: 11, fps: 18, loop: false, eventFrame: null,
+        fallbacks: ['./sprites/huntress/huntress_death_neutral_v5.png', './sprites/huntress/huntress_death_neutral_v4.png'],
       },
       revive: {
-        file: './sprites/huntress/huntress_revive_neutral_v5.png',
-        frames: 8, fps: 16, loop: false, eventFrame: 6,
-        fallbacks: ['./sprites/huntress/huntress_revive_neutral_v4.png'],
+        // Motion Set v8: Revive v8 (12fr@20fps, readyFrame 11)
+        file: './sprites/huntress/huntress_revive_v8.png',
+        frames: 12, fps: 20, loop: false, eventFrame: 11,
+        fallbacks: ['./sprites/huntress/huntress_revive_neutral_v5.png', './sprites/huntress/huntress_revive_neutral_v4.png'],
+      },
+      run_stop: {
+        // Motion Set v8: Run Stop v8 (6fr@18fps, idleHandoff frame 5)
+        file: './sprites/huntress/huntress_run_stop_v8.png',
+        frames: 6, fps: 18, loop: false, eventFrame: 5,
+        fallbacks: [],
       },
     };
 
@@ -655,20 +664,23 @@ export class ThreeRenderer {
         }
       }
 
-      // === RUN→IDLE DECELERATION (90ms grace, 80ms cancel window, 110ms crossfade) ===
-      // When run→idle: don't switch instantly, wait 90ms in case input resumes
+      // === RUN→IDLE DECELERATION (90ms grace, 80ms cancel window, run_stop insert) ===
       if (!this._runToIdleTimer) this._runToIdleTimer = 0;
       if (!this._runToIdleFade) this._runToIdleFade = { active: false, progress: 0 };
 
       if (this.playerCurrentAnim === 'run' && targetAnim === 'idle') {
         if (this._runToIdleTimer === 0) {
-          this._runToIdleTimer = 0.001; // start grace period
+          this._runToIdleTimer = 0.001;
         }
         this._runToIdleTimer += dt;
         if (this._runToIdleTimer < 0.090) {
-          targetAnim = 'run'; // keep running during grace period
+          targetAnim = 'run'; // keep running during grace
+        } else if (this.sprites.run_stop && state.playerSpeed > 4.5 * 0.25 && this._animLock !== 'run_stop') {
+          // Fast stop: insert run_stop animation before idle
+          targetAnim = 'run_stop';
+          this._animLock = 'run_stop';
+          this._animLockTimer = this.sprites.run_stop.frames / this.sprites.run_stop.speed;
         }
-        // else: proceed to transition below
       } else if (targetAnim === 'run' && this._runToIdleTimer > 0 && this._runToIdleTimer < 0.080) {
         // Input resumed within 80ms cancel window — stay run
         this._runToIdleTimer = 0;
@@ -687,8 +699,11 @@ export class ThreeRenderer {
         const isLocoToAttack = (from === 'idle' || from === 'run') && (to === 'attack' || to === 'attack_move');
         const isDashToLoco = from === 'dash' && (to === 'idle' || to === 'run');
         const isGestureToLoco = from === 'gesture' && (to === 'idle' || to === 'run');
+        const isHitToLoco = from === 'hit' && (to === 'idle' || to === 'run');
+        const isRunStopToIdle = from === 'run_stop' && to === 'idle';
+        const isRunToRunStop = from === 'run' && to === 'run_stop';
 
-        if (isLocomotionTransition || isAttackToLoco || isLocoToAttack || isDashToLoco || isGestureToLoco) {
+        if (isLocomotionTransition || isAttackToLoco || isLocoToAttack || isDashToLoco || isGestureToLoco || isHitToLoco || isRunStopToIdle || isRunToRunStop) {
           // Dual-sprite crossfade (same pivot/scale guaranteed)
           this._spriteB.material.map = this._spriteA.material.map;
           this._spriteB.material.opacity = 1.0;
@@ -700,9 +715,12 @@ export class ThreeRenderer {
           else if (from === 'attack_move') fadeDur = 0.075; // attack_move→run
           else if (isDashToLoco) fadeDur = 0.070; // dash→locomotion
           else if (isGestureToLoco) fadeDur = 0.080; // gesture→locomotion
+          else if (isHitToLoco) fadeDur = 0.080; // hit→locomotion
+          else if (isRunStopToIdle) fadeDur = 0.060; // run_stop→idle
+          else if (isRunToRunStop) fadeDur = 0.045; // run→run_stop (quick)
           else fadeDur = 0.085; // attack_stable→locomotion
           // Save run frame for phase preservation
-          if ((isLocoToAttack || isDashToLoco || isGestureToLoco) && from === 'run') {
+          if ((isLocoToAttack || isDashToLoco || isGestureToLoco || isHitToLoco || isRunToRunStop) && from === 'run') {
             this._savedRunFrame = this.playerSpriteFrame;
           }
           this._runToIdleFade = { active: true, progress: 0, duration: fadeDur };
@@ -710,7 +728,7 @@ export class ThreeRenderer {
           // Set new clip on A — preserve run phase after attack
           this.playerCurrentAnim = targetAnim;
           // Only reset frame for non-run targets or fresh starts (preserve run phase after attack/dash)
-          if ((isAttackToLoco || isDashToLoco || isGestureToLoco) && to === 'run' && this._savedRunFrame !== undefined) {
+          if ((isAttackToLoco || isDashToLoco || isGestureToLoco || isHitToLoco) && to === 'run' && this._savedRunFrame !== undefined) {
             this.playerSpriteFrame = this._savedRunFrame;
           } else {
             this.playerSpriteFrame = 0;
