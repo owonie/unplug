@@ -866,6 +866,10 @@ export class ThreeRenderer {
             const speedRatio = Math.max(0.6, Math.min(1.3, state.playerSpeed / 4.5));
             animSpeed = spriteInfo.speed * speedRatio;
           }
+          // Gesture: stretch animation across 2.5s timer (12fr / 2.5s = 4.8fps)
+          if (this.playerCurrentAnim === 'gesture') {
+            animSpeed = spriteInfo.frames / 2.5; // ~4.8fps for 12fr over 2.5s
+          }
           // Per-frame timing: contact frames hold longer, flight frames pass quickly
           let frameHold = 1.0;
           if (spriteInfo.frameTiming && spriteInfo.frameTiming[this.playerSpriteFrame]) {

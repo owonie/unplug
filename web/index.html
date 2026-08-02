@@ -534,6 +534,41 @@
           showSpellGuide();
           // === GESTURE STAGE 1: 시작 — 배경 채도 저하 + 커서 변경 ===
           document.body.style.cursor = 'crosshair';
+          // Timer: 2.5s limit
+          window._gestureStartTime = performance.now();
+          window._gestureTimeLimit = 2500; // ms
+          // Spawn semicircle gauge HUD
+          if (!document.getElementById('gesture-timer-hud')) {
+            const hud = document.createElement('div');
+            hud.id = 'gesture-timer-hud';
+            hud.innerHTML = `<svg width="160" height="90" viewBox="0 0 160 90" style="filter:drop-shadow(0 0 8px rgba(100,180,255,0.4))">
+              <path d="M 10 85 A 70 70 0 0 1 150 85" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="4" stroke-linecap="round"/>
+              <path id="gesture-arc" d="M 10 85 A 70 70 0 0 1 150 85" fill="none" stroke="rgba(100,200,255,0.7)" stroke-width="4" stroke-linecap="round"/>
+            </svg>`;
+            hud.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-60%);pointer-events:none;z-index:995;opacity:0;transition:opacity 0.2s';
+            document.body.appendChild(hud);
+            requestAnimationFrame(() => hud.style.opacity = '1');
+          }
+          // Start timer animation
+          window._gestureTimerRAF = requestAnimationFrame(function tickGestureTimer() {
+            const elapsed = performance.now() - window._gestureStartTime;
+            const ratio = Math.min(1, elapsed / window._gestureTimeLimit);
+            const arc = document.getElementById('gesture-arc');
+            if (arc) {
+              // SVG arc: full semicircle = path length ~220, reduce dashoffset
+              const totalLen = 220;
+              arc.style.strokeDasharray = totalLen;
+              arc.style.strokeDashoffset = totalLen * ratio;
+              // Color shift: blue → orange → red as time runs out
+              if (ratio > 0.7) arc.setAttribute('stroke', `rgba(255,${Math.floor(180*(1-ratio))},50,0.8)`);
+            }
+            if (ratio >= 1 && dragStart) {
+              // TIME'S UP — auto-fail gesture
+              document.dispatchEvent(new MouseEvent('mouseup', { clientX: dragStart.x, clientY: dragStart.y, button: 0 }));
+              return;
+            }
+            if (dragStart) window._gestureTimerRAF = requestAnimationFrame(tickGestureTimer);
+          });
           if (!document.getElementById('gesture-desaturate')) {
             const overlay = document.createElement('div');
             overlay.id = 'gesture-desaturate';
@@ -689,6 +724,9 @@
         document.body.style.cursor = '';
         const desat = document.getElementById('gesture-desaturate');
         if (desat) desat.remove();
+        const timerHud = document.getElementById('gesture-timer-hud');
+        if (timerHud) timerHud.remove();
+        if (window._gestureTimerRAF) cancelAnimationFrame(window._gestureTimerRAF);
 
         clearGestureTrail();
         if (magicCircle) { magicCircle.remove(); magicCircle = null; }
