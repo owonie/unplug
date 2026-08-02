@@ -244,10 +244,16 @@ export class ThreeRenderer {
         fallbacks: ['./sprites/huntress/huntress_run_neutral_v5.png', './sprites/huntress/huntress_run_neutral_v4.png'],
       },
       attack: {
-        // Motion Set v8: Attack stable v8 (11fr, eventFrame 6)
+        // Motion Set v8: Attack stable v8 (11fr, standing/slow attack)
         file: './sprites/huntress/huntress_attack_stable_v8.png',
         frames: 11, fps: 24, loop: false, eventFrame: 6,
         fallbacks: ['./sprites/huntress/huntress_attack_v2_neutral_v5.png', './sprites/huntress/huntress_attack_v2_neutral_v4.png'],
+      },
+      attack_move: {
+        // Motion Set v8: Attack Move v9 (12fr, running attack)
+        file: './sprites/huntress/huntress_attack_move_v9.png',
+        frames: 12, fps: 24, loop: false, eventFrame: 7,
+        fallbacks: ['./sprites/huntress/huntress_attack_stable_v8.png'],
       },
       dash: {
         file: './sprites/huntress/huntress_dash_neutral_v5.png',
@@ -307,6 +313,17 @@ export class ThreeRenderer {
       this._contactShadowTex = shadowTex;
     } catch (e) {
       console.warn('Contact shadow not loaded:', e.message);
+    }
+
+    // Load weapon arc VFX (separate sprite, additive blending)
+    try {
+      const arcTex = await loader.loadAsync('./sprites/vfx/weapon_arc_v1.png');
+      arcTex.magFilter = THREE.LinearFilter;
+      arcTex.minFilter = THREE.LinearFilter;
+      arcTex.colorSpace = THREE.SRGBColorSpace;
+      this._weaponArcTex = arcTex;
+    } catch (e) {
+      console.warn('Weapon arc not loaded:', e.message);
     }
 
     this.setupSpritePlayer();
@@ -614,11 +631,15 @@ export class ThreeRenderer {
             this._animLockTimer = this.sprites.hit.frames / this.sprites.hit.speed;
           }
         } else if (state.playerAttacking) {
-          targetAnim = 'attack';
-          if (this.sprites.attack && this._animLock !== 'attack') {
-            this._animLock = 'attack';
-            this._animLockTimer = this.sprites.attack.frames / this.sprites.attack.speed;
+          // Speed-based attack selection: moving > 20% maxSpeed → attack_move
+          const isMovingFast = state.playerSpeed && state.playerSpeed > 4.5 * 0.2;
+          const atkClip = (isMovingFast && this.sprites.attack_move) ? 'attack_move' : 'attack';
+          targetAnim = atkClip;
+          if (this.sprites[atkClip] && this._animLock !== 'attack' && this._animLock !== 'attack_move') {
+            this._animLock = atkClip;
+            this._animLockTimer = this.sprites[atkClip].frames / this.sprites[atkClip].speed;
             this._attackEventFired = false;
+            this._weaponArcStarted = false;
           }
         } else if (state.playerCasting && this.sprites.gesture) {
           targetAnim = 'gesture';
@@ -655,8 +676,8 @@ export class ThreeRenderer {
         const from = this.playerCurrentAnim;
         const to = targetAnim;
         const isLocomotionTransition = (from === 'run' && to === 'idle') || (from === 'idle' && to === 'run');
-        const isAttackToLoco = (from === 'attack') && (to === 'idle' || to === 'run');
-        const isLocoToAttack = (from === 'idle' || from === 'run') && to === 'attack';
+        const isAttackToLoco = (from === 'attack' || from === 'attack_move') && (to === 'idle' || to === 'run');
+        const isLocoToAttack = (from === 'idle' || from === 'run') && (to === 'attack' || to === 'attack_move');
 
         if (isLocomotionTransition || isAttackToLoco || isLocoToAttack) {
           // Dual-sprite crossfade (same pivot/scale guaranteed)
@@ -667,11 +688,12 @@ export class ThreeRenderer {
           if (from === 'run' && to === 'idle') fadeDur = 0.110;
           else if (from === 'idle' && to === 'run') fadeDur = 0.090;
           else if (isLocoToAttack) fadeDur = 0.045; // locomotion→attack
+          else if (from === 'attack_move') fadeDur = 0.075; // attack_move→run
+          else fadeDur = 0.085; // attack_stable→locomotion
           // Save run frame for phase preservation
           if (isLocoToAttack && from === 'run') {
             this._savedRunFrame = this.playerSpriteFrame;
           }
-          else fadeDur = 0.085; // attack→locomotion
           this._runToIdleFade = { active: true, progress: 0, duration: fadeDur };
 
           // Set new clip on A — preserve run phase after attack
@@ -834,19 +856,23 @@ export class ThreeRenderer {
               this.playerSpriteFrame = (this.playerSpriteFrame + 1) % spriteInfo.frames;
             }
 
-            // Attack contact frame: fire event + hold
-            // Attack contact frame: fire event + hold (uses eventFrame from spriteData)
-            if (this.playerCurrentAnim === 'attack' && spriteInfo.eventFrame && this.playerSpriteFrame === spriteInfo.eventFrame && !this._attackEventFired) {
+            // Attack contact frame: fire event + hold (both attack and attack_move)
+            const isAtkAnim = this.playerCurrentAnim === 'attack' || this.playerCurrentAnim === 'attack_move';
+            if (isAtkAnim && spriteInfo.eventFrame && this.playerSpriteFrame === spriteInfo.eventFrame && !this._attackEventFired) {
               this._attackEventFired = true;
               this._contactHoldActive = true;
-              this._contactHoldTimer = this._contactHoldMs;
+              this._contactHoldTimer = this.playerCurrentAnim === 'attack_move' ? 24 : this._contactHoldMs;
               // Spawn slash arc VFX in mouse aim direction (separate from body)
               const aimX = state.mouseWorldX !== undefined ? state.mouseWorldX - playerX : this.playerFacing;
               const aimZ = state.mouseWorldZ !== undefined ? state.mouseWorldZ - playerZ : 0;
               this.spawnSlash(playerX, playerZ, aimX, aimZ, state.element || 0);
-              // Shake/hitstop ONLY on actual hit (checked via damage events)
               // Dispatch contact event for external sync
               if (this._onAttackContact) this._onAttackContact();
+            }
+            // Weapon Arc: start at frame 5 of attack clips (separate additive sprite)
+            if (isAtkAnim && this.playerSpriteFrame === 5 && !this._weaponArcStarted && this._weaponArcTex) {
+              this._weaponArcStarted = true;
+              this._spawnWeaponArc(playerX, playerZ, state);
             }
             // Dash shake on movement start frame
             if (this.playerCurrentAnim === 'dash' && this.playerSpriteFrame === 2) {
@@ -1186,6 +1212,9 @@ export class ThreeRenderer {
       }
     });
 
+    // Update weapon arc VFX
+    this._updateWeaponArcs(dt);
+
     this.renderer.render(this.scene, this.camera);
 
     // Update slash effects
@@ -1474,6 +1503,62 @@ export class ThreeRenderer {
   }
 
   // VFX methods (shield, ultimate, directional, element-specific) → see vfx.js
+
+  // === WEAPON ARC VFX (separate sprite, additive, 6fr@30fps) ===
+  _spawnWeaponArc(px, pz, state) {
+    if (!this._weaponArcTex) return;
+    const tex = this._weaponArcTex.clone();
+    tex.repeat.set(1 / 6, 1);
+    tex.offset.set(0, 0);
+    // Element tint
+    const elemColors = { 1: 0xff6633, 2: 0x66ccff, 3: 0xffee33, 4: 0x66ff66 };
+    const tint = elemColors[state.element] || 0xffffff;
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex, transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false, side: THREE.DoubleSide,
+      color: tint,
+    });
+    const geo = new THREE.PlaneGeometry(2.0, 2.0); // 512px arc at game scale
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(px + this.playerFacing * 0.5, 0.7, pz);
+    mesh.quaternion.copy(this.camera.quaternion);
+    this.scene.add(mesh);
+
+    // Animate 6 frames at 30fps then remove
+    let frame = 0;
+    const totalFrames = 6;
+    const fps = 30;
+    let timer = 0;
+    const arc = { mesh, timer: 0, frame: 0 };
+    if (!this._weaponArcs) this._weaponArcs = [];
+    this._weaponArcs.push(arc);
+  }
+
+  _updateWeaponArcs(dt) {
+    if (!this._weaponArcs) return;
+    for (let i = this._weaponArcs.length - 1; i >= 0; i--) {
+      const arc = this._weaponArcs[i];
+      arc.timer += dt * 30; // 30 fps
+      if (arc.timer >= 1) {
+        arc.timer = 0;
+        arc.frame++;
+        if (arc.frame >= 6) {
+          this.scene.remove(arc.mesh);
+          arc.mesh.geometry.dispose();
+          arc.mesh.material.dispose();
+          this._weaponArcs.splice(i, 1);
+          continue;
+        }
+        arc.mesh.material.map.offset.x = arc.frame / 6;
+        // Scale pulse: peak at frame 2 (1.08x), then back
+        const scalePulse = arc.frame === 2 ? 1.08 : 1.0;
+        arc.mesh.scale.set(scalePulse, scalePulse, 1);
+      }
+      // Billboard
+      arc.mesh.quaternion.copy(this.camera.quaternion);
+    }
+  }
 }
 
 // Mixin VFX methods onto ThreeRenderer prototype
