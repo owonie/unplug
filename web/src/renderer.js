@@ -238,9 +238,14 @@ export class ThreeRenderer {
         fallbacks: ['./sprites/huntress/huntress_idle_calm_v3_neutral_v4.png'],
       },
       run: {
-        // Motion Set v8: Run v7 (12fr, head stable) — slowed to 10fps for weighty feel
+        // Motion Set v8: Run v7 (12fr, head stable)
+        // Frame timing: contact frames hold longer, flight frames pass quickly
         file: './sprites/huntress/huntress_run_head_stable_v7.png',
-        frames: 12, fps: 10, loop: true, eventFrame: null,
+        frames: 12, fps: 14, loop: true, eventFrame: null,
+        // Per-frame duration multiplier: >1 = hold longer (contact), <1 = faster (flight)
+        // Stride 1: frames 0-5, Stride 2: frames 6-11
+        // 0=push-off, 1-2=flight, 3=contact, 4=push-off, 5=flight (mirrored)
+        frameTiming: [1.4, 0.7, 0.7, 1.5, 1.4, 0.7, 0.7, 1.4, 0.7, 0.7, 1.5, 1.4],
         fallbacks: ['./sprites/huntress/huntress_run_neutral_v5.png', './sprites/huntress/huntress_run_neutral_v4.png'],
       },
       attack: {
@@ -847,7 +852,12 @@ export class ThreeRenderer {
             const speedRatio = Math.max(0.6, Math.min(1.3, state.playerSpeed / 4.5));
             animSpeed = spriteInfo.speed * speedRatio;
           }
-          this.playerSpriteTimer += dt * animSpeed;
+          // Per-frame timing: contact frames hold longer, flight frames pass quickly
+          let frameHold = 1.0;
+          if (spriteInfo.frameTiming && spriteInfo.frameTiming[this.playerSpriteFrame]) {
+            frameHold = spriteInfo.frameTiming[this.playerSpriteFrame];
+          }
+          this.playerSpriteTimer += dt * animSpeed / frameHold;
           if (this.playerSpriteTimer >= 1) {
             this.playerSpriteTimer = 0;
             if (spriteInfo.loop === false && this.playerSpriteFrame >= spriteInfo.frames - 1) {
