@@ -290,12 +290,16 @@ export const vfxDirectionalMethods = {
   spawnDirectionalEffect(fromX, fromZ, angle, element, range) {
     const dirX = Math.cos(angle);
     const dirZ = -Math.sin(angle);
+    // VFX CONTRACT: spawn from weapon socket, not character center
+    const socketOffset = 1.0;
+    const x = fromX + dirX * socketOffset;
+    const z = fromZ + dirZ * socketOffset;
     switch (element) {
-      case 1: this._spawnFireBreath(fromX, fromZ, dirX, dirZ, range); break;
-      case 3: this._spawnLightningBolt(fromX, fromZ, dirX, dirZ, range); break;
-      case 2: this._spawnIceWave(fromX, fromZ, dirX, dirZ, range); break;
-      case 4: this._spawnPoisonMist(fromX, fromZ, dirX, dirZ, range); break;
-      default: this._spawnFireBreath(fromX, fromZ, dirX, dirZ, range); break;
+      case 1: this._spawnFireBreath(x, z, dirX, dirZ, range); break;
+      case 3: this._spawnLightningBolt(x, z, dirX, dirZ, range); break;
+      case 2: this._spawnIceWave(x, z, dirX, dirZ, range); break;
+      case 4: this._spawnPoisonMist(x, z, dirX, dirZ, range); break;
+      default: this._spawnFireBreath(x, z, dirX, dirZ, range); break;
     }
   },
 

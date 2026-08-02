@@ -212,8 +212,10 @@ export class ThreeRenderer {
 
     // Load Huntress sprite sheets
     this.sprites = {};
+    // Feature flag: ?v2sprite in URL enables prototype sprite from art handoff
+    const useV2Idle = window.location.search.includes('v2sprite');
     const spriteData = {
-      idle: { file: './sprites/huntress/Idle.png', frames: 8, speed: 8 },
+      idle: { file: useV2Idle ? './sprites/huntress/huntress-idle-v2.png' : './sprites/huntress/Idle.png', frames: 8, speed: 8 },
       run: { file: './sprites/huntress/Run.png', frames: 8, speed: 12 },
       attack: { file: './sprites/huntress/Attack1.png', frames: 5, speed: 15 },
       death: { file: './sprites/huntress/Death.png', frames: 8, speed: 8 },
