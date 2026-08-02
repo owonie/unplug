@@ -305,8 +305,8 @@ export class ThreeRenderer {
     tex.repeat.set(1 / this.sprites.idle.frames, 1);
     tex.offset.set(0, 0);
 
-    // Plane mesh — ENLARGED 20% for readability (피드백: 15-25% 확대)
-    const geo = new THREE.PlaneGeometry(3.0, 3.0);
+    // Plane mesh — sized for 256px sprites at game scale
+    const geo = new THREE.PlaneGeometry(2.0, 2.0);
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, alphaTest: 0.1, depthWrite: false });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(30, 1.5, 30);
@@ -416,8 +416,11 @@ export class ThreeRenderer {
       if (faceDir < -0.01) this.playerFacing = -1;
       else if (faceDir > 0.01) this.playerFacing = 1;
 
-      // Scale (2.2 enlarged, flip X)
-      this.playerGroup.scale.set(2.2 * this.playerFacing, 2.2, 1);
+      // Scale: Legacy Idle/Run ~150px content in cell → needs 1.8x
+      // New Pack (Attack/Dash/Death) 256px full cell → needs 1.2x
+      const newAnimStates = ['attack', 'dash', 'death'];
+      const baseScale = newAnimStates.includes(this.playerCurrentAnim) ? 1.2 : 1.8;
+      this.playerGroup.scale.set(baseScale * this.playerFacing, baseScale, 1);
 
       // Foot rune follows player + element color
       if (this.playerRuneMesh) {
@@ -940,7 +943,7 @@ export class ThreeRenderer {
         tex.repeat.set(1 / this.ashHoundSprites.idle.frames, 1);
         tex.offset.set(0, 0);
         const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.02, depthWrite: false, side: THREE.DoubleSide });
-        const geo = new THREE.PlaneGeometry(2.0 * scale, 2.0 * scale);
+        const geo = new THREE.PlaneGeometry(1.2 * scale, 1.2 * scale);
         const sprite = new THREE.Mesh(geo, mat);
         sprite.position.y = 1.0 * scale;
         group.add(sprite);
