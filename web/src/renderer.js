@@ -232,8 +232,10 @@ export class ThreeRenderer {
     const spriteData = {
       idle: { file: useV2Idle ? './sprites/huntress/huntress-idle-v2.png' : './sprites/huntress/Idle.png', frames: 8, speed: 8 },
       run: { file: './sprites/huntress/Run.png', frames: 8, speed: 12 },
-      attack: { file: './sprites/huntress/Attack1.png', frames: 5, speed: 15 },
-      death: { file: './sprites/huntress/Death.png', frames: 8, speed: 8 },
+      // Runtime Animation Pack v1: new attack (6fr@18fps), dash (6fr@22fps), death (8fr@14fps)
+      attack: { file: './sprites/huntress/huntress_attack.png', frames: 6, speed: 18, eventFrame: 3, fallback: './sprites/huntress/Attack1.png', fallbackFrames: 5 },
+      dash: { file: './sprites/huntress/huntress_dash.png', frames: 6, speed: 22, eventFrame: 2 },
+      death: { file: './sprites/huntress/huntress_death.png', frames: 8, speed: 14, loop: false, fallback: './sprites/huntress/Death.png', fallbackFrames: 8 },
       hit: { file: './sprites/huntress/Take hit.png', frames: 3, speed: 10 },
     };
 
@@ -243,16 +245,52 @@ export class ThreeRenderer {
         tex.magFilter = THREE.NearestFilter;
         tex.minFilter = THREE.NearestFilter;
         tex.colorSpace = THREE.SRGBColorSpace;
-        // Recolor: shift brown/dark → purple/violet, skin → light
         const recolored = this._recolorTexture(tex);
-        this.sprites[key] = { texture: recolored, frames: data.frames, speed: data.speed };
+        this.sprites[key] = {
+          texture: recolored, frames: data.frames, speed: data.speed,
+          loop: data.loop !== false, // default true
+          eventFrame: data.eventFrame || null,
+        };
       } catch (e) {
-        console.warn(`Failed to load sprite: ${key}`, e);
+        console.warn(`Failed to load sprite: ${key}, trying fallback...`, e);
+        // Fallback to legacy asset
+        if (data.fallback) {
+          try {
+            const fbTex = await loader.loadAsync(data.fallback);
+            fbTex.magFilter = THREE.NearestFilter;
+            fbTex.minFilter = THREE.NearestFilter;
+            fbTex.colorSpace = THREE.SRGBColorSpace;
+            const recolored = this._recolorTexture(fbTex);
+            this.sprites[key] = { texture: recolored, frames: data.fallbackFrames || data.frames, speed: data.speed, loop: true, eventFrame: null };
+          } catch (e2) {
+            console.warn(`Fallback also failed for: ${key}`);
+          }
+        }
       }
     }
 
     this.setupSpritePlayer();
     console.log('✅ Sprite system loaded');
+
+    // Load Ash Hound enemy sprites
+    this.ashHoundSprites = {};
+    const ashHoundData = {
+      idle: { file: './sprites/ash_hound/ash_hound_idle.png', frames: 6, speed: 10, loop: true },
+      attack: { file: './sprites/ash_hound/ash_hound_attack.png', frames: 6, speed: 18, loop: false, eventFrame: 3 },
+      death: { file: './sprites/ash_hound/ash_hound_death.png', frames: 8, speed: 14, loop: false },
+    };
+    for (const [key, data] of Object.entries(ashHoundData)) {
+      try {
+        const tex = await loader.loadAsync(data.file);
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        this.ashHoundSprites[key] = { texture: tex, frames: data.frames, speed: data.speed, loop: data.loop, eventFrame: data.eventFrame || null };
+      } catch (e) {
+        console.warn(`Ash Hound sprite failed: ${key}`);
+      }
+    }
+    if (this.ashHoundSprites.idle) console.log('✅ Ash Hound sprites loaded');
   }
 
   _recolorTexture(tex) {
@@ -414,7 +452,7 @@ export class ThreeRenderer {
 
       // Determine animation state
       let targetAnim = 'idle';
-      if (state.playerDashing) targetAnim = 'run'; // use run frames for dash
+      if (state.playerDashing) targetAnim = this.sprites.dash ? 'dash' : 'run';
       else if (state.playerHit) targetAnim = 'hit';
       else if (state.playerAttacking) targetAnim = 'attack';
       else if (playerMoving) targetAnim = 'run';
@@ -518,7 +556,12 @@ export class ThreeRenderer {
         this.playerSpriteTimer += dt * spriteInfo.speed;
         if (this.playerSpriteTimer >= 1) {
           this.playerSpriteTimer = 0;
-          this.playerSpriteFrame = (this.playerSpriteFrame + 1) % spriteInfo.frames;
+          if (spriteInfo.loop === false && this.playerSpriteFrame >= spriteInfo.frames - 1) {
+            // Stay on last frame (death, etc)
+            this.playerSpriteFrame = spriteInfo.frames - 1;
+          } else {
+            this.playerSpriteFrame = (this.playerSpriteFrame + 1) % spriteInfo.frames;
+          }
           this.playerSpriteMat.map.offset.x = this.playerSpriteFrame / spriteInfo.frames;
         }
       }
@@ -716,6 +759,26 @@ export class ThreeRenderer {
     this.enemyMeshes.forEach((m, i) => {
       if (m.visible && enemies[i]) {
         m.position.y = Math.sin(t * 3 + i * 2) * 0.04;
+
+        // Ash Hound sprite animation tick
+        if (m.userData.isSprite && m.userData.spriteMat) {
+          // Billboard: face camera
+          m.children.forEach(c => { if (c.material === m.userData.spriteMat) c.quaternion.copy(this.camera.quaternion); });
+          const info = m.userData.spriteInfo;
+          if (info) {
+            m.userData.spriteTimer += dt * info.speed;
+            if (m.userData.spriteTimer >= 1) {
+              m.userData.spriteTimer = 0;
+              if (info.loop === false && m.userData.spriteFrame >= info.frames - 1) {
+                m.userData.spriteFrame = info.frames - 1;
+              } else {
+                m.userData.spriteFrame = (m.userData.spriteFrame + 1) % info.frames;
+              }
+              m.userData.spriteMat.map.offset.x = m.userData.spriteFrame / info.frames;
+            }
+          }
+        }
+
         // Face player
         const dx = playerX - m.position.x;
         const dz = playerZ - m.position.z;
@@ -871,18 +934,35 @@ export class ThreeRenderer {
     const eyeColor = eyeColors[type] || 0x88ffaa;
 
     if (type === 0 || type === 4) {
-      // === 추종자 (Follower): 둥글고 넓은 실루엣, 느리고 대량 등장 ===
-      const bodyGeo = new THREE.SphereGeometry(0.35 * scale, 8, 6);
-      const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.85 }));
-      body.position.y = 0.4 * scale;
-      body.scale.set(1.2, 0.9, 1.0); // squat, wide
-      body.castShadow = true;
-      group.add(body);
-      // Small head bump
-      const headGeo = new THREE.SphereGeometry(0.15 * scale, 6, 4);
-      const head = new THREE.Mesh(headGeo, new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.8 }));
-      head.position.y = 0.75 * scale;
-      group.add(head);
+      // === Ash Hound (Runtime Animation Pack v1) — billboard sprite if loaded ===
+      if (this.ashHoundSprites && this.ashHoundSprites.idle) {
+        const tex = this.ashHoundSprites.idle.texture.clone();
+        tex.repeat.set(1 / this.ashHoundSprites.idle.frames, 1);
+        tex.offset.set(0, 0);
+        const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.02, depthWrite: false, side: THREE.DoubleSide });
+        const geo = new THREE.PlaneGeometry(2.0 * scale, 2.0 * scale);
+        const sprite = new THREE.Mesh(geo, mat);
+        sprite.position.y = 1.0 * scale;
+        group.add(sprite);
+        group.userData.isSprite = true;
+        group.userData.spriteMat = mat;
+        group.userData.spriteFrame = 0;
+        group.userData.spriteTimer = 0;
+        group.userData.spriteInfo = this.ashHoundSprites.idle;
+        group.userData.spriteAnim = 'idle';
+      } else {
+        // Fallback: 3D mesh
+        const bodyGeo = new THREE.SphereGeometry(0.35 * scale, 8, 6);
+        const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.85 }));
+        body.position.y = 0.4 * scale;
+        body.scale.set(1.2, 0.9, 1.0);
+        body.castShadow = true;
+        group.add(body);
+        const headGeo = new THREE.SphereGeometry(0.15 * scale, 6, 4);
+        const head = new THREE.Mesh(headGeo, new THREE.MeshStandardMaterial({ color: baseGray, roughness: 0.8 }));
+        head.position.y = 0.75 * scale;
+        group.add(head);
+      }
     } else if (type === 6 || type === 1) {
       // === 사냥개/돌격 (Charger): 낮고 뾰족한 실루엣 ===
       const bodyGeo = new THREE.ConeGeometry(0.3 * scale, 0.8 * scale, 5);
