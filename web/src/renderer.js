@@ -458,6 +458,7 @@ export class ThreeRenderer {
       if (state.playerDashing) targetAnim = this.sprites.dash ? 'dash' : 'run';
       else if (state.playerHit) targetAnim = 'hit';
       else if (state.playerAttacking) targetAnim = 'attack';
+      else if (state.playerCasting && this.sprites.gesture) targetAnim = 'gesture';
       else if (playerMoving) targetAnim = 'run';
 
       // Dash visual: element-specific
