@@ -230,13 +230,15 @@ export class ThreeRenderer {
     // Feature flag: ?v2sprite in URL enables prototype sprite from art handoff
     const useV2Idle = window.location.search.includes('v2sprite');
     const spriteData = {
-      idle: { file: useV2Idle ? './sprites/huntress/huntress-idle-v2.png' : './sprites/huntress/Idle.png', frames: 8, speed: 8 },
-      run: { file: './sprites/huntress/Run.png', frames: 8, speed: 12 },
-      // Runtime Animation Pack v1: new attack (6fr@18fps), dash (6fr@22fps), death (8fr@14fps)
-      attack: { file: './sprites/huntress/huntress_attack.png', frames: 6, speed: 18, eventFrame: 3, fallback: './sprites/huntress/Attack1.png', fallbackFrames: 5 },
-      dash: { file: './sprites/huntress/huntress_dash.png', frames: 6, speed: 22, eventFrame: 2 },
+      // === Runtime Animation Pack v1 (full set) ===
+      idle: { file: './sprites/huntress/huntress_idle.png', frames: 6, speed: 10, loop: true, fallback: './sprites/huntress/Idle.png', fallbackFrames: 8 },
+      run: { file: './sprites/huntress/huntress_run.png', frames: 8, speed: 14, loop: true, fallback: './sprites/huntress/Run.png', fallbackFrames: 8 },
+      attack: { file: './sprites/huntress/huntress_attack.png', frames: 6, speed: 18, loop: false, eventFrame: 3, fallback: './sprites/huntress/Attack1.png', fallbackFrames: 5 },
+      dash: { file: './sprites/huntress/huntress_dash.png', frames: 6, speed: 22, loop: false, eventFrame: 2 },
+      gesture: { file: './sprites/huntress/huntress_gesture_cast.png', frames: 6, speed: 18, loop: false, eventFrame: 4 },
+      hit: { file: './sprites/huntress/huntress_hit.png', frames: 4, speed: 18, loop: false, eventFrame: 1, fallback: './sprites/huntress/Take hit.png', fallbackFrames: 3 },
       death: { file: './sprites/huntress/huntress_death.png', frames: 8, speed: 14, loop: false, fallback: './sprites/huntress/Death.png', fallbackFrames: 8 },
-      hit: { file: './sprites/huntress/Take hit.png', frames: 3, speed: 10 },
+      revive: { file: './sprites/huntress/huntress_revive.png', frames: 8, speed: 16, loop: false, eventFrame: 6 },
     };
 
     for (const [key, data] of Object.entries(spriteData)) {
@@ -416,10 +418,8 @@ export class ThreeRenderer {
       if (faceDir < -0.01) this.playerFacing = -1;
       else if (faceDir > 0.01) this.playerFacing = 1;
 
-      // Scale: Legacy Idle/Run ~150px content in cell → needs 1.8x
-      // New Pack (Attack/Dash/Death) 256px full cell → needs 1.2x
-      const newAnimStates = ['attack', 'dash', 'death'];
-      const baseScale = newAnimStates.includes(this.playerCurrentAnim) ? 1.2 : 1.8;
+      // Scale: all animations now use consistent 256px cells → unified scale
+      const baseScale = 1.4;
       this.playerGroup.scale.set(baseScale * this.playerFacing, baseScale, 1);
 
       // Foot rune follows player + element color
