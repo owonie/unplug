@@ -108,16 +108,16 @@ export class ThreeRenderer {
         void main() {
           vec2 worldUV = vWorldPos.xz; // world-space coords
           
-          // Base stone color (warm dark brown)
-          vec3 baseColor = vec3(0.12, 0.09, 0.07);
+          // Base stone color (warm dark brown — visible but not bright)
+          vec3 baseColor = vec3(0.16, 0.13, 0.10);
           
-          // Stone tile pattern (voronoi)
-          float tiles = voronoi(worldUV * 0.8);
-          float tileEdge = smoothstep(0.02, 0.06, tiles); // dark cracks between tiles
-          baseColor *= (0.7 + tileEdge * 0.4);
+          // Stone tile pattern (voronoi) — high detail
+          float tiles = voronoi(worldUV * 2.5);
+          float tileEdge = smoothstep(0.03, 0.08, tiles); // dark cracks between tiles
+          baseColor *= (0.75 + tileEdge * 0.35);
           
           // Micro noise for surface roughness
-          float n = noise(worldUV * 4.0) * 0.08;
+          float n = noise(worldUV * 8.0) * 0.06;
           baseColor += vec3(n * 0.8, n * 0.6, n * 0.4);
           
           // Large-scale color variation
@@ -239,39 +239,8 @@ export class ThreeRenderer {
   }
 
   _recolorTexture(tex) {
-    const img = tex.image;
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const d = imageData.data;
-
-    for (let i = 0; i < d.length; i += 4) {
-      if (d[i + 3] < 10) continue;
-      const r = d[i], g = d[i+1], b = d[i+2];
-      const lum = (r + g + b) / 3;
-
-      // BRIGHT recolor: light lavender/silver so player pops against dark bg
-      // Keeps silhouette readable while matching dark fantasy tone
-      if (lum > 200) {
-        // Very bright → white/silver highlights
-        d[i] = 240; d[i+1] = 235; d[i+2] = 255;
-      } else {
-        const t = Math.min(1, lum / 150);
-        d[i] = Math.round(80 + t * 140);     // R: 80-220
-        d[i+1] = Math.round(70 + t * 120);   // G: 70-190
-        d[i+2] = Math.round(120 + t * 135);  // B: 120-255 (cool tint)
-      }
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-    const newTex = new THREE.CanvasTexture(canvas);
-    newTex.magFilter = THREE.NearestFilter;
-    newTex.minFilter = THREE.NearestFilter;
-    newTex.colorSpace = THREE.SRGBColorSpace;
-    return newTex;
+    // No recolor — use original sprite (clear silhouette against dark ground)
+    return tex;
   }
 
   setupSpritePlayer() {
