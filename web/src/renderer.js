@@ -233,7 +233,7 @@ export class ThreeRenderer {
     const useV2Idle = window.location.search.includes('v2sprite');
     const spriteData = {
       // === Runtime Animation Pack v1 (full set) ===
-      idle: { file: './sprites/huntress/huntress_idle.png', frames: 6, speed: 10, loop: true, fallback: './sprites/huntress/Idle.png', fallbackFrames: 8 },
+      idle: { file: './sprites/huntress/huntress_idle.png', frames: 6, speed: 7, loop: true, fallback: './sprites/huntress/Idle.png', fallbackFrames: 8 },
       run: { file: './sprites/huntress/huntress_run.png', frames: 8, speed: 14, loop: true, fallback: './sprites/huntress/Run.png', fallbackFrames: 8 },
       attack: { file: './sprites/huntress/huntress_attack.png', frames: 6, speed: 18, loop: false, eventFrame: 3, fallback: './sprites/huntress/Attack1.png', fallbackFrames: 5 },
       dash: { file: './sprites/huntress/huntress_dash.png', frames: 6, speed: 22, loop: false, eventFrame: 2 },
@@ -246,8 +246,8 @@ export class ThreeRenderer {
     for (const [key, data] of Object.entries(spriteData)) {
       try {
         const tex = await loader.loadAsync(data.file);
-        tex.magFilter = THREE.NearestFilter;
-        tex.minFilter = THREE.NearestFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.minFilter = THREE.LinearFilter;
         tex.colorSpace = THREE.SRGBColorSpace;
         const recolored = this._recolorTexture(tex);
         this.sprites[key] = {
@@ -286,8 +286,8 @@ export class ThreeRenderer {
     for (const [key, data] of Object.entries(ashHoundData)) {
       try {
         const tex = await loader.loadAsync(data.file);
-        tex.magFilter = THREE.NearestFilter;
-        tex.minFilter = THREE.NearestFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.minFilter = THREE.LinearFilter;
         tex.colorSpace = THREE.SRGBColorSpace;
         this.ashHoundSprites[key] = { texture: tex, frames: data.frames, speed: data.speed, loop: data.loop, eventFrame: data.eventFrame || null };
       } catch (e) {
@@ -582,8 +582,8 @@ export class ThreeRenderer {
         this.playerSpriteTimer = 0;
         const spriteInfo = this.sprites[targetAnim];
         const tex = spriteInfo.texture.clone();
-        tex.magFilter = THREE.NearestFilter;
-        tex.minFilter = THREE.NearestFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.minFilter = THREE.LinearFilter;
         tex.repeat.set(1 / spriteInfo.frames, 1);
         tex.offset.set(0, 0);
         this.playerSpriteMat.map = tex;
