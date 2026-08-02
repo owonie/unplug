@@ -55,41 +55,105 @@ export class ThreeRenderer {
     this.playerLight.position.set(50, 3, 50);
     this.scene.add(this.playerLight);
 
-    // GROUND — dark warm stone (MeshStandardMaterial for natural light response)
-    const groundGeo = new THREE.PlaneGeometry(120, 120, 40, 40);
-    const posAttr = groundGeo.attributes.position;
-    for (let i = 0; i < posAttr.count; i++) {
-      posAttr.setZ(i, (Math.random() - 0.5) * 0.06);
-    }
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x2a2218, roughness: 0.95, metalness: 0.0,
+    // === PROCEDURAL GROUND SHADER: dark stone tiles + cracks + rune circle ===
+    const groundGeo = new THREE.PlaneGeometry(120, 120, 1, 1);
+    const groundMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uPlayerPos: { value: new THREE.Vector2(50, 50) },
+        uKeyColor: { value: new THREE.Color(0xffd4a0) },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+        void main() {
+          vUv = uv;
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform vec2 uPlayerPos;
+        uniform vec3 uKeyColor;
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+
+        // Simplex-like noise
+        float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float noise(vec2 p) {
+          vec2 i = floor(p); vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          float a = hash(i); float b = hash(i + vec2(1,0));
+          float c = hash(i + vec2(0,1)); float d = hash(i + vec2(1,1));
+          return mix(mix(a,b,f.x), mix(c,d,f.x), f.y);
+        }
+
+        // Voronoi for stone tile pattern
+        float voronoi(vec2 p) {
+          vec2 i = floor(p); vec2 f = fract(p);
+          float minDist = 1.0;
+          for(int y=-1; y<=1; y++) {
+            for(int x=-1; x<=1; x++) {
+              vec2 neighbor = vec2(float(x), float(y));
+              vec2 point = hash(i + neighbor) * vec2(0.8) + vec2(0.1);
+              float d = length(neighbor + point - f);
+              minDist = min(minDist, d);
+            }
+          }
+          return minDist;
+        }
+
+        void main() {
+          vec2 worldUV = vWorldPos.xz; // world-space coords
+          
+          // Base stone color (warm dark brown)
+          vec3 baseColor = vec3(0.12, 0.09, 0.07);
+          
+          // Stone tile pattern (voronoi)
+          float tiles = voronoi(worldUV * 0.8);
+          float tileEdge = smoothstep(0.02, 0.06, tiles); // dark cracks between tiles
+          baseColor *= (0.7 + tileEdge * 0.4);
+          
+          // Micro noise for surface roughness
+          float n = noise(worldUV * 4.0) * 0.08;
+          baseColor += vec3(n * 0.8, n * 0.6, n * 0.4);
+          
+          // Large-scale color variation
+          float largeNoise = noise(worldUV * 0.15);
+          baseColor *= (0.85 + largeNoise * 0.3);
+          
+          // Rune circle at world center (50, 50)
+          float distToCenter = length(worldUV - vec2(50.0, 50.0));
+          float runeRing = smoothstep(0.1, 0.0, abs(distToCenter - 10.0) - 0.15);
+          runeRing += smoothstep(0.1, 0.0, abs(distToCenter - 12.0) - 0.1) * 0.5;
+          vec3 runeColor = vec3(0.4, 0.25, 0.1); // warm gold-brown
+          baseColor = mix(baseColor, runeColor, runeRing * 0.4);
+          
+          // Player proximity glow (subtle warm light around player)
+          float distToPlayer = length(worldUV - uPlayerPos);
+          float playerGlow = smoothstep(8.0, 1.0, distToPlayer) * 0.15;
+          baseColor += uKeyColor * playerGlow;
+          
+          // Darken edges (natural vignette on ground)
+          float edgeDist = length(worldUV - vec2(50.0, 50.0)) / 60.0;
+          baseColor *= (1.0 - edgeDist * 0.5);
+          
+          gl_FragColor = vec4(baseColor, 1.0);
+        }
+      `,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(50, 0, 50);
-    ground.receiveShadow = true;
+    this.groundMat = groundMat; // reference for updating uniforms
     this.scene.add(ground);
 
-    // Central rune circle (world center marker — faint occult glyph)
-    const ringGeo = new THREE.RingGeometry(10, 10.3, 64);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x553a20, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.set(50, 0.01, 50);
-    this.scene.add(ring);
+    // Remove old ring/cross (now in shader)
+    // Central rune is now part of ground shader
 
-    // Inner glyph cross (direction reference)
-    const crossMat = new THREE.MeshBasicMaterial({ color: 0x443320, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
-    for (let angle = 0; angle < 4; angle++) {
-      const lineGeo = new THREE.PlaneGeometry(0.15, 8);
-      const line = new THREE.Mesh(lineGeo, crossMat);
-      line.rotation.x = -Math.PI / 2;
-      line.rotation.z = (angle * Math.PI) / 4;
-      line.position.set(50, 0.01, 50);
-      this.scene.add(line);
-    }
-
-    // Environment: low ruined pillars — #1A2433, non-competing with gameplay
+    // Environment: low ruined pillars
     const pillarGeo = new THREE.CylinderGeometry(0.25, 0.35, 1.8, 5);
     const pillarMat = new THREE.MeshStandardMaterial({ color: 0x3a3028, roughness: 0.9 });
     const pillarPositions = [
@@ -306,6 +370,10 @@ export class ThreeRenderer {
     this.camera.lookAt(playerX, 0, playerZ); // NO shake on lookAt — prevents nausea
 
     this.playerLight.position.set(playerX, 3, playerZ);
+    // Update ground shader uniforms
+    if (this.groundMat && this.groundMat.uniforms) {
+      this.groundMat.uniforms.uPlayerPos.value.set(playerX, playerZ);
+    }
 
     // Player position + sprite animation
     if (this.playerGroup) {
@@ -806,9 +874,12 @@ export class ThreeRenderer {
 
     // === ART: 적은 배경보다 25-35% 밝은 #687080 기조. 역할별 실루엣으로 구분 ===
     // 밝기 계층: 배경(#090B14) < 지면(#101825) < 구조물(#1A2433) < 적(#687080) < 플레이어(#DCE8FF)
-    const baseGray = 0x687080;
+    const baseGray = bodyAccents[type] || 0x687080;
     const darkGray = 0x4a5060;
-    const eyeColors = [0x88ffaa, 0xff6622, 0xaa44ff, 0x44ddff, 0xff4444, 0xffcc00, 0xff6600, 0xff44ff, 0xff0000];
+    // Eye colors by role (clear functional distinction)
+    // 0,4=follower(green), 1,6=charger(orange), 3,5=caster(purple), 2=shield(blue), 7=elite(pink), 8=boss(red)
+    const eyeColors = [0x44ff66, 0xff8822, 0x4488ff, 0xaa44ff, 0x44ff66, 0xaa44ff, 0xff8822, 0xff44ff, 0xff2200];
+    const bodyAccents = [0x556655, 0x665544, 0x445566, 0x554466, 0x556655, 0x554466, 0x665544, 0x664455, 0x553333];
 
     // Scale by type
     const scales = [1.0, 1.6, 0.7, 1.0, 0.6, 0.9, 1.3, 1.8, 2.5];

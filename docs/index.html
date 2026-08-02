@@ -52,8 +52,9 @@
     /* Level up popup — dark ornate frame */
     #levelup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(5,3,10,0.97);border:1px solid rgba(218,165,32,0.4);border-radius:8px;padding:20px 28px;display:none;pointer-events:all;text-align:center;min-width:360px;max-width:420px;z-index:1000;box-shadow:0 0 40px rgba(218,165,32,0.1),inset 0 0 30px rgba(0,0,0,0.5);backdrop-filter:blur(8px)}
     #levelup h2{color:#daa520;margin-bottom:10px;font-size:16px;font-weight:400;letter-spacing:1px}
-    .choice-btn{display:block;width:100%;padding:10px 14px;margin:6px 0;background:rgba(15,12,20,0.9);border:1px solid rgba(255,200,100,0.15);color:#d0ccc5;font-size:12px;cursor:pointer;border-radius:4px;font-family:inherit;text-align:left;transition:all 0.15s}
-    .choice-btn:hover{background:rgba(30,25,40,0.95);border-color:rgba(218,165,32,0.5);transform:translateX(2px)}
+    .choice-btn{display:block;width:100%;padding:12px 16px;margin:8px 0;background:rgba(12,10,18,0.92);border:1px solid rgba(255,200,100,0.1);color:#d8d4cc;font-size:12px;cursor:pointer;border-radius:6px;font-family:'Inter',sans-serif;text-align:left;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+    .choice-btn:hover{background:rgba(25,20,35,0.95);border-color:rgba(218,165,32,0.6);transform:translateY(-2px) scale(1.02);box-shadow:0 4px 16px rgba(218,165,32,0.15)}
+    .choice-btn:active{transform:translateY(0) scale(0.98)}
     .choice-btn span{color:#daa520;font-weight:600}
     #controls-hint{position:fixed;bottom:12px;left:16px;color:rgba(100,95,85,0.5);font-size:9px}
     .dmg-popup{position:fixed;color:#e8e4dc;font-weight:bold;pointer-events:none;animation:dmg-float 0.9s ease-out forwards;text-shadow:0 0 3px rgba(0,0,0,0.8);z-index:999;transform:translateX(-50%);font-family:'JetBrains Mono',monospace}
@@ -63,7 +64,7 @@
     @keyframes skill-acquired{0%{opacity:0;transform:translateX(-50%) translateY(8px)}15%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.02)}75%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-15px)}}
     @keyframes flash-fade{0%{opacity:1}100%{opacity:0}}
   </style>
-  <script type="module" crossorigin src="/unplug/assets/index-BqPRnSrx.js"></script>
+  <script type="module" crossorigin src="/unplug/assets/index-Bw38HMwb.js"></script>
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
