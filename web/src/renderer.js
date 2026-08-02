@@ -196,6 +196,8 @@ export class ThreeRenderer {
     this.vfxAtlas = null;
     this._loadAtlases();
     this.playerHitFlash = 0;
+    this._animLock = null;
+    this._animLockTimer = 0;
     this.deathParticles = [];
     this.prevEnemyCount = 0;
     this.slashEffects = []; // {mesh, life, maxLife}
@@ -403,7 +405,10 @@ export class ThreeRenderer {
 
     // Player position + sprite animation
     if (this.playerGroup) {
-      this.playerGroup.position.set(playerX, 1.2, playerZ);
+      // Pivot 0.93 = foot at 93% down from top of 256px cell
+      // PlaneGeo 2.0 height → center at 1.0, foot offset = 1.0 * (0.93 - 0.5) = 0.43 below center
+      // So position.y should be ~0.5 to put feet near ground
+      this.playerGroup.position.set(playerX, 0.6, playerZ);
 
       // Billboard: face camera (simple quaternion copy)
       this.playerGroup.quaternion.copy(this.camera.quaternion);
@@ -453,13 +458,42 @@ export class ThreeRenderer {
         }
       }
 
-      // Determine animation state
+      // Determine animation state — with animation lock (play-to-completion)
       let targetAnim = 'idle';
-      if (state.playerDashing) targetAnim = this.sprites.dash ? 'dash' : 'run';
-      else if (state.playerHit) targetAnim = 'hit';
-      else if (state.playerAttacking) targetAnim = 'attack';
-      else if (state.playerCasting && this.sprites.gesture) targetAnim = 'gesture';
-      else if (playerMoving) targetAnim = 'run';
+
+      // Lock: non-looping animations play to completion before allowing switch
+      if (this._animLock && this._animLockTimer > 0) {
+        this._animLockTimer -= dt;
+        targetAnim = this._animLock;
+        if (this._animLockTimer <= 0) {
+          this._animLock = null; // release lock
+        }
+      } else {
+        if (state.playerDashing) {
+          targetAnim = this.sprites.dash ? 'dash' : 'run';
+          // Lock dash animation for its full duration
+          if (this.sprites.dash && this._animLock !== 'dash') {
+            this._animLock = 'dash';
+            this._animLockTimer = this.sprites.dash.frames / this.sprites.dash.speed;
+          }
+        } else if (state.playerHit) {
+          targetAnim = 'hit';
+          if (this.sprites.hit && this._animLock !== 'hit') {
+            this._animLock = 'hit';
+            this._animLockTimer = this.sprites.hit.frames / this.sprites.hit.speed;
+          }
+        } else if (state.playerAttacking) {
+          targetAnim = 'attack';
+          if (this.sprites.attack && this._animLock !== 'attack') {
+            this._animLock = 'attack';
+            this._animLockTimer = this.sprites.attack.frames / this.sprites.attack.speed;
+          }
+        } else if (state.playerCasting && this.sprites.gesture) {
+          targetAnim = 'gesture';
+        } else if (playerMoving) {
+          targetAnim = 'run';
+        }
+      }
 
       // Dash visual: element-specific
       const dashType = state.dashType || 5;
@@ -557,7 +591,12 @@ export class ThreeRenderer {
       // Animate frames
       const spriteInfo = this.sprites[this.playerCurrentAnim];
       if (spriteInfo && this.playerSpriteMat.map) {
-        this.playerSpriteTimer += dt * spriteInfo.speed;
+        // Run speed scales with actual movement (prevents sliding feel)
+        let animSpeed = spriteInfo.speed;
+        if (this.playerCurrentAnim === 'run' && state.playerSpeed) {
+          animSpeed = spriteInfo.speed * Math.max(0.5, state.playerSpeed / 5.0);
+        }
+        this.playerSpriteTimer += dt * animSpeed;
         if (this.playerSpriteTimer >= 1) {
           this.playerSpriteTimer = 0;
           if (spriteInfo.loop === false && this.playerSpriteFrame >= spriteInfo.frames - 1) {
