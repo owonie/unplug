@@ -345,8 +345,10 @@ export class ThreeRenderer {
     this.setupSpritePlayer();
     console.log('✅ Sprite system loaded (neutral_light_v4)');
 
-    // === 3D GLB PLAYER (feature flag: ?3d or ?3dv2 or ?3dv3) ===
-    if (window.location.search.includes('3dv3')) {
+    // === 3D GLB PLAYER (feature flag: ?3d or ?3dv2 or ?3dv3 or ?3dv4) ===
+    if (window.location.search.includes('3dv4')) {
+      await this._load3DPlayer('./models/huntress_skinned_v4.glb');
+    } else if (window.location.search.includes('3dv3')) {
       await this._load3DPlayer('./models/huntress_commercial_polish_v3.glb');
     } else if (window.location.search.includes('3dv2')) {
       await this._load3DPlayer('./models/huntress_lowpoly_refined_v2.glb');
