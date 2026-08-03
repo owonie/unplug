@@ -146,8 +146,11 @@ export const vfxMethods = {
     const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: isCrit ? 1.0 : (0.8 + power * 0.2), side: THREE.DoubleSide, depthWrite: false });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(toX, 0.8, toZ);
-    mesh.lookAt(this.camera.position);
-    mesh.rotateZ(-angle + Math.PI + (Math.random() - 0.5) * 0.3);
+    // Billboard: face camera, then rotate to match aim direction in screen space
+    mesh.quaternion.copy(this.camera.quaternion);
+    // Convert world XZ angle to screen rotation (camera looks down -Z with slight angle)
+    const screenAngle = -Math.atan2(dx, -dz) + (Math.random() - 0.5) * 0.25;
+    mesh.rotateZ(screenAngle);
     this.scene.add(mesh);
     this.slashEffects.push({ mesh, life: 0.15, maxLife: 0.15, isCrit, expand: false });
     if (isCrit) {
@@ -163,6 +166,13 @@ export const vfxMethods = {
   },
 
   updateSlashes(dt) {
+    // Cap slash effects to prevent memory buildup
+    while (this.slashEffects.length > 20) {
+      const oldest = this.slashEffects.shift();
+      this.scene.remove(oldest.mesh);
+      if (oldest.mesh.geometry) oldest.mesh.geometry.dispose();
+      if (oldest.mesh.material) oldest.mesh.material.dispose();
+    }
     for (let i = this.slashEffects.length - 1; i >= 0; i--) {
       const s = this.slashEffects[i];
       s.life -= dt;
@@ -170,7 +180,7 @@ export const vfxMethods = {
       if (s.expand) { const scale = 1 + progress * 3; s.mesh.scale.set(scale, scale, 1); }
       else { s.mesh.position.y += dt * 2; }
       s.mesh.material.opacity = (1 - progress * progress) * (s.isCrit ? 1.0 : 0.85);
-      if (s.life <= 0) { this.scene.remove(s.mesh); this.slashEffects.splice(i, 1); }
+      if (s.life <= 0) { this.scene.remove(s.mesh); if(s.mesh.geometry) s.mesh.geometry.dispose(); if(s.mesh.material) s.mesh.material.dispose(); this.slashEffects.splice(i, 1); }
     }
   },
 

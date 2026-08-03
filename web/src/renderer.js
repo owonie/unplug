@@ -1018,7 +1018,7 @@ export class ThreeRenderer {
       const orbCount = this.elementOrbs.length;
       // Orbit center follows player with lag (creates trailing effect on movement)
       if (!this._orbCenter) this._orbCenter = { x: playerX, z: playerZ };
-      const lagSpeed = 10; // higher = tighter follow (less lag distance)
+      const lagSpeed = 25; // very tight — orbs never leave body
       this._orbCenter.x += (playerX - this._orbCenter.x) * lagSpeed * dt;
       this._orbCenter.z += (playerZ - this._orbCenter.z) * lagSpeed * dt;
       const cx = this._orbCenter.x;
@@ -1034,10 +1034,10 @@ export class ThreeRenderer {
         const targetZ = cz + Math.sin(angle) * radius;
         const targetY = 0.6 + Math.sin(t * 3 + i * 2) * 0.2;
         // Each orb lerps to its target (close follow with slight inertia)
-        const orbLag = 12.0 - phaseDelay * 8; // tight follow
+        const orbLag = 20.0 - phaseDelay * 6;
         orb.position.x += (targetX - orb.position.x) * Math.min(1, orbLag * dt);
         orb.position.z += (targetZ - orb.position.z) * Math.min(1, orbLag * dt);
-        orb.position.y += (targetY - orb.position.y) * Math.min(1, 12 * dt);
+        orb.position.y += (targetY - orb.position.y) * Math.min(1, 20 * dt);
       });
     }
 
@@ -1532,6 +1532,8 @@ export class ThreeRenderer {
     for (let i = data.length; i < pool.length; i++) {
       pool[i].visible = false;
       if (pool[i]._contactShadow) pool[i]._contactShadow.visible = false;
+      if (pool[i]._telegraphLine) pool[i]._telegraphLine.visible = false;
+      if (pool[i]._rushLine) pool[i]._rushLine.visible = false;
       // Hide associated telegraph lines
       if (pool[i]._telegraphLine) pool[i]._telegraphLine.visible = false;
       if (pool[i]._rushLine) pool[i]._rushLine.visible = false;

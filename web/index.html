@@ -752,8 +752,9 @@
               preFlash.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:${flashColors[elem]||flashColors[0]};pointer-events:none;z-index:998;animation:flash-fade 0.15s ease-out forwards`;
               document.body.appendChild(preFlash);
               setTimeout(() => preFlash.remove(), 150);
-              // 2. VFX
-              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, elem, 7);
+              // 2. VFX — match actual hitbox range (pre-promo 6, post-promo 8)
+              const skillRange = engine.player_class_tier() > 0 ? 8 : 6;
+              renderer.spawnDirectionalEffect(engine.player_x(), engine.player_z(), angle, elem, skillRange);
               // 3. 히트스톱 50ms + 카메라 임펄스 (controlled, not overwhelming)
               renderer.hitStop(0.04);
               renderer.shake(0.3, 0.1);
