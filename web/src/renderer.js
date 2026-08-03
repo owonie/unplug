@@ -345,9 +345,11 @@ export class ThreeRenderer {
     this.setupSpritePlayer();
     console.log('✅ Sprite system loaded (neutral_light_v4)');
 
-    // === 3D GLB PLAYER (feature flag: ?3d) ===
-    if (window.location.search.includes('3d')) {
-      await this._load3DPlayer();
+    // === 3D GLB PLAYER (feature flag: ?3d or ?3dv2) ===
+    if (window.location.search.includes('3dv2')) {
+      await this._load3DPlayer('./models/huntress_lowpoly_refined_v2.glb');
+    } else if (window.location.search.includes('3d')) {
+      await this._load3DPlayer('./models/huntress_lowpoly_prototype_v1.glb');
     }
 
     // Load Ash Hound enemy sprites
@@ -372,10 +374,10 @@ export class ThreeRenderer {
   }
 
   // === 3D GLB PLAYER SYSTEM ===
-  async _load3DPlayer() {
+  async _load3DPlayer(modelPath) {
     try {
       const loader = new GLTFLoader();
-      const gltf = await loader.loadAsync('./models/huntress_lowpoly_prototype_v1.glb');
+      const gltf = await loader.loadAsync(modelPath);
 
       // Hide sprite player
       if (this._spriteA) this._spriteA.visible = false;
