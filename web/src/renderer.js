@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { loadAtlas, applyAtlasFrame, makeVfxMaterial, makeItemMaterial } from './atlas-loader.js';
 import { vfxMethods, vfxShieldMethods, vfxDirectionalMethods } from './vfx.js';
 
@@ -344,6 +345,11 @@ export class ThreeRenderer {
     this.setupSpritePlayer();
     console.log('✅ Sprite system loaded (neutral_light_v4)');
 
+    // === 3D GLB PLAYER (feature flag: ?3d) ===
+    if (window.location.search.includes('3d')) {
+      await this._load3DPlayer();
+    }
+
     // Load Ash Hound enemy sprites
     this.ashHoundSprites = {};
     const ashHoundData = {
@@ -363,6 +369,125 @@ export class ThreeRenderer {
       }
     }
     if (this.ashHoundSprites.idle) console.log('✅ Ash Hound sprites loaded');
+  }
+
+  // === 3D GLB PLAYER SYSTEM ===
+  async _load3DPlayer() {
+    try {
+      const loader = new GLTFLoader();
+      const gltf = await loader.loadAsync('./models/huntress_lowpoly_prototype_v1.glb');
+
+      // Hide sprite player
+      if (this._spriteA) this._spriteA.visible = false;
+      if (this._spriteB) this._spriteB.visible = false;
+      if (this._contactShadow) this._contactShadow.visible = false;
+
+      // Setup 3D model
+      this._3dModel = gltf.scene;
+      this._3dModel.traverse(child => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      // Compute bounds for y=0 correction and scale
+      const box = new THREE.Box3().setFromObject(this._3dModel);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+
+      // Target height: ~1.6 world units (same as sprite)
+      const targetHeight = 1.6;
+      const modelScale = targetHeight / size.y;
+      this._3dModel.scale.setScalar(modelScale);
+
+      // Offset so feet are at y=0
+      const feetOffset = -box.min.y * modelScale;
+      this._3dModel.position.y = feetOffset;
+
+      // Wrap in visualRoot (already exists from sprite setup)
+      this._3dVisualRoot = new THREE.Object3D();
+      this._3dVisualRoot.add(this._3dModel);
+      this.playerRoot.add(this._3dVisualRoot);
+
+      // AnimationMixer
+      this._mixer = new THREE.AnimationMixer(this._3dModel);
+      this._3dClips = {};
+      this._3dActions = {};
+      gltf.animations.forEach(clip => {
+        this._3dClips[clip.name] = clip;
+        const action = this._mixer.clipAction(clip);
+        this._3dActions[clip.name] = action;
+      });
+
+      // State mapping: game state → clip name
+      this._3dStateMap = {
+        idle: 'Idle',
+        run: 'Run',
+        dash: 'Dash',
+        attack: 'Attack',
+        attack_move: 'Attack',
+        gesture: 'GestureSkill',
+        hit: 'Hit',
+        death: 'Death',
+      };
+
+      // Start idle
+      this._3dCurrentClip = 'Idle';
+      this._3dActions['Idle'].play();
+
+      this._use3D = true;
+      console.log('✅ 3D GLB player loaded (feature flag ?3d)', { meshes: 36, clips: 7, scale: modelScale.toFixed(3) });
+    } catch (e) {
+      console.warn('3D player load failed, using sprites:', e.message);
+      this._use3D = false;
+    }
+  }
+
+  _update3DPlayer(state, dt) {
+    if (!this._use3D || !this._mixer) return;
+
+    // Update mixer
+    this._mixer.update(dt);
+
+    // Determine target clip from game state
+    let targetClipName = 'Idle';
+    const anim = this.playerCurrentAnim; // follows sprite state machine
+    if (this._3dStateMap[anim]) {
+      targetClipName = this._3dStateMap[anim];
+    }
+
+    // Transition clips
+    if (targetClipName !== this._3dCurrentClip) {
+      const prevAction = this._3dActions[this._3dCurrentClip];
+      const nextAction = this._3dActions[targetClipName];
+      if (nextAction) {
+        nextAction.reset();
+        // Non-loop clips
+        if (targetClipName === 'Attack' || targetClipName === 'Dash' || targetClipName === 'GestureSkill' || targetClipName === 'Hit' || targetClipName === 'Death') {
+          nextAction.setLoop(THREE.LoopOnce);
+          nextAction.clampWhenFinished = true;
+        } else {
+          nextAction.setLoop(THREE.LoopRepeat);
+        }
+        nextAction.play();
+        if (prevAction) prevAction.crossFadeTo(nextAction, 0.1, true);
+        this._3dCurrentClip = targetClipName;
+      }
+    }
+
+    // Facing: rotate model Y toward movement/mouse direction
+    let faceDir = 0;
+    if (state.playerMoving) {
+      faceDir = state.playerDirX;
+    } else if (state.mouseWorldX !== undefined) {
+      faceDir = state.mouseWorldX - state.playerX;
+    }
+    if (Math.abs(faceDir) > 0.01) {
+      // Model faces +X by default, flip via Y rotation
+      const targetRotY = faceDir < 0 ? Math.PI : 0;
+      this._3dVisualRoot.rotation.y += (targetRotY - this._3dVisualRoot.rotation.y) * Math.min(1, 12 * dt);
+    }
   }
 
   _recolorTexture(tex) {
@@ -562,10 +687,16 @@ export class ThreeRenderer {
       // (the sprite art itself has the pose change — no knock-forward needed)
       this.playerRoot.position.set(playerX, 0, playerZ);
 
+      // === 3D Player update (if active) ===
+      if (this._use3D) {
+        this._update3DPlayer(state, dt);
+        // Skip sprite rendering below
+      }
+
       // visualRoot: sprites follow playerRoot (no additional transform during attack)
       // Billboard: face camera
-      this._spriteA.quaternion.copy(this.camera.quaternion);
-      if (this._spriteB.visible) this._spriteB.quaternion.copy(this.camera.quaternion);
+      if (!this._use3D) this._spriteA.quaternion.copy(this.camera.quaternion);
+      if (!this._use3D && this._spriteB.visible) this._spriteB.quaternion.copy(this.camera.quaternion);
 
       // Flip: movement direction when moving, mouse direction when idle
       let faceDir = 0;
