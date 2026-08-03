@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "coordinateSystem": "normalized_sprite_uv",
+  "fixedFrameSize": [256, 256],
+  "fixedPivot": [0.5, 0.93],
+  "fixedWorldScale": 1.0,
+  "transitionsMs": {
+    "idle_to_run": 90,
+    "run_to_idle": 110,
+    "locomotion_to_attack": 45,
+    "attack_to_locomotion": 85,
+    "locomotion_to_dash": 30,
+    "dash_to_locomotion": 70,
+    "any_to_hit": 25,
+    "hit_to_locomotion": 80
+  },
+  "attack": {
+    "clip": "huntress_attack_v2_neutral_v5",
+    "eventFrame": 5,
+    "lockRootWorldPosition": true,
+    "allowRootMotion": false,
+    "contactHoldMs": 28,
+    "inputBufferMs": 110,
+    "cancelToDashFromFrame": 6,
+    "vfxSeparateFromBody": true
+  },
+  "dash": {
+    "clip": "huntress_dash_neutral_v5",
+    "movementStartsFrame": 2,
+    "movementEndsFrame": 4,
+    "spriteFollowsCollisionBody": true,
+    "afterimageSeparateFromBody": true
+  },
+  "camera": {
+    "characterSafeAreaViewport": [0.14, 0.12],
+    "lookAheadMaxViewportX": 0.045,
+    "lookAheadSmoothingMs": 180,
+    "attackShake": {
+      "durationMs": 75,
+      "amplitudeViewport": 0.0035,
+      "frequencyHz": 28,
+      "decay": "quadratic"
+    },
+    "dashShake": {
+      "durationMs": 90,
+      "amplitudeViewport": 0.0025,
+      "frequencyHz": 22,
+      "decay": "quadratic"
+    },
+    "applyShakeToInnerCameraRig": true,
+    "clampAfterShake": true
+  },
+  "rendering": {
+    "dualSpriteCrossfade": true,
+    "crossfadeCurve": "smoothstep",
+    "bodyMaterial": "normal_blending",
+    "vfxMaterial": "additive_blending",
+    "disablePerStateScale": true
+  }
+}

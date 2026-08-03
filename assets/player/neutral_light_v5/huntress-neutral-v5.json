@@ -1,0 +1,156 @@
+{
+  "animations": {
+    "huntress_idle_calm_v3_neutral_v5": {
+      "image": "huntress_idle_calm_v3_neutral_v5.png",
+      "frames": 8,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "fps": 6,
+      "loop": true,
+      "eventFrame": null,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.93
+      },
+      "motion": "grounded_2px_breath",
+      "heightDeltas": [
+        0,
+        0,
+        1,
+        2,
+        1,
+        0,
+        0,
+        0
+      ],
+      "lightingVariant": "neutral_v5",
+      "assetScaleCorrection": 1.0,
+      "worldScale": 1.0
+    },
+    "huntress_run_neutral_v5": {
+      "image": "huntress_run_neutral_v5.png",
+      "frames": 8,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "fps": 14,
+      "loop": true,
+      "eventFrame": null,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.93
+      },
+      "lightingVariant": "neutral_v5",
+      "assetScaleCorrection": 1.0,
+      "worldScale": 1.0
+    },
+    "huntress_attack_v2_neutral_v5": {
+      "image": "huntress_attack_v2_neutral_v5.png",
+      "frames": 10,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "fps": 24,
+      "loop": false,
+      "eventFrame": 5,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.93
+      },
+      "lightingVariant": "neutral_v5",
+      "assetScaleCorrection": 1.0,
+      "worldScale": 1.0
+    },
+    "huntress_dash_neutral_v5": {
+      "image": "huntress_dash_neutral_v5.png",
+      "frames": 6,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "fps": 22,
+      "loop": false,
+      "eventFrame": 2,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.93
+      },
+      "lightingVariant": "neutral_v5",
+      "assetScaleCorrection": 1.058252,
+      "worldScale": 1.0
+    },
+    "huntress_gesture_cast_neutral_v5": {
+      "image": "huntress_gesture_cast_neutral_v5.png",
+      "frames": 6,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "fps": 18,
+      "loop": false,
+      "eventFrame": 4,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.93
+      },
+      "lightingVariant": "neutral_v5",
+      "assetScaleCorrection": 1.0,
+      "worldScale": 1.0
+    },
+    "huntress_hit_neutral_v5": {
+      "image": "huntress_hit_neutral_v5.png",
+      "frames": 4,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "fps": 18,
+      "loop": false,
+      "eventFrame": 1,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.93
+      },
+      "lightingVariant": "neutral_v5",
+      "assetScaleCorrection": 1.0,
+      "worldScale": 1.0
+    },
+    "huntress_death_neutral_v5": {
+      "image": "huntress_death_neutral_v5.png",
+      "frames": 8,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "fps": 14,
+      "loop": false,
+      "eventFrame": null,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.93
+      },
+      "lightingVariant": "neutral_v5",
+      "assetScaleCorrection": 1.0,
+      "worldScale": 1.0
+    },
+    "huntress_revive_neutral_v5": {
+      "image": "huntress_revive_neutral_v5.png",
+      "frames": 8,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "fps": 16,
+      "loop": false,
+      "eventFrame": 6,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.93
+      },
+      "lightingVariant": "neutral_v5",
+      "assetScaleCorrection": 1.0,
+      "worldScale": 1.0
+    }
+  },
+  "meta": {
+    "frameSize": [
+      256,
+      256
+    ],
+    "pivot": {
+      "x": 0.5,
+      "y": 0.93
+    },
+    "worldScale": 1.0,
+    "standingReferenceHeightPx": 218,
+    "lighting": "neutral_v5_scale_normalized"
+  }
+}

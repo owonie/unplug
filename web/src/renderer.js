@@ -394,9 +394,7 @@ export class ThreeRenderer {
     for (const [clipName, clipData] of Object.entries(manifest.clips)) {
       this._p25d.clips[clipName] = { data: clipData, textures: {} };
       for (const dir of manifest.directions) {
-        // Strip 'runtime_256/' prefix from manifest paths (files are in basePath directly)
-        const filePath = clipData.files[dir].replace('runtime_256/', '');
-        const path = basePath + filePath;
+        const path = basePath + clipData.files[dir];
         try {
           const tex = await loader.loadAsync(path);
           tex.magFilter = THREE.LinearFilter;
