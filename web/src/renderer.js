@@ -757,7 +757,16 @@ export class ThreeRenderer {
       if (faceDir < -0.01) this.playerFacing = -1;
       else if (faceDir > 0.01) this.playerFacing = 1;
 
-      // Scale: fixed 1.0 — NO scale change during attack/dash (v5 mandate)
+      // === DIRECTION STATE (for premium 2.5D: down/side/up) ===
+      // Based on movement direction relative to camera (top-down perspective)
+      let dirZ = playerMoving ? playerDirZ : (state.mouseWorldZ !== undefined ? state.mouseWorldZ - playerZ : 0);
+      let dirState = 'side'; // default
+      if (Math.abs(dirZ) > Math.abs(faceDir) * 0.8) {
+        dirState = dirZ > 0.3 ? 'down' : dirZ < -0.3 ? 'up' : 'side';
+      }
+      this._playerDirection = dirState; // stored for premium 2.5D texture swap
+
+      // Scale: fixed 1.0 — NO scale change during attack/dash
       this.visualRoot.scale.set(this.playerFacing, 1, 1);
 
       // === CONTACT SHADOW opacity by state ===
