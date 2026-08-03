@@ -345,6 +345,11 @@ export class ThreeRenderer {
     this.setupSpritePlayer();
     console.log('✅ Sprite system loaded (neutral_light_v4)');
 
+    // === PREMIUM 2.5D (feature flag: ?25dv1) ===
+    if (window.location.search.includes('25dv1')) {
+      await this._loadPremium25D();
+    }
+
     // === 3D GLB PLAYER (feature flag: ?3d or ?3dv2 or ?3dv3 or ?3dv4) ===
     if (window.location.search.includes('3dv4')) {
       await this._load3DPlayer('./models/huntress_skinned_v4.glb');
@@ -375,6 +380,138 @@ export class ThreeRenderer {
       }
     }
     if (this.ashHoundSprites.idle) console.log('✅ Ash Hound sprites loaded');
+  }
+
+  // === PREMIUM 2.5D SYSTEM ===
+  async _loadPremium25D() {
+    const loader = new THREE.TextureLoader();
+    const basePath = './sprites/huntress/premium25d/';
+    const manifest = await fetch(basePath + 'animation_manifest.json').then(r => r.json());
+
+    this._p25d = { clips: {}, shadow: null, manifest, currentClip: 'idle', currentDir: 'side', frame: 0, timer: 0 };
+
+    // Load all direction textures for each clip
+    for (const [clipName, clipData] of Object.entries(manifest.clips)) {
+      this._p25d.clips[clipName] = { data: clipData, textures: {} };
+      for (const dir of manifest.directions) {
+        const path = basePath + clipData.files[dir];
+        try {
+          const tex = await loader.loadAsync(path);
+          tex.magFilter = THREE.LinearFilter;
+          tex.minFilter = THREE.LinearFilter;
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.repeat.set(1 / clipData.frames, 1);
+          tex.offset.set(0, 0);
+          this._p25d.clips[clipName].textures[dir] = tex;
+        } catch (e) {
+          console.warn(`[P25D] Failed: ${path}`);
+        }
+      }
+    }
+
+    // Load contact shadow
+    try {
+      const shadowTex = await loader.loadAsync(basePath + 'huntress_contact_shadow_256.png');
+      shadowTex.magFilter = THREE.LinearFilter;
+      shadowTex.minFilter = THREE.LinearFilter;
+      this._p25d.shadow = shadowTex;
+    } catch (e) {}
+
+    // Hide old sprite system
+    if (this._spriteA) this._spriteA.visible = false;
+    if (this._spriteB) this._spriteB.visible = false;
+    if (this._contactShadow) this._contactShadow.visible = false;
+
+    // Create premium sprite plane (same size as existing: 1.6×1.6)
+    const geo = new THREE.PlaneGeometry(1.6, 1.6);
+    const mat = new THREE.MeshBasicMaterial({
+      transparent: true, alphaTest: 0.02, depthWrite: false,
+      side: THREE.DoubleSide, blending: THREE.NormalBlending,
+    });
+    this._p25dSprite = new THREE.Mesh(geo, mat);
+    this._p25dSprite.position.y = 0.45; // pivot based
+    this.visualRoot.add(this._p25dSprite);
+
+    // Premium contact shadow (ground-fixed, independent of bob)
+    if (this._p25d.shadow) {
+      const shadowMat = new THREE.MeshBasicMaterial({
+        map: this._p25d.shadow, transparent: true, opacity: 0.25,
+        depthWrite: false, side: THREE.DoubleSide,
+      });
+      const shadowGeo = new THREE.PlaneGeometry(1.2, 1.2);
+      this._p25dShadow = new THREE.Mesh(shadowGeo, shadowMat);
+      this._p25dShadow.rotation.x = -Math.PI / 2;
+      this._p25dShadow.position.y = 0.015;
+      this.playerRoot.add(this._p25dShadow); // on playerRoot, not visualRoot
+    }
+
+    this._usePremium25D = true;
+    const totalTextures = Object.values(this._p25d.clips).reduce((sum, c) => sum + Object.keys(c.textures).length, 0);
+    console.log(`✅ Premium 2.5D loaded: ${totalTextures} textures, ${Object.keys(this._p25d.clips).length} clips`);
+  }
+
+  _updatePremium25D(state, dt) {
+    if (!this._usePremium25D || !this._p25dSprite) return;
+
+    // Map game state to clip name
+    const anim = this.playerCurrentAnim;
+    const clipMap = {
+      idle: 'idle', run: 'run', run_stop: 'run_stop',
+      dash: 'dash', attack: 'moving_attack', attack_move: 'moving_attack',
+      gesture: 'gesture_skill', hit: 'hit', death: 'death',
+    };
+    const targetClip = clipMap[anim] || 'idle';
+
+    // Direction
+    const dir = this._playerDirection || 'side';
+
+    // Clip or direction changed → swap texture
+    if (targetClip !== this._p25d.currentClip || dir !== this._p25d.currentDir) {
+      this._p25d.currentClip = targetClip;
+      this._p25d.currentDir = dir;
+      this._p25d.frame = 0;
+      this._p25d.timer = 0;
+
+      const clipInfo = this._p25d.clips[targetClip];
+      if (clipInfo && clipInfo.textures[dir]) {
+        const tex = clipInfo.textures[dir];
+        tex.offset.set(0, 0);
+        this._p25dSprite.material.map = tex;
+        this._p25dSprite.material.needsUpdate = true;
+      }
+    }
+
+    // Animate frames
+    const clipInfo = this._p25d.clips[this._p25d.currentClip];
+    if (clipInfo && clipInfo.data) {
+      const fps = clipInfo.data.fps;
+      const frames = clipInfo.data.frames;
+      const loop = clipInfo.data.loop;
+
+      this._p25d.timer += dt * fps;
+      if (this._p25d.timer >= 1) {
+        this._p25d.timer = 0;
+        if (!loop && this._p25d.frame >= frames - 1) {
+          this._p25d.frame = frames - 1; // clamp
+        } else {
+          this._p25d.frame = (this._p25d.frame + 1) % frames;
+        }
+        if (this._p25dSprite.material.map) {
+          this._p25dSprite.material.map.offset.x = this._p25d.frame / frames;
+        }
+      }
+    }
+
+    // Billboard
+    this._p25dSprite.quaternion.copy(this.camera.quaternion);
+
+    // Facing: side direction uses scale.x flip (handled by visualRoot.scale.x)
+    // Contact shadow stays fixed on ground (no visual bob)
+  }
+
+  _recolorTexture(tex) {
+    // v4 neutral light — no recolor needed, original clean art
+    return tex;
   }
 
   // === 3D GLB PLAYER SYSTEM ===
@@ -535,11 +672,6 @@ export class ThreeRenderer {
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
     this._3dFacingAngle += angleDiff * Math.min(1, 12 * dt);
     this._3dVisualRoot.rotation.y = this._3dFacingAngle;
-  }
-
-  _recolorTexture(tex) {
-    // v4 neutral light — no recolor needed, original clean art
-    return tex;
   }
 
   setupSpritePlayer() {
@@ -737,13 +869,16 @@ export class ThreeRenderer {
       // === 3D Player update (if active) ===
       if (this._use3D) {
         this._update3DPlayer(state, dt);
-        // Skip sprite rendering below
+      }
+      // === Premium 2.5D update (if active) ===
+      if (this._usePremium25D) {
+        this._updatePremium25D(state, dt);
       }
 
       // visualRoot: sprites follow playerRoot (no additional transform during attack)
       // Billboard: face camera
-      if (!this._use3D) this._spriteA.quaternion.copy(this.camera.quaternion);
-      if (!this._use3D && this._spriteB.visible) this._spriteB.quaternion.copy(this.camera.quaternion);
+      if (!this._use3D && !this._usePremium25D) this._spriteA.quaternion.copy(this.camera.quaternion);
+      if (!this._use3D && !this._usePremium25D && this._spriteB.visible) this._spriteB.quaternion.copy(this.camera.quaternion);
 
       // Flip: movement direction when moving, mouse direction when idle
       let faceDir = 0;

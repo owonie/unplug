@@ -1,0 +1,200 @@
+{
+  "version": "huntress-premium-25d-v1-candidate",
+  "status": "runtime_candidate",
+  "cell": {
+    "width": 256,
+    "height": 256,
+    "pivot": [
+      0.5,
+      0.92
+    ],
+    "layout": "horizontal",
+    "alpha": "straight"
+  },
+  "directions": [
+    "down",
+    "side",
+    "up"
+  ],
+  "right": {
+    "source": "side",
+    "flipX": true
+  },
+  "render": {
+    "filter": "LinearFilter",
+    "alphaTest": 0.02,
+    "depthWrite": false,
+    "fixedVisualScale": true
+  },
+  "clips": {
+    "idle": {
+      "fps": 6,
+      "loop": true,
+      "frames": 8,
+      "files": {
+        "down": "runtime_256/huntress_idle_down.png",
+        "side": "runtime_256/huntress_idle_side.png",
+        "up": "runtime_256/huntress_idle_up.png"
+      },
+      "emissive": {
+        "down": "maps_256/emissive/huntress_idle_down_emissive.png",
+        "side": "maps_256/emissive/huntress_idle_side_emissive.png",
+        "up": "maps_256/emissive/huntress_idle_up_emissive.png"
+      },
+      "hitMask": {
+        "down": "maps_256/hit_mask/huntress_idle_down_hit_mask.png",
+        "side": "maps_256/hit_mask/huntress_idle_side_hit_mask.png",
+        "up": "maps_256/hit_mask/huntress_idle_up_hit_mask.png"
+      }
+    },
+    "run": {
+      "fps": 12,
+      "loop": true,
+      "frames": 10,
+      "files": {
+        "down": "runtime_256/huntress_run_down.png",
+        "side": "runtime_256/huntress_run_side.png",
+        "up": "runtime_256/huntress_run_up.png"
+      },
+      "emissive": {
+        "down": "maps_256/emissive/huntress_run_down_emissive.png",
+        "side": "maps_256/emissive/huntress_run_side_emissive.png",
+        "up": "maps_256/emissive/huntress_run_up_emissive.png"
+      },
+      "hitMask": {
+        "down": "maps_256/hit_mask/huntress_run_down_hit_mask.png",
+        "side": "maps_256/hit_mask/huntress_run_side_hit_mask.png",
+        "up": "maps_256/hit_mask/huntress_run_up_hit_mask.png"
+      }
+    },
+    "run_stop": {
+      "fps": 12,
+      "loop": false,
+      "frames": 6,
+      "files": {
+        "down": "runtime_256/huntress_run_stop_down.png",
+        "side": "runtime_256/huntress_run_stop_side.png",
+        "up": "runtime_256/huntress_run_stop_up.png"
+      },
+      "emissive": {
+        "down": "maps_256/emissive/huntress_run_stop_down_emissive.png",
+        "side": "maps_256/emissive/huntress_run_stop_side_emissive.png",
+        "up": "maps_256/emissive/huntress_run_stop_up_emissive.png"
+      },
+      "hitMask": {
+        "down": "maps_256/hit_mask/huntress_run_stop_down_hit_mask.png",
+        "side": "maps_256/hit_mask/huntress_run_stop_side_hit_mask.png",
+        "up": "maps_256/hit_mask/huntress_run_stop_up_hit_mask.png"
+      }
+    },
+    "dash": {
+      "fps": 16,
+      "loop": false,
+      "eventFrame": 2,
+      "unlockFrame": 6,
+      "frames": 8,
+      "files": {
+        "down": "runtime_256/huntress_dash_down.png",
+        "side": "runtime_256/huntress_dash_side.png",
+        "up": "runtime_256/huntress_dash_up.png"
+      },
+      "emissive": {
+        "down": "maps_256/emissive/huntress_dash_down_emissive.png",
+        "side": "maps_256/emissive/huntress_dash_side_emissive.png",
+        "up": "maps_256/emissive/huntress_dash_up_emissive.png"
+      },
+      "hitMask": {
+        "down": "maps_256/hit_mask/huntress_dash_down_hit_mask.png",
+        "side": "maps_256/hit_mask/huntress_dash_side_hit_mask.png",
+        "up": "maps_256/hit_mask/huntress_dash_up_hit_mask.png"
+      }
+    },
+    "moving_attack": {
+      "fps": 14,
+      "loop": false,
+      "eventFrame": 5,
+      "unlockFrame": 8,
+      "frames": 10,
+      "files": {
+        "down": "runtime_256/huntress_moving_attack_down.png",
+        "side": "runtime_256/huntress_moving_attack_side.png",
+        "up": "runtime_256/huntress_moving_attack_up.png"
+      },
+      "emissive": {
+        "down": "maps_256/emissive/huntress_moving_attack_down_emissive.png",
+        "side": "maps_256/emissive/huntress_moving_attack_side_emissive.png",
+        "up": "maps_256/emissive/huntress_moving_attack_up_emissive.png"
+      },
+      "hitMask": {
+        "down": "maps_256/hit_mask/huntress_moving_attack_down_hit_mask.png",
+        "side": "maps_256/hit_mask/huntress_moving_attack_side_hit_mask.png",
+        "up": "maps_256/hit_mask/huntress_moving_attack_up_hit_mask.png"
+      }
+    },
+    "gesture_skill": {
+      "fps": 12,
+      "loop": false,
+      "eventFrame": 7,
+      "unlockFrame": 10,
+      "frames": 12,
+      "files": {
+        "down": "runtime_256/huntress_gesture_skill_down.png",
+        "side": "runtime_256/huntress_gesture_skill_side.png",
+        "up": "runtime_256/huntress_gesture_skill_up.png"
+      },
+      "emissive": {
+        "down": "maps_256/emissive/huntress_gesture_skill_down_emissive.png",
+        "side": "maps_256/emissive/huntress_gesture_skill_side_emissive.png",
+        "up": "maps_256/emissive/huntress_gesture_skill_up_emissive.png"
+      },
+      "hitMask": {
+        "down": "maps_256/hit_mask/huntress_gesture_skill_down_hit_mask.png",
+        "side": "maps_256/hit_mask/huntress_gesture_skill_side_hit_mask.png",
+        "up": "maps_256/hit_mask/huntress_gesture_skill_up_hit_mask.png"
+      }
+    },
+    "hit": {
+      "fps": 14,
+      "loop": false,
+      "unlockFrame": 5,
+      "frames": 6,
+      "files": {
+        "down": "runtime_256/huntress_hit_down.png",
+        "side": "runtime_256/huntress_hit_side.png",
+        "up": "runtime_256/huntress_hit_up.png"
+      },
+      "emissive": {
+        "down": "maps_256/emissive/huntress_hit_down_emissive.png",
+        "side": "maps_256/emissive/huntress_hit_side_emissive.png",
+        "up": "maps_256/emissive/huntress_hit_up_emissive.png"
+      },
+      "hitMask": {
+        "down": "maps_256/hit_mask/huntress_hit_down_hit_mask.png",
+        "side": "maps_256/hit_mask/huntress_hit_side_hit_mask.png",
+        "up": "maps_256/hit_mask/huntress_hit_up_hit_mask.png"
+      }
+    },
+    "death": {
+      "fps": 10,
+      "loop": false,
+      "clampWhenFinished": true,
+      "frames": 12,
+      "files": {
+        "down": "runtime_256/huntress_death_down.png",
+        "side": "runtime_256/huntress_death_side.png",
+        "up": "runtime_256/huntress_death_up.png"
+      },
+      "emissive": {
+        "down": "maps_256/emissive/huntress_death_down_emissive.png",
+        "side": "maps_256/emissive/huntress_death_side_emissive.png",
+        "up": "maps_256/emissive/huntress_death_up_emissive.png"
+      },
+      "hitMask": {
+        "down": "maps_256/hit_mask/huntress_death_down_hit_mask.png",
+        "side": "maps_256/hit_mask/huntress_death_side_hit_mask.png",
+        "up": "maps_256/hit_mask/huntress_death_up_hit_mask.png"
+      }
+    }
+  },
+  "shadow": "runtime_256/huntress_contact_shadow_256.png"
+}
