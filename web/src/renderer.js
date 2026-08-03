@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { loadAtlas, applyAtlasFrame, makeVfxMaterial, makeItemMaterial } from './atlas-loader.js';
 import { vfxMethods, vfxShieldMethods, vfxDirectionalMethods } from './vfx.js';
+import { Premium25Dv2 } from './premium-25d-v2.js';
 
 export class ThreeRenderer {
   constructor(canvas) {
@@ -348,6 +349,19 @@ export class ThreeRenderer {
     // === PREMIUM 2.5D (feature flag: ?25dv1) ===
     if (window.location.search.includes('25dv1')) {
       await this._loadPremium25D();
+    }
+
+    // === PREMIUM 2.5D v2 — 16 directions (feature flag: ?25dv2) ===
+    if (window.location.search.includes('25dv2')) {
+      this._p25dv2 = new Premium25Dv2(this.scene, this.camera, this.playerRoot, this.visualRoot);
+      await this._p25dv2.load();
+      if (this._p25dv2.active) {
+        // Hide other sprite systems
+        if (this._spriteA) this._spriteA.visible = false;
+        if (this._spriteB) this._spriteB.visible = false;
+        if (this._contactShadow) this._contactShadow.visible = false;
+        if (this._p25dSprite) this._p25dSprite.visible = false;
+      }
     }
 
     // === 3D GLB PLAYER (feature flag: ?3d or ?3dv2 or ?3dv3 or ?3dv4) ===
@@ -873,6 +887,10 @@ export class ThreeRenderer {
       // === Premium 2.5D update (if active) ===
       if (this._usePremium25D) {
         this._updatePremium25D(state, dt);
+      }
+      // === Premium 2.5D v2 — 16 directions ===
+      if (this._p25dv2 && this._p25dv2.active) {
+        this._p25dv2.update(state, dt, this.playerCurrentAnim);
       }
 
       // visualRoot: sprites follow playerRoot (no additional transform during attack)
