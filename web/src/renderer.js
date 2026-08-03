@@ -382,7 +382,7 @@ export class ThreeRenderer {
       if (this._spriteB) this._spriteB.visible = false;
       if (this._contactShadow) this._contactShadow.visible = false;
 
-      // Setup 3D model
+      // Setup 3D model with correction node (+Z forward → +X forward)
       this._3dModel = gltf.scene;
       this._3dModel.traverse(child => {
         if (child.isMesh) {
@@ -394,20 +394,24 @@ export class ThreeRenderer {
       // Compute bounds for y=0 correction and scale
       const box = new THREE.Box3().setFromObject(this._3dModel);
       const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
 
       // Target height: ~1.6 world units (same as sprite)
       const targetHeight = 1.6;
       const modelScale = targetHeight / size.y;
       this._3dModel.scale.setScalar(modelScale);
 
+      // Model correction: +Z forward → +X forward (baseYaw = PI/2)
+      this._3dModelCorrection = new THREE.Object3D();
+      this._3dModelCorrection.rotation.y = Math.PI / 2;
+      this._3dModelCorrection.add(this._3dModel);
+
       // Offset so feet are at y=0
       const feetOffset = -box.min.y * modelScale;
       this._3dModel.position.y = feetOffset;
 
-      // Wrap in visualRoot (already exists from sprite setup)
+      // Visual root for 3D (separate from sprite visualRoot)
       this._3dVisualRoot = new THREE.Object3D();
-      this._3dVisualRoot.add(this._3dModel);
+      this._3dVisualRoot.add(this._3dModelCorrection);
       this.playerRoot.add(this._3dVisualRoot);
 
       // AnimationMixer
@@ -424,6 +428,7 @@ export class ThreeRenderer {
       this._3dStateMap = {
         idle: 'Idle',
         run: 'Run',
+        run_stop: 'Idle', // no dedicated clip, use idle
         dash: 'Dash',
         attack: 'Attack',
         attack_move: 'Attack',
@@ -432,12 +437,33 @@ export class ThreeRenderer {
         death: 'Death',
       };
 
+      // Clip config from Codex contract
+      this._3dClipConfig = {
+        Idle:         { loop: THREE.LoopRepeat, crossIn: 0.12 },
+        Run:          { loop: THREE.LoopRepeat, crossIn: 0.12 },
+        Dash:         { loop: THREE.LoopOnce, crossIn: 0.04, clamp: true },
+        Attack:       { loop: THREE.LoopOnce, crossIn: 0.07, clamp: false, lockDuration: 0.55 },
+        GestureSkill: { loop: THREE.LoopOnce, crossIn: 0.08, clamp: true },
+        Hit:          { loop: THREE.LoopOnce, crossIn: 0.03, clamp: true, lockDuration: 0.42 },
+        Death:        { loop: THREE.LoopOnce, crossIn: 0.06, clamp: true },
+      };
+
+      // State priority (higher = overrides lower)
+      this._3dPriority = { Idle: 0, Run: 1, Attack: 2, GestureSkill: 3, Hit: 4, Dash: 5, Death: 6 };
+
       // Start idle
       this._3dCurrentClip = 'Idle';
-      this._3dActions['Idle'].play();
+      const idleAction = this._3dActions['Idle'];
+      idleAction.setLoop(THREE.LoopRepeat);
+      idleAction.play();
+
+      // Dash timeScale sync
+      // game dash varies by element: fire=0.05s, thunder=0.12s, poison=0.15s, default=0.2~0.3s
+      // We'll set dynamically when dash activates
 
       this._use3D = true;
-      console.log('✅ 3D GLB player loaded (feature flag ?3d)', { meshes: 36, clips: 7, scale: modelScale.toFixed(3) });
+      this._3dFacingAngle = 0;
+      console.log('✅ 3D GLB player loaded', { scale: modelScale.toFixed(3), clips: Object.keys(this._3dClips) });
     } catch (e) {
       console.warn('3D player load failed, using sprites:', e.message);
       this._use3D = false;
@@ -451,43 +477,58 @@ export class ThreeRenderer {
     this._mixer.update(dt);
 
     // Determine target clip from game state
-    let targetClipName = 'Idle';
-    const anim = this.playerCurrentAnim; // follows sprite state machine
-    if (this._3dStateMap[anim]) {
-      targetClipName = this._3dStateMap[anim];
-    }
+    const anim = this.playerCurrentAnim;
+    const targetClipName = this._3dStateMap[anim] || 'Idle';
 
-    // Transition clips
+    // Transition clips (with priority check)
     if (targetClipName !== this._3dCurrentClip) {
-      const prevAction = this._3dActions[this._3dCurrentClip];
+      const curPriority = this._3dPriority[this._3dCurrentClip] || 0;
+      const newPriority = this._3dPriority[targetClipName] || 0;
+      const config = this._3dClipConfig[targetClipName] || { crossIn: 0.1 };
       const nextAction = this._3dActions[targetClipName];
-      if (nextAction) {
+
+      if (nextAction && (newPriority >= curPriority || this._3dCurrentClip === targetClipName)) {
+        const prevAction = this._3dActions[this._3dCurrentClip];
+
         nextAction.reset();
-        // Non-loop clips
-        if (targetClipName === 'Attack' || targetClipName === 'Dash' || targetClipName === 'GestureSkill' || targetClipName === 'Hit' || targetClipName === 'Death') {
-          nextAction.setLoop(THREE.LoopOnce);
-          nextAction.clampWhenFinished = true;
+        nextAction.setLoop(config.loop || THREE.LoopRepeat);
+        if (config.clamp) nextAction.clampWhenFinished = true;
+
+        // Dash timeScale sync with game
+        if (targetClipName === 'Dash' && state.playerDashing) {
+          // Rough game dash durations by type
+          const dashDurations = { 1: 0.05, 3: 0.12, 4: 0.15, 5: 0.25, 0: 0.25 };
+          const gameDash = dashDurations[state.dashType] || 0.25;
+          nextAction.timeScale = 0.55 / Math.max(0.15, gameDash);
         } else {
-          nextAction.setLoop(THREE.LoopRepeat);
+          nextAction.timeScale = 1.0;
         }
+
         nextAction.play();
-        if (prevAction) prevAction.crossFadeTo(nextAction, 0.1, true);
+        if (prevAction) {
+          prevAction.crossFadeTo(nextAction, config.crossIn, true);
+        }
         this._3dCurrentClip = targetClipName;
       }
     }
 
-    // Facing: rotate model Y toward movement/mouse direction
-    let faceDir = 0;
+    // Facing: smooth Y rotation toward movement/mouse direction
+    let targetAngle = this._3dFacingAngle;
     if (state.playerMoving) {
-      faceDir = state.playerDirX;
+      targetAngle = Math.atan2(state.playerDirX, -state.playerDirZ);
     } else if (state.mouseWorldX !== undefined) {
-      faceDir = state.mouseWorldX - state.playerX;
+      const dx = state.mouseWorldX - state.playerX;
+      const dz = (state.mouseWorldZ || state.playerZ) - state.playerZ;
+      if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
+        targetAngle = Math.atan2(dx, -dz);
+      }
     }
-    if (Math.abs(faceDir) > 0.01) {
-      // Model faces +X by default, flip via Y rotation
-      const targetRotY = faceDir < 0 ? Math.PI : 0;
-      this._3dVisualRoot.rotation.y += (targetRotY - this._3dVisualRoot.rotation.y) * Math.min(1, 12 * dt);
-    }
+    // Smooth rotation
+    let angleDiff = targetAngle - this._3dFacingAngle;
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    this._3dFacingAngle += angleDiff * Math.min(1, 12 * dt);
+    this._3dVisualRoot.rotation.y = this._3dFacingAngle;
   }
 
   _recolorTexture(tex) {
