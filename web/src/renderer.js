@@ -422,14 +422,14 @@ export class ThreeRenderer {
     if (this._spriteB) this._spriteB.visible = false;
     if (this._contactShadow) this._contactShadow.visible = false;
 
-    // Create premium sprite plane (same size as existing: 1.6×1.6)
-    const geo = new THREE.PlaneGeometry(1.6, 1.6);
+    // Create premium sprite plane (larger to avoid clipping on big poses)
+    const geo = new THREE.PlaneGeometry(2.0, 2.0);
     const mat = new THREE.MeshBasicMaterial({
       transparent: true, alphaTest: 0.02, depthWrite: false,
       side: THREE.DoubleSide, blending: THREE.NormalBlending,
     });
     this._p25dSprite = new THREE.Mesh(geo, mat);
-    this._p25dSprite.position.y = 0.45; // pivot based
+    this._p25dSprite.position.y = 0.55; // pivot based for 2.0 geo
     this.visualRoot.add(this._p25dSprite);
 
     // Premium contact shadow (ground-fixed, independent of bob)
@@ -895,14 +895,21 @@ export class ThreeRenderer {
       // === DIRECTION STATE (for premium 2.5D: down/side/up) ===
       // Based on movement direction relative to camera (top-down perspective)
       let dirZ = playerMoving ? playerDirZ : (state.mouseWorldZ !== undefined ? state.mouseWorldZ - playerZ : 0);
-      let dirState = 'side'; // default
-      if (Math.abs(dirZ) > Math.abs(faceDir) * 0.8) {
-        dirState = dirZ > 0.3 ? 'down' : dirZ < -0.3 ? 'up' : 'side';
+      let dirState = this._playerDirection || 'side'; // keep previous by default (hysteresis)
+      const dirThreshold = 0.5; // higher = less jitter between states
+      if (playerMoving || Math.abs(faceDir) > 0.3 || Math.abs(dirZ) > 0.3) {
+        if (dirZ > dirThreshold) dirState = 'down';
+        else if (dirZ < -dirThreshold) dirState = 'up';
+        else dirState = 'side';
       }
-      this._playerDirection = dirState; // stored for premium 2.5D texture swap
+      this._playerDirection = dirState;
 
-      // Scale: fixed 1.0 — NO scale change during attack/dash
-      this.visualRoot.scale.set(this.playerFacing, 1, 1);
+      // Scale: fixed 1.0 — NO flip for premium 2.5D (weapon hand must stay consistent)
+      if (this._usePremium25D) {
+        this.visualRoot.scale.set(1, 1, 1); // never flip — side sprite already shows correct hand
+      } else {
+        this.visualRoot.scale.set(this.playerFacing, 1, 1);
+      }
 
       // === CONTACT SHADOW opacity by state ===
       if (this._contactShadow) {
