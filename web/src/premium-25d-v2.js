@@ -129,10 +129,31 @@ export class Premium25Dv2 {
         }
         this.atlasCache[clipName][i] = tex;
       } catch (e) {
-        // Texture not yet available — will show nothing for this direction
+        // Missing direction — will assign fallback below
       }
     }
+
+    // Fill missing directions with nearest available (no flip!)
+    for (let i = 0; i < 16; i++) {
+      if (this.atlasCache[clipName][i]) continue;
+      // Search nearest loaded direction (±1, ±2, etc.)
+      for (let offset = 1; offset <= 8; offset++) {
+        const prev = (i - offset + 16) % 16;
+        const next = (i + offset) % 16;
+        if (this.atlasCache[clipName][prev]) {
+          this.atlasCache[clipName][i] = this.atlasCache[clipName][prev];
+          break;
+        }
+        if (this.atlasCache[clipName][next]) {
+          this.atlasCache[clipName][i] = this.atlasCache[clipName][next];
+          break;
+        }
+      }
+    }
+
+    const loaded = Object.keys(this.atlasCache[clipName]).length;
     this.preloadedClips.add(clipName);
+    console.log(`[P25Dv2] ${clipName}: ${loaded}/16 directions (fallback applied)`);
   }
 
   // Lazy load action atlas when needed
